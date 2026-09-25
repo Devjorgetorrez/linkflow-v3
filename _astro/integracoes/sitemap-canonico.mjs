@@ -24,7 +24,16 @@
  * Substitui o antigo public/sitemap.xml estático, que era do tema de
  * exemplo (domínio vitalcaresaude.com.br, URLs /blog/<slug>) e ia igual
  * para todo cliente.
+ *
+ * robots.txt e llms.txt: mesma ideia, gerados aqui com o domínio real
+ * (lido dos mesmos canonicals do sitemap) — SÓ quando o arquivo não veio
+ * de public/. O Astro copia public/ pra dist/ antes deste hook rodar,
+ * então checar existsSync(dist/robots.txt) aqui já é suficiente pra saber
+ * se o painel salvou um (prevalece) ou se o site nunca teve um (gera
+ * básico, funcional desde o primeiro build, antes de qualquer edição no
+ * painel).
  */
+import { existsSync } from 'node:fs'
 import { readdir, readFile, writeFile } from 'node:fs/promises'
 import { join, relative, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -111,6 +120,30 @@ export default function sitemapCanonico() {
         resumo(fora.canonicalOutraRota, 'canonical apontando para outra rota')
         if (fora.noindex.length) logger.info(`${fora.noindex.length} página(s) noindex fora do sitemap: ${fora.noindex.join(', ')}`)
         if (hosts.size > 1) logger.warn(`canonicals com mais de um domínio (${[...hosts].join(', ')}) — conferir site.dominio`)
+
+        const dominioPrincipal = [...hosts][0]
+        if (dominioPrincipal) {
+          const robotsPath = join(raiz, 'robots.txt')
+          if (!existsSync(robotsPath)) {
+            const robotsTxt =
+              'User-agent: *\n' +
+              'Allow: /\n' +
+              '\n' +
+              `Sitemap: https://${dominioPrincipal}/sitemap.xml\n`
+            await writeFile(robotsPath, robotsTxt, 'utf-8')
+            logger.info(`robots.txt gerado (basico) — ${dominioPrincipal}`)
+          }
+
+          const llmsPath = join(raiz, 'llms.txt')
+          if (!existsSync(llmsPath)) {
+            const llmsTxt =
+              `# ${dominioPrincipal}\n` +
+              '\n' +
+              `Sitemap: https://${dominioPrincipal}/sitemap.xml\n`
+            await writeFile(llmsPath, llmsTxt, 'utf-8')
+            logger.info(`llms.txt gerado (basico) — ${dominioPrincipal}`)
+          }
+        }
 
         if (urls.size === 0) {
           logger.error('nenhuma página elegível — sitemap.xml NÃO foi gerado')

@@ -149,9 +149,38 @@ bloqueia a colisão antes de reportar "pronto").
     assina não precisa de e-mail de login).
 11. **R1 — Página de categoria `/<slug>` nos 3 temas**, ver resumo no
     histórico de rodadas abaixo.
-12. **R2 — Privacidade do painel ligada ao `site.legal`**, ver detalhe abaixo.
+12. **R2 — Privacidade do painel ligada ao `site.legal`**, ver resumo no
+    histórico de rodadas abaixo.
+13. **R3 — `robots.txt`/`llms.txt` desde o primeiro build**, ver detalhe abaixo.
 
-## Última rodada: R2 concluída e validada (build real)
+## Última rodada: R3 concluída e validada (build real)
+
+**`robots.txt` e `llms.txt` agora nascem automaticamente no primeiro
+build**, antes de qualquer edição no painel — o guardião exigia os dois,
+mas só o painel os criava (cliente ficava sem eles até logar e salvar a
+tela).
+
+- `_astro/integracoes/sitemap-canonico.mjs` (o mesmo hook `astro:build:done`
+  que já gera o `sitemap.xml`) agora também gera `dist/robots.txt` e
+  `dist/llms.txt` básicos, com o domínio real (lido dos mesmos canonicals
+  do sitemap) e a linha `Sitemap:` — **só quando o arquivo ainda não
+  existe**. Não precisou de config nova: o Astro já copia `public/` pra
+  `dist/` antes desse hook rodar, então `existsSync(dist/robots.txt)` já
+  diz sozinho se veio de `public/` (painel salvou um customizado — esse
+  prevalece) ou se o site nunca teve um (gera o básico).
+- `scripts/guardiao_construtor.py`: a checagem de `robots.txt`/`llms.txt`
+  saiu de `_astro/public/` (que agora pode legitimamente estar vazio) e
+  passou a conferir o **site publicado** (`/var/www/[slug]/`), igual ao
+  que já fazia com o `sitemap.xml`.
+
+Testado com build real, 2 cenários (`public/robots.txt` ausente vs.
+presente): ausente → `robots.txt`/`llms.txt` gerados com o domínio real e
+`Sitemap:` correto; presente (customizado) → preservado, nada sobrescrito.
+Lógica do guardião testada isoladamente para os casos site-publicado
+completo (0 erros) e site-publicado vazio (erro em `robots.txt`, aviso em
+`llms.txt`). `py_compile` e `node --check` limpos.
+
+## Rodada R2 (concluída antes da R3)
 
 **As 3 telas Privacidade (Política, Termos, Cookies) agora gravam de
 verdade no `site.legal` que o site publica** — antes eram só estado local
@@ -266,19 +295,17 @@ Resumo:
   gravavam `descricao` em vez de `metaDescription`, o que quebrava o build.
 - Números esperados no build: **19 / 19 / 19** páginas (base, tema-03, tema-04).
 
-## Pendências, em ordem (rodadas R3-R6, plano ativo)
+## Pendências, em ordem (rodadas R4-R6, plano ativo)
 
-1. **R3 — `robots.txt` e `llms.txt` na criação do site:** o guardião exige, mas só
-   o painel cria (quando alguém salva a tela).
-2. **R4 — Varredura do que não foi auditado:** o fluxo das skills no caminho
+1. **R4 — Varredura do que não foi auditado:** o fluxo das skills no caminho
    Astro (`fase3-conteudo` → `site-atualizar` → `site-publicar`), as telas
    de menus, formulários e leads, e o caminho WordPress. Checagem no
    `guardiao_construtor`: post com `autor:` ou `categoria:` inexistente.
-3. **R5 — Teste de ponta a ponta no VPS de teste** (critério de "concluído"
+2. **R5 — Teste de ponta a ponta no VPS de teste** (critério de "concluído"
    sugerido: a Torrez criada do zero pelo fluxo do agente, com site e painel
    no ar, publicando um post pelo painel sem intervenção manual). **Pedir
    autorização ao Lucas antes de tocar no VPS.**
-4. **R6 — Fechamento:** `HANDOFF.md` final e resumo do que ficou pronto/pendente.
+3. **R6 — Fechamento:** `HANDOFF.md` final e resumo do que ficou pronto/pendente.
 
 ## VPS de teste
 

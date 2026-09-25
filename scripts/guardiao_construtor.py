@@ -240,7 +240,6 @@ def verificar_saida(slug):
     astro_dir = linkflow / "_astro"
     content_dir = astro_dir / "src" / "content"
     config_file = astro_dir / "src" / "config" / "site.ts"
-    public_dir = astro_dir / "public"
 
     # Contagem prévia de serviços — usada abaixo para exigir nav com Serviços
     qtd_servicos = 0
@@ -372,10 +371,20 @@ def verificar_saida(slug):
                 )
 
     # ── Arquivos técnicos de SEO ──────────────────────────────────────────────
-    # robots.txt
-    robots = public_dir / "robots.txt"
+    # robots.txt e llms.txt nascem automaticamente no build (a integração
+    # _astro/integracoes/sitemap-canonico.mjs gera um básico se ainda não
+    # existir um custom em public/, salvo pelo painel). Por isso o guardião
+    # confere o PUBLICADO (/var/www/[slug]/), não mais só public/ — que
+    # agora pode legitimamente estar vazio até o cliente customizar pelo
+    # painel, sem que isso signifique falha.
+    site_dir_seo = Path(f"/var/www/{slug}")
+
+    robots = site_dir_seo / "robots.txt"
     if not robots.exists():
-        erros.append("robots.txt nao encontrado em _astro/public/ — indexacao bloqueada")
+        erros.append(
+            "robots.txt nao encontrado no site publicado (/var/www/[slug]/) — "
+            "build nao rodou, ou a integracao sitemap-canonico.mjs falhou em gera-lo"
+        )
     else:
         robots_conteudo = robots.read_text(encoding="utf-8")
         if "seudominio" in robots_conteudo or "exemplo" in robots_conteudo:
@@ -383,10 +392,9 @@ def verificar_saida(slug):
         if "Sitemap:" not in robots_conteudo:
             avisos.append("robots.txt nao referencia o Sitemap — adicionar linha 'Sitemap: https://[dominio]/sitemap.xml'")
 
-    # llms.txt
-    llms = public_dir / "llms.txt"
+    llms = site_dir_seo / "llms.txt"
     if not llms.exists():
-        avisos.append("llms.txt nao encontrado — recomendado para visibilidade em IAs")
+        avisos.append("llms.txt nao encontrado no site publicado — recomendado para visibilidade em IAs")
 
     # sitemap — gerado no dist/ após o build
     match_dominio = re.search(r"dominio[^:\n]*:[ \t]*(.+)", conteudo, re.IGNORECASE)
