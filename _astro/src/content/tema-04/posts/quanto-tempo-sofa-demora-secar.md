@@ -2,7 +2,7 @@
 titulo: "Quanto tempo o sofá demora para secar de verdade"
 metaDescription: "Por que a secagem do estofado leva de 8 a 12 horas, o que acelera sem danificar a fibra e por que promessa de secagem em duas horas costuma ser sinal de alerta."
 publicadoEm: "2026-07-25"
-categoria: "Cuidados"
+categoria: cuidados
 imagemCapa: "https://images.unsplash.com/photo-1524758631624-e2822e304c36?w=1200&h=630&fit=crop&auto=format"
 imagemCapaAlt: "Sala de estar arejada com sofá e janela aberta"
 autor: marcos-teixeira

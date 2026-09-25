@@ -1,5 +1,5 @@
 import type { Autor, Categoria, Pagina, Post } from "@/mock/types";
-import { idAutorSchema, urlAutor, urlPost } from "@/lib/urls-publicas";
+import { idAutorSchema, urlAutor, urlCategoria, urlPost } from "@/lib/urls-publicas";
 
 // ── Informações do site (recebidas de fora — nunca hardcoded) ─────────────────
 
@@ -252,8 +252,9 @@ export function gerarGraphPost(
   const url = urlPost(post.slug); // URL plana: /<slug>, nunca /blog/<slug>
   const absUrl = `${DOMINIO}${url}`;
 
-  // Mesmo breadcrumb que o site publica (Início › Blog › Artigo). A
-  // categoria não entra: ela não está na URL e não tem página própria.
+  // Mesmo breadcrumb que o site publica (Início › Blog › Artigo) — a
+  // categoria tem página própria (/<slug>) mas não entra no breadcrumb do
+  // artigo, decisão do Jorge (o selo de categoria já linka pra ela à parte).
   // `categorias` segue na assinatura por compatibilidade com quem chama.
   void categorias;
   const breadcrumbs: ItemBreadcrumb[] = [
@@ -309,8 +310,44 @@ export function gerarGraphPagina(pagina: Pagina, site: SiteInfo): SchemaGraph {
   return { "@context": "https://schema.org", "@graph": graph };
 }
 
-// gerarGraphCategoria foi removida: categoria não tem página pública no
-// site (sem rota /categoria), então não existe CollectionPage a descrever.
+export function gerarGraphCategoria(categoria: Categoria, artigos: Post[], site: SiteInfo): SchemaGraph {
+  // Espelha o que pages/[slug].astro emite pra categoria: CollectionPage +
+  // ItemList + breadcrumb (Início › Blog › Categoria).
+  const DOMINIO = urlBase(site);
+  const url = urlCategoria(categoria.slug);
+  const absUrl = `${DOMINIO}${url}`;
+  const breadcrumbs: ItemBreadcrumb[] = [
+    { name: "Início", item: DOMINIO },
+    { name: "Blog", item: `${DOMINIO}/blog` },
+    { name: categoria.nome, item: absUrl },
+  ];
+
+  const graph: NodoGraph[] = [
+    nodoWebSite(site),
+    nodoOrganization(site),
+    nodoBreadcrumb(url, breadcrumbs, site),
+    nodoWebPage({
+      url,
+      tipo: "CollectionPage",
+      title: `${categoria.nome} — ${site.nomeSite}`,
+      description: categoria.metaDescription || categoria.descricao,
+      imagemUrl: categoria.imagem || undefined,
+      imagemAlt: categoria.nome,
+    }, site),
+    {
+      "@type": "ItemList",
+      "@id": `${absUrl}#itemlist`,
+      itemListElement: artigos.map((p, i) => ({
+        "@type": "ListItem",
+        position: i + 1,
+        url: `${DOMINIO}${urlPost(p.slug)}`,
+        name: p.titulo,
+      })),
+    },
+  ];
+
+  return { "@context": "https://schema.org", "@graph": graph };
+}
 
 export function gerarGraphAutor(autor: Autor, site: SiteInfo): SchemaGraph {
   // Espelha o que pages/autor/[slug].astro emite: ProfilePage + Person +

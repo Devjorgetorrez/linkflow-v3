@@ -2,7 +2,7 @@
 titulo: "Fluxo de caixa: o relatório que antecipa o aperto"
 metaDescription: "Como montar e ler um fluxo de caixa projetado de 90 dias, a diferença entre lucro e caixa, e os quatro erros que quebram pequena empresa lucrativa."
 publicadoEm: "2026-08-04"
-categoria: "Gestão"
+categoria: gestao
 imagemCapa: "https://images.unsplash.com/photo-1543286386-713bdd548da4?w=1200&h=630&fit=crop&auto=format"
 imagemCapaAlt: "Planilha de fluxo de caixa projetado em uma tela"
 autor: rodrigo-sampaio

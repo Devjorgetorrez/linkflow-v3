@@ -13,10 +13,11 @@ import {
 } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { useSiteInfo } from "@/lib/useSiteInfo";
-import { urlAutor, urlPost } from "@/lib/urls-publicas";
+import { urlAutor, urlCategoria, urlPost } from "@/lib/urls-publicas";
 import { cn } from "@/lib/utils";
 import {
   gerarGraphAutor,
+  gerarGraphCategoria,
   gerarGraphPagina,
   gerarGraphPost,
   type SchemaGraph,
@@ -414,8 +415,24 @@ export default function DadosEstruturadosPage() {
       });
     }
 
-    // Categorias não entram: não têm página pública no site (sem rota
-    // /categoria), logo não emitem dados estruturados próprios.
+    for (const c of categorias.filter((cat) => cat.slug)) {
+      const artigosDaCategoria = publicados.filter((p) => p.categoriaId === c.id);
+      const graph = gerarGraphCategoria(c, artigosDaCategoria, siteInfo);
+      const tipos = listarTiposDoGraph(graph);
+      const { frase, tooltip } = frasePorTipos(tipos, "categoria");
+      const { status, problemas } = calcularStatusCategoria(c);
+      lista.push({
+        id: `cat-${c.id}`,
+        titulo: c.nome,
+        url: urlCategoria(c.slug),
+        tipoEntidade: "categoria",
+        frase,
+        fraseTooltip: tooltip,
+        status,
+        problemas,
+        graph,
+      });
+    }
 
     for (const a of ativos) {
       const graph = gerarGraphAutor(a, siteInfo);

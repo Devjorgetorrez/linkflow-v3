@@ -12,6 +12,9 @@ import { verificarAcesso, validarSlug } from "@/lib/auth";
 import { painelParaFrontmatter } from "@/lib/frontmatter-post";
 import { lerUsuarios } from "@/lib/usuarios";
 import { slugDoAutor } from "@/lib/sync-autores";
+import { lerDados } from "@/lib/dados";
+import { slugDoCategoria } from "@/lib/sync-categorias";
+import type { Categoria } from "@/mock/types";
 
 function postPath(slug: string): string {
   // Validação já foi feita antes de chegar aqui, mas path.join resolve ../ etc
@@ -61,6 +64,9 @@ export async function PATCH(
     const camposFrontmatter = painelParaFrontmatter(body);
     if (typeof camposFrontmatter.autor === "string") {
       camposFrontmatter.autor = slugDoAutor(camposFrontmatter.autor, lerUsuarios()); // site usa o slug
+    }
+    if (typeof camposFrontmatter.categoria === "string") {
+      camposFrontmatter.categoria = slugDoCategoria(camposFrontmatter.categoria, lerDados<Categoria[]>("categorias.json", [])); // site usa o slug
     }
 
     const campos = {

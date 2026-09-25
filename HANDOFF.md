@@ -85,7 +85,7 @@ nunca é editado nem servido.
 campos diferentes. A escolha é **definitiva**, feita uma vez no onboarding.
 `scripts/promover_tema.py` move o tema para a raiz da cópia do cliente e
 apaga os outros. Ele trata a coleção nova pela lista `COLECOES`
-(servicos, equipe, depoimentos, posts, autores) e as páginas do tema base
+(servicos, equipe, depoimentos, posts, autores, categorias) e as páginas do tema base
 pela lista `NOMES_BASE_LEGITIMOS`. **Coleção ou página nova precisa entrar
 nessas listas**, senão a promoção apaga como resíduo. O painel **não** troca
 tema: a tela "Tema" é só informativa.
@@ -102,12 +102,13 @@ tema: a tela "Tema" é só informativa.
 | Artigo | `/<slug>` |
 | Serviços (pilar) | `/servicos` |
 | Serviço interno | `/<slug>` |
-| Categoria (a fazer) | `/<categoria>`; o artigo continua `/<slug>` |
+| Categoria | `/<slug>`; o artigo continua `/<slug>`, sem categoria no caminho |
 | Autor | `/autor/<slug>` |
 
 Rota unificada em `pages/[slug].astro`. Prioridade em caso de slug repetido
-(decidida): página fixa > serviço > categoria > artigo. Os slugs não devem
-se repetir, e a checagem de colisão na raiz ainda está por fazer.
+(decidida): página fixa > serviço > categoria > artigo — implementada e
+testada (build ignora o perdedor e avisa no log; `guardiao_construtor.py`
+bloqueia a colisão antes de reportar "pronto").
 
 **Painel:** a única fonte de URL pública é `painel/lib/urls-publicas.ts`
 (espelha as rotas do site). Não existe mais mock: `painel/mock/` só tem
@@ -140,23 +141,64 @@ se repetir, e a checagem de colisão na raiz ainda está por fazer.
    e o PATCH é cirúrgico (preserva listas e comentários).
 9. **Lockfile do painel regenerado.** O deploy usa `npm ci` e copia o
    `package-lock.json` para a pasta do cliente.
+10. **R0 — 3 bugs da rodada de autor, corrigidos e validados (19/19/19):**
+    `PostLista.astro` agora mostra `{autor} · {data}` nas 3 variantes (antes
+    só a data, em `/blog` e na home); `Tema04Base.astro` corrigido pra
+    apontar `<link rel="sitemap">` pro `/sitemap.xml` real; `emailLogin` em
+    `api/usuarios` só é exigido quando `podeAcessar: true` (autor que só
+    assina não precisa de e-mail de login).
+11. **R1 — Página de categoria `/<slug>` nos 3 temas**, ver detalhe abaixo.
 
-## Última rodada: R0 concluída e validada (build real)
+## Última rodada: R1 concluída e validada (build real)
 
-**Os 3 bugs da rodada de autor, corrigidos:**
-1. `PostLista.astro` — as 3 variantes (grade, destaque, minimalista) agora
-   mostram `{autor} · {data}` (antes só a data). Confirmado nos cards de
-   `/blog` e da home, nos 3 temas.
-2. `Tema04Base.astro` — `<link rel="sitemap">` apontava pro arquivo estático
-   antigo (`/sitemap-tema-04.xml`, já apagado pela promoção). Agora aponta
-   pro `/sitemap.xml` real, igual ao `ThemeBase.astro`/`Tema03Base.astro`.
-   Nenhum outro resíduo (`sitemap-tema`, `llms-tema`, `tema-0N.json`)
-   encontrado fora dos arquivos de catálogo esperados.
-3. `painel/app/api/usuarios/route.ts` — `emailLogin` só é exigido quando
-   `podeAcessar: true`. Teste da Ana refeito com o corpo original (sem
-   e-mail): `ok:true`, `ana-souza.md` gravado corretamente.
+**Página de categoria `/<slug>` nos 3 temas**, mesmo padrão da rodada de autor:
+- Coleção `categorias` (+T3/T4): `nome`, `descricao`, `seoTitle`,
+  `metaDescription`, `imagem`, `ordem`, `gerenciadoPor`. Post referencia
+  pelo slug em `categoria:`; `_astro/src/lib/categorias.ts` resolve (aceita
+  nome como reserva, para posts antigos) e limita a página aos 12 artigos
+  mais recentes, sem paginação (decisão do Jorge).
+- Posts de exemplo dos 3 temas convertidos pra slug; categorias criadas a
+  partir dos nomes que eles já usavam (ex: base → `prevencao`,
+  `endocrinologia`, `saude-mental`).
+- Rota em `pages/[slug].astro` (raiz, junto com serviço e artigo — nunca
+  `/categoria/<slug>`), com prioridade página fixa > serviço > categoria >
+  artigo e aviso no log em toda colisão. Componente
+  `CategoriaDetalhe(T3/T4).astro`: cabeçalho, artigos, link `/blog`. Sem
+  artigo publicado, sai `noindex`. JSON-LD `CollectionPage` + `ItemList` +
+  breadcrumb (Home › Blog › Categoria).
+- Artigo: selo de categoria virou link pra página dela; breadcrumb do
+  artigo continua Home › Blog › Artigo (decisão do Jorge — a categoria não
+  entra no breadcrumb do artigo, só o selo linka).
+- Painel: `lib/sync-categorias.ts` (chamado no POST/PATCH/DELETE de
+  `/api/categorias`, mesmo padrão de `sync-autores.ts`), `urlCategoria()`
+  em `urls-publicas.ts`, botão "Ver" na tela de categoria, categoria de
+  volta no `llms.txt`/`indexaveis`/dados estruturados
+  (`gerarGraphCategoria`), e POST/PATCH de posts convertendo
+  `categoriaId` ↔ slug.
+- Colisão de slug: `guardiao_construtor.py` bloqueia colisão entre
+  serviço/post/categoria/página fixa na saída; o painel avisa (não
+  bloqueia) ao salvar categoria com slug colidindo
+  (`avisoColisaoSlug` em `sync-categorias.ts`).
+- `scripts/vps/novo-cliente.sh` limpa `content/categorias/` no cliente novo.
+- Skill `site-publicar` atualizada: `categoria:` agora é o slug de um
+  arquivo existente em `content/categorias/`, com a mesma regra de "criar
+  se não existir" que já valia pro autor. **`fase3-conteudo` não foi
+  tocada** — ela não gera posts de blog (isso é `site-publicar`), não tem
+  nenhuma referência a `categoria:` no frontmatter, então a instrução de
+  atualizá-la não se aplicava.
+- Bug encontrado e corrigido durante a implementação: `const RESERVADOS`
+  declarado no escopo do módulo de `[slug].astro`, fora de
+  `getStaticPaths`, quebrava o build com `"RESERVADOS is not defined"` — o
+  Astro isola `getStaticPaths` num chunk próprio de pré-renderização e não
+  inclui `const` do escopo do módulo declarada fora da função. Movido pra
+  dentro da função nos 3 temas.
 
-Build real: 19/19/19 páginas e URLs no sitemap, nos 3 temas. `tsc --noEmit`
+Build real: **22/22/21** páginas e URLs no sitemap (base/tema-03/tema-04 —
+19 da rodada de autor + 3/3/2 categorias novas). Testado com build real:
+categoria com artigo (indexável, JSON-LD, selo linkando), categoria vazia
+(`noindex`), colisão de slug categoria×serviço (serviço vence, aviso no
+log, build não quebra), criação/edição de categoria e post pelo painel com
+sincronização e round-trip `categoriaId`↔slug confirmados. `tsc --noEmit`
 e `npm run build` do painel sem erro.
 
 ## Rodada de autor (concluída antes da R0)
@@ -178,27 +220,21 @@ Resumo:
   gravavam `descricao` em vez de `metaDescription`, o que quebrava o build.
 - Números esperados no build: **19 / 19 / 19** páginas (base, tema-03, tema-04).
 
-## Pendências, em ordem (agora executadas em rodadas R1-R6, ver plano ativo)
+## Pendências, em ordem (rodadas R2-R6, plano ativo)
 
-1. **Página de categoria** `/<categoria>` nos 3 temas: coleção
-   `categorias`, sincronização a partir do `painel/data/categorias.json`,
-   bloco compartilhado e **os 12 artigos mais recentes, sem paginação**
-   (decisão). Mais a checagem de slug repetido na raiz, no build e no
-   `guardiao_construtor`. Lembrar de incluir em `COLECOES` e
-   `NOMES_BASE_LEGITIMOS` (se houver página) e na limpeza do
-   `novo-cliente.sh`.
-2. **Privacidade no painel ligada ao `site.legal`:** as telas Política,
+1. **R2 — Privacidade no painel ligada ao `site.legal`:** as telas Política,
    Termos e Cookies (cerca de 1.700 linhas) não gravam no que o site publica.
-3. **`robots.txt` e `llms.txt` na criação do site:** o guardião exige, mas só
+2. **R3 — `robots.txt` e `llms.txt` na criação do site:** o guardião exige, mas só
    o painel cria (quando alguém salva a tela).
-4. **Varredura do que não foi auditado:** o fluxo das skills no caminho
+3. **R4 — Varredura do que não foi auditado:** o fluxo das skills no caminho
    Astro (`fase3-conteudo` → `site-atualizar` → `site-publicar`), as telas
    de menus, formulários e leads, e o caminho WordPress. Checagem no
    `guardiao_construtor`: post com `autor:` ou `categoria:` inexistente.
-5. **Teste de ponta a ponta no VPS de teste** (critério de "concluído"
+4. **R5 — Teste de ponta a ponta no VPS de teste** (critério de "concluído"
    sugerido: a Torrez criada do zero pelo fluxo do agente, com site e painel
    no ar, publicando um post pelo painel sem intervenção manual). **Pedir
    autorização ao Lucas antes de tocar no VPS.**
+5. **R6 — Fechamento:** `HANDOFF.md` final e resumo do que ficou pronto/pendente.
 
 ## VPS de teste
 

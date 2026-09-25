@@ -19,6 +19,7 @@ import { site }     from '../../config/tema-04.ts'
 import { getCollection } from 'astro:content'
 import { ehPublicado } from '../../lib/publicacao.ts'
 import { nomeAutor } from '../../lib/autores.ts'
+import { nomeCategoria } from '../../lib/categorias.ts'
 
 const servicos = (await getCollection('servicosT4'))
   .sort((a, b) => a.data.ordem - b.data.ordem)
@@ -33,10 +34,11 @@ const depoimentos = (await getCollection('depoimentosT4'))
   .map(d => ({ nome: d.data.nome, cidade: d.data.cidade, servico: d.data.servico, corpo: d.body.trim() }))
 
 const autores = await getCollection('autoresT4')
+const categorias = await getCollection('categoriasT4')
 const posts = (await getCollection('postsT4', ehPublicado))
   .sort((a, b) => new Date(b.data.publicadoEm).getTime() - new Date(a.data.publicadoEm).getTime())
   .map(p => ({
-    titulo: p.data.titulo, publicadoEm: p.data.publicadoEm, categoria: p.data.categoria,
+    titulo: p.data.titulo, publicadoEm: p.data.publicadoEm, categoria: nomeCategoria(p.data.categoria, categorias),
     imagemCapa: p.data.imagemCapa, imagemCapaAlt: p.data.imagemCapaAlt,
     autor: nomeAutor(p.data, autores), href: `/tema-04/${p.id}`,
   }))

@@ -2,7 +2,7 @@
 titulo: "Ácaros no sofá: por que a alergia piora em casa"
 metaDescription: "O que são ácaros, por que eles se concentram no sofá e no colchão, e o que reduz de verdade a crise alérgica dentro de casa. Sem promessa de eliminação total."
 publicadoEm: "2026-08-22"
-categoria: "Saúde em casa"
+categoria: saude-em-casa
 imagemCapa: "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=1200&h=630&fit=crop&auto=format"
 imagemCapaAlt: "Sala de estar clara com sofá e almofadas"
 autor: marcos-teixeira

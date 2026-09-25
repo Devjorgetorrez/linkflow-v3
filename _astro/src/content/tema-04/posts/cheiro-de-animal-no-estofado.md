@@ -2,7 +2,7 @@
 titulo: "Cheiro de animal no sofá: por que volta depois"
 metaDescription: "Por que o odor de xixi de cachorro e gato retorna dias após a limpeza caseira, o que dissolve de fato o composto responsável e quando não há mais retorno."
 publicadoEm: "2026-08-08"
-categoria: "Cuidados"
+categoria: cuidados
 imagemCapa: "https://images.unsplash.com/photo-1450778869180-41d0601e046e?w=1200&h=630&fit=crop&auto=format"
 imagemCapaAlt: "Cachorro deitado sobre um sofá claro"
 autor: daniel-arruda

@@ -2,7 +2,7 @@
 titulo: "Simples ou Lucro Presumido: como escolher o regime"
 metaDescription: "Comparativo prático entre Simples Nacional e Lucro Presumido para prestadores de serviço, com o papel do fator R e quando cada regime realmente compensa."
 publicadoEm: "2026-08-18"
-categoria: "Tributário"
+categoria: tributario
 imagemCapa: "https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?w=1200&h=630&fit=crop&auto=format"
 imagemCapaAlt: "Calculadora, caneta e papéis de apuração sobre a mesa de trabalho"
 autor: helena-vasconcelos

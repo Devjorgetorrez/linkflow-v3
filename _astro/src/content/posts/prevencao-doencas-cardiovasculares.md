@@ -2,7 +2,7 @@
 titulo: 7 hábitos que reduzem em 40% o risco de doenças cardiovasculares
 metaDescription: Doença cardiovascular mata 30% dos brasileiros. Saiba quais mudanças de estilo de vida têm maior impacto na prevenção, segundo a medicina baseada em evidências.
 publicadoEm: "2025-08-12"
-categoria: Prevenção
+categoria: prevencao
 imagemCapa: https://images.unsplash.com/photo-1505751172876-fa1923c5c528?w=800&h=500&fit=crop&auto=format
 imagemCapaAlt: Coração saudável e alimentação preventiva
 destaque: true

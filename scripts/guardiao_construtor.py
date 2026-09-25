@@ -337,6 +337,40 @@ def verificar_saida(slug):
             if any(g in texto.lower() for g in genericos):
                 erros.append(f"Conteudo generico/placeholder detectado em {md.name} — substituir por conteudo real")
 
+        # ── Colisao de slug na raiz (URL plana) ─────────────────────────────
+        # servicos, posts e categorias nascem todos em /<slug> — pagina fixa
+        # (sobre, contato, servicos, blog, autor, legais) tem prioridade
+        # maxima, depois servico, depois categoria, depois artigo (decisao
+        # do Jorge). O build (pages/[slug].astro) ja ignora o perdedor e
+        # avisa no log, mas o guardiao bloqueia aqui pra nao passar batido.
+        categorias_dir = content_dir / "categorias"
+        categorias = list(categorias_dir.glob("*.md")) if categorias_dir.exists() else []
+        PAGINAS_FIXAS = {
+            "sobre", "contato", "servicos", "blog", "autor",
+            "politica-de-privacidade", "termos-de-uso",
+        }
+        slugs_por_tipo = {
+            "servico": {md.stem for md in servicos},
+            "post": {md.stem for md in posts},
+            "categoria": {md.stem for md in categorias},
+        }
+        donos_do_slug = {}
+        for tipo, slugs in slugs_por_tipo.items():
+            for s in slugs:
+                donos_do_slug.setdefault(s, []).append(tipo)
+        for s, tipos in sorted(donos_do_slug.items()):
+            if s in PAGINAS_FIXAS:
+                erros.append(
+                    f"Slug '{s}' ({'/'.join(tipos)}) colide com pagina fixa do site "
+                    f"— troque o slug do {'/'.join(tipos)}."
+                )
+            elif len(tipos) > 1:
+                erros.append(
+                    f"Slug '{s}' repetido entre {' e '.join(tipos)} — as URLs colidem "
+                    "em /[slug] (prioridade: pagina fixa > servico > categoria > artigo, "
+                    "os demais ficam inacessiveis). Troque o slug do que perde a prioridade."
+                )
+
     # ── Arquivos técnicos de SEO ──────────────────────────────────────────────
     # robots.txt
     robots = public_dir / "robots.txt"

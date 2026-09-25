@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ExternalLink, Info } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { usePaginasReais } from "@/lib/usePaginasReais";
-import { urlPost } from "@/lib/urls-publicas";
+import { urlCategoria, urlPost } from "@/lib/urls-publicas";
 import { Alternador, Botao } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import type { Categoria, Pagina, Post } from "@/mock/types";
@@ -158,9 +158,15 @@ function gerarLlms(
     linhas.push("");
   }
 
-  // Categorias não entram: não têm página pública no site (sem rota
-  // /categoria — lib/urls-publicas.ts). Listá-las publicaria links 404.
-  void categorias;
+  const categoriasComSlug = categorias.filter((c) => c.slug);
+  if (categoriasComSlug.length) {
+    linhas.push("## Categorias do blog");
+    for (const c of categoriasComSlug) {
+      const desc = c.metaDescription || c.descricao ? `: ${c.metaDescription || c.descricao}` : "";
+      linhas.push(`- [${c.nome}](${baseUrl}${urlCategoria(c.slug)})${desc}`);
+    }
+    linhas.push("");
+  }
 
   linhas.push(`O sitemap XML deste site está em ${baseUrl}/sitemap.xml.`);
 

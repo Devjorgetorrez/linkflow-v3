@@ -10,10 +10,8 @@
  *   Serviços (pilar)  /servicos
  *   Serviço interno . /<slug>          nunca /servicos/<slug>
  *   Autor ........... /autor/<slug>    (pages/autor/[slug].astro)
- *
- * Categoria ainda NÃO tem página pública no site — não existe urlCategoria
- * aqui até a rota nascer no Astro. Regra de sempre: a rota nasce primeiro
- * no site e só depois entra aqui.
+ *   Categoria ....... /<slug>          (pages/[slug].astro, mesma raiz de
+ *                                       serviço e artigo — nunca /categoria/<slug>)
  */
 
 export const URL_HOME = "/";
@@ -27,6 +25,11 @@ export function urlPost(slug: string): string {
 
 /** Serviço interno — direto na raiz. */
 export function urlServico(slug: string): string {
+  return `/${slug}`;
+}
+
+/** Categoria do blog — direto na raiz, igual serviço e artigo. */
+export function urlCategoria(slug: string): string {
   return `/${slug}`;
 }
 

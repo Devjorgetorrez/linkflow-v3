@@ -20,6 +20,7 @@ import { site }    from '../../config/tema-03.ts'
 import { getCollection } from 'astro:content'
 import { ehPublicado } from '../../lib/publicacao.ts'
 import { nomeAutor } from '../../lib/autores.ts'
+import { nomeCategoria } from '../../lib/categorias.ts'
 
 const servicos = (await getCollection('servicosT3'))
   .sort((a, b) => a.data.ordem - b.data.ordem)
@@ -43,12 +44,13 @@ const depoimentos = (await getCollection('depoimentosT3'))
   }))
 
 const autores = await getCollection('autoresT3')
+const categorias = await getCollection('categoriasT3')
 const posts = (await getCollection('postsT3', ehPublicado))
   .sort((a, b) => new Date(b.data.publicadoEm).getTime() - new Date(a.data.publicadoEm).getTime())
   .map(p => ({
     titulo:        p.data.titulo,
     publicadoEm:   p.data.publicadoEm,
-    categoria:     p.data.categoria,
+    categoria:     nomeCategoria(p.data.categoria, categorias),
     imagemCapa:    p.data.imagemCapa,
     imagemCapaAlt: p.data.imagemCapaAlt,
     autor:         nomeAutor(p.data, autores),

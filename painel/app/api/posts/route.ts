@@ -12,6 +12,9 @@ import { painelParaFrontmatter } from "@/lib/frontmatter-post";
 import { lerStatusPost } from "@/lib/status-post";
 import { lerUsuarios } from "@/lib/usuarios";
 import { idDoAutor, slugDoAutor } from "@/lib/sync-autores";
+import { lerDados } from "@/lib/dados";
+import { idDoCategoria, slugDoCategoria } from "@/lib/sync-categorias";
+import type { Categoria } from "@/mock/types";
 
 function postsDirAtivo(): string {
   return path.join(getContentDir(), "posts");
@@ -25,6 +28,7 @@ export async function GET(req: NextRequest) {
     const dir = postsDirAtivo();
     const arquivos = listarArquivos(dir, ".md");
     const usuarios = lerUsuarios(); // autor: slug no arquivo, id do usuário no painel
+    const categorias = lerDados<Categoria[]>("categorias.json", []); // categoria: slug no arquivo, id no painel
 
     const posts = arquivos
       .map((arquivo) => {
@@ -51,7 +55,7 @@ export async function GET(req: NextRequest) {
           faq: [],
           fontes: [],
           palavras: content.split(/\s+/).length,
-          categoriaId: frontmatter.categoria ?? "",
+          categoriaId: idDoCategoria(String(frontmatter.categoria ?? ""), categorias),
           autorId: idDoAutor(String(frontmatter.autor ?? ""), usuarios),
         };
       })
@@ -101,6 +105,10 @@ export async function POST(req: NextRequest) {
     // painel manda o id do usuário.
     if (typeof frontmatter.autor === "string") {
       frontmatter.autor = slugDoAutor(frontmatter.autor, lerUsuarios());
+    }
+    // Mesma coisa pra categoria (content/categorias/<slug>.md vs id do painel).
+    if (typeof frontmatter.categoria === "string") {
+      frontmatter.categoria = slugDoCategoria(frontmatter.categoria, lerDados<Categoria[]>("categorias.json", []));
     }
 
     if (imagemHero) frontmatter.imagemHero = imagemHero;

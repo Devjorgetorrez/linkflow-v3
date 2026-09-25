@@ -76,6 +76,7 @@ rm -f "$CLIENTE_DIR/_astro/src/content/posts/"*.md 2>/dev/null || true
 rm -f "$CLIENTE_DIR/_astro/src/content/equipe/"*.md 2>/dev/null || true
 rm -f "$CLIENTE_DIR/_astro/src/content/depoimentos/"*.md 2>/dev/null || true
 rm -f "$CLIENTE_DIR/_astro/src/content/autores/"*.md 2>/dev/null || true
+rm -f "$CLIENTE_DIR/_astro/src/content/categorias/"*.md 2>/dev/null || true
 
 # Página temporária enquanto o site não foi buildado
 cat > $SITES_DIR/$SLUG/index.html << HTML

@@ -25,7 +25,7 @@ from pathlib import Path
 
 TEMAS_VALIDOS = ["base", "tema-03", "tema-04"]
 SUFIXOS = {"base": "", "tema-03": "T3", "tema-04": "T4"}
-COLECOES = ["servicos", "equipe", "depoimentos", "posts", "autores"]
+COLECOES = ["servicos", "equipe", "depoimentos", "posts", "autores", "categorias"]
 
 
 def gravar_lf(path, texto):
@@ -340,7 +340,7 @@ def limpar_nao_escolhidos(tema_escolhido, pages_dir, config_dir, content_dir, la
 
         components_paginas_dir = layouts_dir.parent / "components" / "paginas"
         if components_paginas_dir.is_dir():
-            for nome in ["ServicoDetalhe.astro", "PostDetalhe.astro"]:
+            for nome in ["ServicoDetalhe.astro", "PostDetalhe.astro", "CategoriaDetalhe.astro"]:
                 alvo_componente = components_paginas_dir / nome
                 if alvo_componente.exists():
                     alvo_componente.unlink()
@@ -369,7 +369,7 @@ def limpar_nao_escolhidos(tema_escolhido, pages_dir, config_dir, content_dir, la
         components_paginas_dir = layouts_dir.parent / "components" / "paginas"
         sufixo_outro = SUFIXOS[outro]
         if components_paginas_dir.is_dir():
-            for nome in [f"ServicoDetalhe{sufixo_outro}.astro", f"PostDetalhe{sufixo_outro}.astro"]:
+            for nome in [f"ServicoDetalhe{sufixo_outro}.astro", f"PostDetalhe{sufixo_outro}.astro", f"CategoriaDetalhe{sufixo_outro}.astro"]:
                 alvo_componente = components_paginas_dir / nome
                 if alvo_componente.exists():
                     alvo_componente.unlink()

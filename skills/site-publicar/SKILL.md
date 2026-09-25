@@ -132,7 +132,7 @@ Criar `_astro/src/content/posts/<slug-artigo>.md`:
 titulo: "[titulo extraído — até 70 chars]"
 metaDescription: "[descricao extraída — 80 a 165 chars, OBRIGATÓRIA para publicar]"
 palavraChave: "[focuskw]"
-categoria: "[inferir pelo cluster do projeto.md]"
+categoria: "[slug do arquivo em content/categorias/ — ver regra abaixo]"
 autor: "[slug do autor — ver regra abaixo]"
 publicadoEm: "[data atual em YYYY-MM-DD, entre aspas]"
 atualizadoEm: "[data atual em YYYY-MM-DD, entre aspas]"
@@ -175,6 +175,28 @@ arquivo existente em `_astro/src/content/autores/<slug>.md`:
    Se o cliente usar o painel, o cadastro de autor passa a ser feito lá
    (Usuários → "Pode assinar artigos") e o painel sobrescreve este arquivo.
 3. Nunca usar o nome do negócio como autor.
+
+**Regra da `categoria`** — a categoria agrega artigos e tem página própria
+em `/<slug>` (raiz do site, igual serviço e artigo — nunca `/categoria/<slug>`).
+O valor de `categoria:` é o **slug** de um arquivo existente em
+`_astro/src/content/categorias/<slug>.md`:
+1. Se já existe categoria cadastrada pro assunto do cluster (pelo painel ou
+   antes pelo agente), usar o slug dela.
+2. Se não existe nenhuma, criar `_astro/src/content/categorias/<slug>.md`
+   com base no cluster do `projeto.md`. Formato:
+   ```markdown
+   ---
+   nome: "Nome da categoria"
+   descricao: "Uma frase sobre o que a categoria reúne."
+   metaDescription: "80 a 165 caracteres, para a página da categoria."
+   ordem: 1
+   ---
+   ```
+   Se o cliente usar o painel, o cadastro de categoria passa a ser feito lá
+   (Categorias) e o painel sobrescreve este arquivo.
+3. Nunca inventar categoria fora do cluster real do artigo, e nunca usar o
+   slug de um serviço ou de uma página fixa (sobre, contato, servicos, blog,
+   autor, politica-de-privacidade, termos-de-uso) — colide na URL.
 
 ---
 

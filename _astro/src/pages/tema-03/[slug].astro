@@ -1,33 +1,76 @@
 ---
 /**
- * Rota unificada para serviços e posts do Tema 03 — URL plana dentro do
- * prefixo /tema-03/ (que some quando o tema for promovido pra raiz,
- * numa etapa separada). Mesmo padrão do tema base: o slug decide o quê,
- * sem /servicos/ nem /blog/ no caminho do item individual.
+ * Rota unificada para serviços, categorias e posts do Tema 03 — URL plana
+ * dentro do prefixo /tema-03/ (que some quando o tema for promovido pra
+ * raiz, numa etapa separada). Mesmo padrão do tema base: o slug decide o
+ * quê, sem /servicos/ nem /blog/ nem /categoria/ no caminho do item
+ * individual.
+ *
+ * Prioridade em caso de slug repetido (decisão do Jorge): página fixa >
+ * serviço > categoria > artigo.
  */
 import ServicoDetalheT3 from '../../components/paginas/ServicoDetalheT3.astro'
+import CategoriaDetalheT3 from '../../components/paginas/CategoriaDetalheT3.astro'
 import PostDetalheT3 from '../../components/paginas/PostDetalheT3.astro'
 import { getCollection } from 'astro:content'
 import { ehPublicado } from '../../lib/publicacao.ts'
 
 export async function getStaticPaths() {
+  // Declarado DENTRO de getStaticPaths: o Astro isola essa função num
+  // chunk próprio de pré-renderização e não inclui const do escopo do
+  // módulo declarada fora dela.
+  const RESERVADOS = new Set([
+    'sobre', 'contato', 'servicos', 'blog', 'autor',
+    'politica-de-privacidade', 'termos-de-uso',
+  ])
+
   const servicos = await getCollection('servicosT3')
+  const categorias = await getCollection('categoriasT3')
   const posts = await getCollection('postsT3', ehPublicado)
 
-  const slugsServicos = new Set(servicos.map(s => s.id))
+  const pathsServicos = servicos
+    .filter(s => {
+      if (RESERVADOS.has(s.id)) {
+        console.error(`tema-03/[slug].astro: serviço "${s.id}" colide com página fixa — ignorado. Troque o slug do serviço.`)
+        return false
+      }
+      return true
+    })
+    .map(s => ({ params: { slug: s.id }, props: { tipo: 'servico' as const, entry: s } }))
 
-  const pathsServicos = servicos.map(s => ({
-    params: { slug: s.id },
-    props: { tipo: 'servico' as const, entry: s },
-  }))
+  const slugsServicos = new Set(pathsServicos.map(p => p.params.slug))
+
+  const pathsCategorias = categorias
+    .filter(c => {
+      if (RESERVADOS.has(c.id)) {
+        console.error(`tema-03/[slug].astro: categoria "${c.id}" colide com página fixa — ignorada. Troque o slug da categoria.`)
+        return false
+      }
+      if (slugsServicos.has(c.id)) {
+        console.error(`tema-03/[slug].astro: colisão de slug "${c.id}" entre servicosT3 e categoriasT3 — a categoria foi ignorada nesta URL, o serviço prevalece. Troque o slug da categoria.`)
+        return false
+      }
+      return true
+    })
+    .map(c => ({ params: { slug: c.id }, props: { tipo: 'categoria' as const, entry: c } }))
+
+  const slugsCategorias = new Set(pathsCategorias.map(p => p.params.slug))
 
   const pathsPosts = posts
     .filter(p => {
+      if (RESERVADOS.has(p.id)) {
+        console.error(`tema-03/[slug].astro: post "${p.id}" colide com página fixa — ignorado. Troque o slug do post.`)
+        return false
+      }
       if (slugsServicos.has(p.id)) {
         console.error(
           `tema-03/[slug].astro: colisão de slug "${p.id}" entre servicosT3 e postsT3 — ` +
           `o post foi ignorado nesta URL, o serviço prevalece. Troque o slug do post.`
         )
+        return false
+      }
+      if (slugsCategorias.has(p.id)) {
+        console.error(`tema-03/[slug].astro: colisão de slug "${p.id}" entre categoriasT3 e postsT3 — o post foi ignorado nesta URL, a categoria prevalece. Troque o slug do post.`)
         return false
       }
       return true
@@ -37,13 +80,12 @@ export async function getStaticPaths() {
       props: { tipo: 'post' as const, entry: p },
     }))
 
-  return [...pathsServicos, ...pathsPosts]
+  return [...pathsServicos, ...pathsCategorias, ...pathsPosts]
 }
 
 const { tipo, entry } = Astro.props
 ---
 
-{tipo === 'servico'
-  ? <ServicoDetalheT3 entry={entry} />
-  : <PostDetalheT3 entry={entry} />
-}
+{tipo === 'servico' && <ServicoDetalheT3 entry={entry} />}
+{tipo === 'categoria' && <CategoriaDetalheT3 entry={entry} />}
+{tipo === 'post' && <PostDetalheT3 entry={entry} />}

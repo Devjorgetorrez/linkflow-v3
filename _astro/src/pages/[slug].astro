@@ -1,42 +1,89 @@
 ---
 /**
- * Rota unificada para serviços e posts de blog — URL plana, sem
- * categoria no caminho (/[slug], nunca /servicos/[slug] nem /blog/[slug]).
- * O slug sozinho decide o que é o quê, igual permalink do WordPress.
+ * Rota unificada para serviços, categorias e posts de blog — URL plana,
+ * sem categoria no caminho (/[slug], nunca /servicos/[slug] nem
+ * /blog/[slug] nem /categoria/[slug]). O slug sozinho decide o que é o
+ * quê, igual permalink do WordPress.
+ *
+ * Prioridade em caso de slug repetido (decisão do Jorge): página fixa >
+ * serviço > categoria > artigo. Página fixa nem entra neste arquivo (é
+ * rota própria do Astro, resolvida antes desta), mas o RESERVADOS abaixo
+ * impede que serviço/categoria/post tentem nascer com o mesmo slug dela.
  *
  * Não renderiza o corpo aqui — só decide qual componente usar
- * (ServicoDetalhe ou PostDetalhe) e monta o <ThemeBase> em volta.
+ * (ServicoDetalhe, CategoriaDetalhe ou PostDetalhe) e monta o
+ * <ThemeBase> em volta.
  */
 import ThemeBase from '../layouts/ThemeBase.astro'
 import ServicoDetalhe from '../components/paginas/ServicoDetalhe.astro'
+import CategoriaDetalhe from '../components/paginas/CategoriaDetalhe.astro'
 import PostDetalhe from '../components/paginas/PostDetalhe.astro'
 import { site } from '../config/site.ts'
 import { getCollection } from 'astro:content'
 import { ehPublicado } from '../lib/publicacao.ts'
 import { resolverAutor } from '../lib/autores.ts'
+import { artigosDaCategoria } from '../lib/categorias.ts'
 
 export async function getStaticPaths() {
+  // Slugs de páginas fixas — fora deste arquivo, mas que colidiriam com a
+  // URL plana de serviço/categoria/post se alguém usasse o mesmo slug.
+  // Declarado DENTRO de getStaticPaths: o Astro isola essa função num
+  // chunk próprio de pré-renderização e não inclui const do escopo do
+  // módulo declarada fora dela (referência solta quebra o build: "X is
+  // not defined").
+  const RESERVADOS = new Set([
+    'sobre', 'contato', 'servicos', 'blog', 'autor',
+    'politica-de-privacidade', 'termos-de-uso',
+  ])
+
   const servicos = await getCollection('servicos')
+  const categorias = await getCollection('categorias')
   const posts = await getCollection('posts', ehPublicado)
 
-  const slugsServicos = new Set(servicos.map(s => s.id))
+  const pathsServicos = servicos
+    .filter(s => {
+      if (RESERVADOS.has(s.id)) {
+        console.error(`[slug].astro: serviço "${s.id}" colide com página fixa — ignorado. Troque o slug do serviço.`)
+        return false
+      }
+      return true
+    })
+    .map(s => ({ params: { slug: s.id }, props: { tipo: 'servico' as const, entry: s } }))
 
-  const pathsServicos = servicos.map(s => ({
-    params: { slug: s.id },
-    props: { tipo: 'servico' as const, entry: s },
-  }))
+  const slugsServicos = new Set(pathsServicos.map(p => p.params.slug))
 
-  // Serviço sempre prevalece sobre post no mesmo slug — colisão deveria
-  // ter sido barrada antes de chegar aqui (checagem de slug único na
-  // Fase 3), mas o build não pode quebrar por causa disso: ignora o post
-  // duplicado e avisa no log, em vez de gerar duas páginas na mesma URL.
+  const pathsCategorias = categorias
+    .filter(c => {
+      if (RESERVADOS.has(c.id)) {
+        console.error(`[slug].astro: categoria "${c.id}" colide com página fixa — ignorada. Troque o slug da categoria.`)
+        return false
+      }
+      if (slugsServicos.has(c.id)) {
+        console.error(`[slug].astro: colisão de slug "${c.id}" entre serviços e categorias — a categoria foi ignorada nesta URL, o serviço prevalece. Troque o slug da categoria.`)
+        return false
+      }
+      return true
+    })
+    .map(c => ({ params: { slug: c.id }, props: { tipo: 'categoria' as const, entry: c } }))
+
+  const slugsCategorias = new Set(pathsCategorias.map(p => p.params.slug))
+
+  // Serviço e categoria sempre prevalecem sobre post no mesmo slug —
+  // colisão deveria ter sido barrada antes de chegar aqui (checagem de
+  // slug único na Fase 3 / guardiao_construtor), mas o build não pode
+  // quebrar por causa disso: ignora o post duplicado e avisa no log.
   const pathsPosts = posts
     .filter(p => {
+      if (RESERVADOS.has(p.id)) {
+        console.error(`[slug].astro: post "${p.id}" colide com página fixa — ignorado. Troque o slug do post.`)
+        return false
+      }
       if (slugsServicos.has(p.id)) {
-        console.error(
-          `[slug].astro: colisão de slug "${p.id}" entre servicos e posts — ` +
-          `o post foi ignorado nesta URL, o serviço prevalece. Troque o slug do post.`
-        )
+        console.error(`[slug].astro: colisão de slug "${p.id}" entre servicos e posts — o post foi ignorado nesta URL, o serviço prevalece. Troque o slug do post.`)
+        return false
+      }
+      if (slugsCategorias.has(p.id)) {
+        console.error(`[slug].astro: colisão de slug "${p.id}" entre categorias e posts — o post foi ignorado nesta URL, a categoria prevalece. Troque o slug do post.`)
         return false
       }
       return true
@@ -46,21 +93,74 @@ export async function getStaticPaths() {
       props: { tipo: 'post' as const, entry: p },
     }))
 
-  return [...pathsServicos, ...pathsPosts]
+  return [...pathsServicos, ...pathsCategorias, ...pathsPosts]
 }
 
 const { tipo, entry } = Astro.props
 
-const titulo = `${entry.data.titulo} — ${site.nome}`
-const metaDescription = entry.data.metaDescription
-const canonical = `${site.dominio}/${entry.id}`
-const noindex = tipo === 'servico' ? (entry.data.noindex ?? false) : false
-const nodeId = tipo === 'servico' ? 'servico-detalhe' : 'post'
-
-// JSON-LD do artigo (o tema base não emitia nenhum). O autor aponta para a
-// página dele (/autor/<slug>) com o mesmo @id que a página de autor usa.
+let titulo: string
+let metaDescription: string
+let noindex: boolean
+let nodeId: string
 let jsonLd: object | undefined
-if (tipo === 'post') {
+const canonical = `${site.dominio}/${entry.id}`
+
+if (tipo === 'servico') {
+  titulo = `${entry.data.titulo} — ${site.nome}`
+  metaDescription = entry.data.metaDescription
+  noindex = entry.data.noindex ?? false
+  nodeId = 'servico-detalhe'
+} else if (tipo === 'categoria') {
+  const categorias = await getCollection('categorias')
+  const posts = await getCollection('posts', ehPublicado)
+  const artigos = artigosDaCategoria(posts, entry.id, categorias)
+
+  titulo = `${entry.data.nome} — ${site.nome}`
+  metaDescription = entry.data.metaDescription || entry.data.descricao || `Artigos sobre ${entry.data.nome} no blog da ${site.nome}.`
+  noindex = artigos.length === 0
+  nodeId = 'categoria'
+
+  jsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'CollectionPage',
+        '@id': `${canonical}#webpage`,
+        url: canonical,
+        name: titulo,
+        description: metaDescription,
+        inLanguage: 'pt-BR',
+        isPartOf: { '@id': `${site.dominio}/#website` },
+      },
+      {
+        '@type': 'ItemList',
+        '@id': `${canonical}#itemlist`,
+        itemListElement: artigos.map((p, i) => ({
+          '@type': 'ListItem',
+          position: i + 1,
+          url: `${site.dominio}/${p.id}`,
+          name: p.data.titulo,
+        })),
+      },
+      {
+        '@type': 'BreadcrumbList',
+        '@id': `${canonical}#breadcrumb`,
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Home', item: `${site.dominio}/` },
+          { '@type': 'ListItem', position: 2, name: 'Blog', item: `${site.dominio}/blog` },
+          { '@type': 'ListItem', position: 3, name: entry.data.nome, item: canonical },
+        ],
+      },
+    ],
+  }
+} else {
+  titulo = `${entry.data.titulo} — ${site.nome}`
+  metaDescription = entry.data.metaDescription
+  noindex = false
+  nodeId = 'post'
+
+  // JSON-LD do artigo (o tema base não emitia nenhum). O autor aponta para a
+  // página dele (/autor/<slug>) com o mesmo @id que a página de autor usa.
   const autores = await getCollection('autores')
   const autor = resolverAutor(entry.data, autores)
   const autorNode = autor
@@ -111,8 +211,7 @@ if (tipo === 'post') {
   noindex={noindex}
   jsonLd={jsonLd}
 >
-  {tipo === 'servico'
-    ? <ServicoDetalhe entry={entry} />
-    : <PostDetalhe entry={entry} />
-  }
+  {tipo === 'servico' && <ServicoDetalhe entry={entry} />}
+  {tipo === 'categoria' && <CategoriaDetalhe entry={entry} />}
+  {tipo === 'post' && <PostDetalhe entry={entry} />}
 </ThemeBase>

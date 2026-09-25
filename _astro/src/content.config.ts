@@ -239,6 +239,23 @@ const postsT4 = defineCollection({
   }),
 })
 
+const categorias = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/content/categorias' }),
+  // Arquivo de categoria do blog — página /<slug> (raiz, junto com serviços
+  // e artigos) e selo de categoria no artigo. O post referencia a categoria
+  // pelo slug (nome do arquivo) em `categoria:`.
+  // Gravado pelo painel (categorias.json -> lib/sync-categorias.ts) ou pelo agente.
+  schema: z.object({
+    nome:            z.string().min(2),
+    descricao:       z.string().default(''),
+    seoTitle:        z.string().optional(),
+    metaDescription: z.string().default(''),
+    imagem:          z.string().optional(),
+    ordem:           z.number().default(99),
+    gerenciadoPor:   z.string().optional(),
+  }),
+})
+
 const autores = defineCollection({
   loader: glob({ pattern: '**/*.md', base: './src/content/autores' }),
   // Perfil público de autor — página /autor/<slug> e assinatura dos artigos.
@@ -272,6 +289,22 @@ const autores = defineCollection({
   }),
 })
 
+const categoriasT3 = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/content/tema-03/categorias' }),
+  // Arquivo de categoria do blog — página /<slug> (raiz) e selo no artigo.
+  // O post referencia a categoria pelo slug em `categoria:`.
+  // Gravado pelo painel (categorias.json -> lib/sync-categorias.ts) ou pelo agente.
+  schema: z.object({
+    nome:            z.string().min(2),
+    descricao:       z.string().default(''),
+    seoTitle:        z.string().optional(),
+    metaDescription: z.string().default(''),
+    imagem:          z.string().optional(),
+    ordem:           z.number().default(99),
+    gerenciadoPor:   z.string().optional(),
+  }),
+})
+
 const autoresT3 = defineCollection({
   loader: glob({ pattern: '**/*.md', base: './src/content/tema-03/autores' }),
   // Perfil público de autor — página /autor/<slug> e assinatura dos artigos.
@@ -302,6 +335,22 @@ const autoresT3 = defineCollection({
     }).default({}),
     ativo:          z.boolean().default(true),
     gerenciadoPor:  z.string().optional(),
+  }),
+})
+
+const categoriasT4 = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/content/tema-04/categorias' }),
+  // Arquivo de categoria do blog — página /<slug> (raiz) e selo no artigo.
+  // O post referencia a categoria pelo slug em `categoria:`.
+  // Gravado pelo painel (categorias.json -> lib/sync-categorias.ts) ou pelo agente.
+  schema: z.object({
+    nome:            z.string().min(2),
+    descricao:       z.string().default(''),
+    seoTitle:        z.string().optional(),
+    metaDescription: z.string().default(''),
+    imagem:          z.string().optional(),
+    ordem:           z.number().default(99),
+    gerenciadoPor:   z.string().optional(),
   }),
 })
 
@@ -339,7 +388,7 @@ const autoresT4 = defineCollection({
 })
 
 export const collections = {
-  servicos, equipe, depoimentos, posts, autores,
-  servicosT3, equipeT3, depoimentosT3, postsT3, autoresT3,
-  servicosT4, equipeT4, depoimentosT4, postsT4, autoresT4,
+  servicos, equipe, depoimentos, posts, autores, categorias,
+  servicosT3, equipeT3, depoimentosT3, postsT3, autoresT3, categoriasT3,
+  servicosT4, equipeT4, depoimentosT4, postsT4, autoresT4, categoriasT4,
 }

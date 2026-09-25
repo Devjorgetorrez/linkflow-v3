@@ -1,5 +1,5 @@
 import type { Autor, Categoria, Pagina, Post, StatusPost } from "@/mock/types";
-import { urlAutor, urlPost } from "@/lib/urls-publicas";
+import { urlAutor, urlCategoria, urlPost } from "@/lib/urls-publicas";
 
 export interface ImagemIndexavel {
   src: string;
@@ -113,11 +113,10 @@ export function gerarIndexaveis(dados: {
   }
 
   // ── Categorias ─────────────────────────────────────────────────────────
-  // Categoria NÃO tem página pública no site (não existe rota /categoria no
-  // motor Astro — ver lib/urls-publicas.ts). Continua no grafo para as
-  // auditorias internas, mas sem URL e fora de sitemap/indexação.
+  // Categoria tem página própria no site: /<slug> (mesma raiz de serviço e
+  // artigo — pages/[slug].astro), indexável quando tem ao menos 1 artigo.
   for (const cat of categorias) {
-    const url = "";
+    const url = cat.slug ? urlCategoria(cat.slug) : "";
     const linksS: string[] = [];
     if (cat.paiId) linksS.push(`cat-${cat.paiId}`);
 
@@ -126,13 +125,13 @@ export function gerarIndexaveis(dados: {
       url,
       tipo: "categoria",
       status: "publicado",
-      indexavel: false,
+      indexavel: !!url,
       title: cat.seoTitle || cat.nome,
       meta_description: cat.metaDescription,
       h1: cat.nome,
       kw_primaria: cat.nome.toLowerCase(),
-      canonical_derivado: "",
-      schemas_emitidos: [],
+      canonical_derivado: url ? `${DOMINIO}${url}` : "",
+      schemas_emitidos: url ? ["CollectionPage"] : [],
       links_saindo: linksS,
       links_entrando: [],
       links_internos_obrigatorios: [],

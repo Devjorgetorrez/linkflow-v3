@@ -3,6 +3,7 @@
 import {
   AlertTriangle,
   ArrowLeft,
+  ExternalLink,
   FileQuestion,
   ImageIcon,
   Link2,
@@ -28,6 +29,7 @@ import {
 import { useStore } from "@/lib/store";
 import { useDominio } from "@/lib/useDominio";
 import { cn, slugify } from "@/lib/utils";
+import { urlCategoria } from "@/lib/urls-publicas";
 import type { Intencao } from "@/mock/types";
 
 /* ------------------------------------------------------------------ */
@@ -182,11 +184,12 @@ export default function EditorCategoriaPage() {
   }
 
   const imagem = midia.find((m) => m.id === cat.imagem);
-  // Categoria organiza o blog, mas NÃO tem página pública no site (URL
-  // plana: a categoria nunca entra no caminho e não existe rota /categoria
-  // — ver lib/urls-publicas.ts). Nada de link "Ver" para um 404.
-  void dominio;
-  const semPaginaPublica = "Sem página pública — a categoria não aparece na URL";
+  // Categoria tem página pública própria em /<slug> — mesma raiz de
+  // serviço e artigo (URL plana, nunca /categoria/<slug> — ver
+  // lib/urls-publicas.ts). Sem slug ainda, não há o que mostrar/abrir.
+  const urlPublica = cat.slug
+    ? `${dominio ? `https://${dominio}` : "https://seudominio.com.br"}${urlCategoria(cat.slug)}`
+    : "";
   const slugAlterado = !!slugOriginal && cat.slug !== slugOriginal;
 
   const editar = (patch: Parameters<typeof atualizarCategoria>[1]) => {
@@ -208,9 +211,18 @@ export default function EditorCategoriaPage() {
         <Botao variante="fantasma" onClick={() => router.push("/categorias")}>
           <ArrowLeft size={13} /> Categorias
         </Botao>
-        <span className="truncate text-[10.5px] text-ink-muted">{semPaginaPublica}</span>
+        <span className="truncate font-mono text-[10.5px] text-ink-muted">
+          {urlPublica || "Defina o slug para gerar a URL"}
+        </span>
         <div className="ml-auto flex items-center gap-1.5">
           {salvo && <span className="text-[11px] text-success">Alterações aplicadas</span>}
+          {urlPublica && (
+            <a href={urlPublica} target="_blank" rel="noopener noreferrer">
+              <Botao variante="secundario">
+                <ExternalLink size={12} /> Ver
+              </Botao>
+            </a>
+          )}
           <Botao variante="primario" onClick={salvar}>
             <Save size={12} /> Salvar
           </Botao>
@@ -482,7 +494,9 @@ export default function EditorCategoriaPage() {
                 <p className="truncate text-[13px] leading-snug text-[color:var(--primary)]">
                   {cat.seoTitle || cat.nome || "Nome da categoria"}
                 </p>
-                <p className="truncate text-[11px] text-ink-muted">{semPaginaPublica}</p>
+                <p className="truncate text-[11px] text-ink-muted">
+                  {urlPublica || "Defina o slug para gerar a URL"}
+                </p>
                 <p className="mt-0.5 line-clamp-2 text-[11.5px] text-ink-muted">
                   {cat.metaDescription || cat.descricao || "A meta description aparece aqui."}
                 </p>

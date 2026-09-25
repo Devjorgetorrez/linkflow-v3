@@ -19,12 +19,14 @@ import { site }         from '../config/site.ts'
 import { getCollection } from 'astro:content'
 import { ehPublicado } from '../lib/publicacao.ts'
 import { nomeAutor } from '../lib/autores.ts'
+import { nomeCategoria } from '../lib/categorias.ts'
 
 /* ── Coleções ─────────────────────────────────────────────────── */
 const todosServicos = await getCollection('servicos')
 const todosEquipe   = await getCollection('equipe')
 const todosDepoi    = await getCollection('depoimentos')
 const autores = await getCollection('autores')
+const categorias = await getCollection('categorias')
 const todosPosts    = await getCollection('posts', ehPublicado)
 
 const servicosOrdenados = todosServicos
@@ -63,7 +65,7 @@ const postsOrdenados = todosPosts
   .map(p => ({
     titulo:        p.data.titulo,
     publicadoEm:   p.data.publicadoEm,
-    categoria:     p.data.categoria,
+    categoria:     nomeCategoria(p.data.categoria, categorias),
     imagemCapa:    p.data.imagemCapa,
     imagemCapaAlt: p.data.imagemCapaAlt,
     autor:         nomeAutor(p.data, autores),

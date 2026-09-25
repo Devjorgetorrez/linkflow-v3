@@ -2,7 +2,7 @@
 titulo: "Pró-labore e lucros: o que muda no bolso do sócio"
 metaDescription: "Diferença entre pró-labore e distribuição de lucros, a carga de cada um, o efeito no fator R e por que retirar só lucro nem sempre sai mais barato."
 publicadoEm: "2026-07-21"
-categoria: "Societário"
+categoria: societario
 imagemCapa: "https://images.unsplash.com/photo-1520607162513-77705c0f0d4a?w=1200&h=630&fit=crop&auto=format"
 imagemCapaAlt: "Sócios de uma pequena empresa analisando documentos financeiros"
 autor: helena-vasconcelos
