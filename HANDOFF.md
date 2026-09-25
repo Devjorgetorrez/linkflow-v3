@@ -1,5 +1,13 @@
 # Handoff — SiteFlow CMS / LinkFlow (Jorge Torrez) — v2 (25/09/2026)
 
+> **Mudança de fluxo (25/09/2026):** a partir da rodada R0, o modelo de duas
+> sessões (chat edita / Code valida) foi encerrado. `C:\Projetos\linkflow-completo`
+> agora é repositório git, e uma única sessão do Code edita a pasta real,
+> testa em cópia isolada e faz commit por rodada. O `HANDOFF.md` continua
+> sendo o documento de retomada — cole-o inteiro numa conversa nova se a
+> sessão for perdida; o histórico de commits complementa o que este
+> documento resume.
+>
 > Cole este documento inteiro como primeira mensagem numa conversa nova,
 > junto com o `linkflow-completo.zip` mais recente, o `manifesto-md5.txt` e
 > o `conferir_manifesto.py`. Ele substitui o histórico das sessões
@@ -133,10 +141,27 @@ se repetir, e a checagem de colisão na raiz ainda está por fazer.
 9. **Lockfile do painel regenerado.** O deploy usa `npm ci` e copia o
    `package-lock.json` para a pasta do cliente.
 
-## Última rodada: entregue, AGUARDANDO validação do Code
+## Última rodada: R0 concluída e validada (build real)
 
-**Páginas de autor `/autor/<slug>` nos 3 temas.** O ZIP atual já contém
-esta rodada, e o prompt completo para o Code está na conversa anterior.
+**Os 3 bugs da rodada de autor, corrigidos:**
+1. `PostLista.astro` — as 3 variantes (grade, destaque, minimalista) agora
+   mostram `{autor} · {data}` (antes só a data). Confirmado nos cards de
+   `/blog` e da home, nos 3 temas.
+2. `Tema04Base.astro` — `<link rel="sitemap">` apontava pro arquivo estático
+   antigo (`/sitemap-tema-04.xml`, já apagado pela promoção). Agora aponta
+   pro `/sitemap.xml` real, igual ao `ThemeBase.astro`/`Tema03Base.astro`.
+   Nenhum outro resíduo (`sitemap-tema`, `llms-tema`, `tema-0N.json`)
+   encontrado fora dos arquivos de catálogo esperados.
+3. `painel/app/api/usuarios/route.ts` — `emailLogin` só é exigido quando
+   `podeAcessar: true`. Teste da Ana refeito com o corpo original (sem
+   e-mail): `ok:true`, `ana-souza.md` gravado corretamente.
+
+Build real: 19/19/19 páginas e URLs no sitemap, nos 3 temas. `tsc --noEmit`
+e `npm run build` do painel sem erro.
+
+## Rodada de autor (concluída antes da R0)
+
+**Páginas de autor `/autor/<slug>` nos 3 temas.**
 Resumo:
 - Coleção `autores` (+T3/T4). O post referencia o autor pelo slug. O helper
   `_astro/src/lib/autores.ts` resolve o autor (aceita nome, para posts
@@ -153,29 +178,27 @@ Resumo:
   gravavam `descricao` em vez de `metaDescription`, o que quebrava o build.
 - Números esperados no build: **19 / 19 / 19** páginas (base, tema-03, tema-04).
 
-## Pendências, em ordem
+## Pendências, em ordem (agora executadas em rodadas R1-R6, ver plano ativo)
 
-1. **Validar a rodada de autor** com o Code (prompt na conversa anterior;
-   se for preciso, remontar a partir do resumo acima).
-2. **Página de categoria** `/<categoria>` nos 3 temas: coleção
+1. **Página de categoria** `/<categoria>` nos 3 temas: coleção
    `categorias`, sincronização a partir do `painel/data/categorias.json`,
    bloco compartilhado e **os 12 artigos mais recentes, sem paginação**
    (decisão). Mais a checagem de slug repetido na raiz, no build e no
    `guardiao_construtor`. Lembrar de incluir em `COLECOES` e
    `NOMES_BASE_LEGITIMOS` (se houver página) e na limpeza do
    `novo-cliente.sh`.
-3. **Privacidade no painel ligada ao `site.legal`:** as telas Política,
+2. **Privacidade no painel ligada ao `site.legal`:** as telas Política,
    Termos e Cookies (cerca de 1.700 linhas) não gravam no que o site publica.
-4. **`robots.txt` e `llms.txt` na criação do site:** o guardião exige, mas só
+3. **`robots.txt` e `llms.txt` na criação do site:** o guardião exige, mas só
    o painel cria (quando alguém salva a tela).
+4. **Varredura do que não foi auditado:** o fluxo das skills no caminho
+   Astro (`fase3-conteudo` → `site-atualizar` → `site-publicar`), as telas
+   de menus, formulários e leads, e o caminho WordPress. Checagem no
+   `guardiao_construtor`: post com `autor:` ou `categoria:` inexistente.
 5. **Teste de ponta a ponta no VPS de teste** (critério de "concluído"
    sugerido: a Torrez criada do zero pelo fluxo do agente, com site e painel
-   no ar, publicando um post pelo painel sem intervenção manual).
-6. **Varredura do que não foi auditado:** o fluxo das skills no caminho
-   Astro (`fase3-conteudo` → `site-atualizar` → `site-publicar`), as telas
-   de menus, formulários e leads, e o caminho WordPress.
-7. **Checagem opcional** no `guardiao_construtor`: post com `autor:` que não
-   existe em `content/autores`.
+   no ar, publicando um post pelo painel sem intervenção manual). **Pedir
+   autorização ao Lucas antes de tocar no VPS.**
 
 ## VPS de teste
 

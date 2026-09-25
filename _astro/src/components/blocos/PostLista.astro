@@ -78,7 +78,9 @@ const formatarData = (s: string) =>
                 <p class="font-semibold text-secondary group-hover:text-primary transition-colors leading-snug">
                   {p.titulo}
                 </p>
-                <p class="mt-auto pt-3 text-xs text-ink-muted">{formatarData(p.publicadoEm)}</p>
+                <p class="mt-auto pt-3 text-xs text-ink-muted">
+                  {p.autor && <>{p.autor} · </>}{formatarData(p.publicadoEm)}
+                </p>
               </div>
             </a>
           </li>
@@ -105,7 +107,9 @@ const formatarData = (s: string) =>
             <p class="text-xl font-bold text-secondary group-hover:text-primary transition-colors leading-snug">
               {principal.titulo}
             </p>
-            <p class="mt-auto pt-3 text-xs text-ink-muted">{formatarData(principal.publicadoEm)}</p>
+            <p class="mt-auto pt-3 text-xs text-ink-muted">
+              {principal.autor && <>{principal.autor} · </>}{formatarData(principal.publicadoEm)}
+            </p>
           </div>
         </a>
 
@@ -129,7 +133,9 @@ const formatarData = (s: string) =>
                     <p class="text-sm font-semibold text-secondary group-hover:text-primary transition-colors leading-snug">
                       {p.titulo}
                     </p>
-                    <p class="mt-1 text-xs text-ink-muted">{formatarData(p.publicadoEm)}</p>
+                    <p class="mt-1 text-xs text-ink-muted">
+                      {p.autor && <>{p.autor} · </>}{formatarData(p.publicadoEm)}
+                    </p>
                   </div>
                 </a>
               </li>
@@ -156,7 +162,9 @@ const formatarData = (s: string) =>
                   {p.titulo}
                 </span>
               </div>
-              <p class="shrink-0 text-xs text-ink-muted">{formatarData(p.publicadoEm)}</p>
+              <p class="shrink-0 text-xs text-ink-muted">
+                {p.autor && <>{p.autor} · </>}{formatarData(p.publicadoEm)}
+              </p>
             </a>
           </li>
         ))}

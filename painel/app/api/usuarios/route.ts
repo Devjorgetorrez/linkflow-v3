@@ -75,7 +75,9 @@ export async function POST(req: NextRequest) {
       nomePublico = body.nome ?? "";
     }
 
-    if (!emailLogin) {
+    // E-mail de login só é obrigatório para quem acessa o painel — um autor
+    // que só assina (podeAcessar: false) não loga, então não precisa dele.
+    if (podeAcessar && !emailLogin) {
       return NextResponse.json({ ok: false, erro: "E-mail obrigatório" }, { status: 400 });
     }
 
