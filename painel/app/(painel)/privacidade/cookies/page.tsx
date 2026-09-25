@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 import { useStore, type CookieConfig } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { AreaTexto, Campo, Entrada, Rotulo } from "@/components/ui";
+import type { LegalPainel } from "@/lib/legal";
 
 /* ------------------------------------------------------------------ */
 /* Texto padrão derivado das categorias ativas                          */
@@ -181,19 +182,33 @@ export default function CookiesPage() {
   const { cookieConfig: initConfig, setCookieConfig: salvarNoStore, politicaPublicada } = useStore();
   const [config, setConfigState] = useState(initConfig);
   const [aba, setAba] = useState<"banner" | "modal">("banner");
+  const [salvando, setSalvando] = useState(false);
 
-  // Pré-preencher descrição do banner com nome do site real
+  // Pré-preencher descrição do banner com nome do site real, e os textos
+  // de finalidade por categoria com o que já foi salvo em dados/legal.json
+  // (fonte de verdade — ver lib/legal.ts; entra também em legal.cookies[]
+  // do site, junto com a base legal/retenção definidas na tela Política).
   useEffect(() => {
     fetch("/api/config")
       .then((r) => r.json())
       .then((data) => {
         if (!data.ok || !data.config) return;
         const c = data.config;
-        // Atualizar apenas campos que existem no CookieConfig
         if (c.nome && !config.bannerDescricao) {
           setConfigState((prev) => ({
             ...prev,
             bannerDescricao: prev.bannerDescricao || `${c.nome} usa cookies para melhorar sua experiência.`,
+          }));
+        }
+        const lp: Partial<LegalPainel> = data.config.legalPainel ?? {};
+        if (lp.cookieAnaliticosFinalidade || lp.cookieMarketingFinalidade || lp.cookieFuncionaisFinalidade) {
+          setConfigState((prev) => ({
+            ...prev,
+            categorias: {
+              analiticos: lp.cookieAnaliticosFinalidade || prev.categorias.analiticos,
+              marketing: lp.cookieMarketingFinalidade || prev.categorias.marketing,
+              funcionais: lp.cookieFuncionaisFinalidade || prev.categorias.funcionais,
+            },
           }));
         }
       })
@@ -477,8 +492,27 @@ export default function CookiesPage() {
 
           <button
             type="button"
-            disabled={!politicaPublicada}
-            onClick={() => salvarNoStore(config)}
+            disabled={!politicaPublicada || salvando}
+            onClick={async () => {
+              salvarNoStore(config);
+              setSalvando(true);
+              try {
+                const legalPainel: Partial<LegalPainel> = {
+                  cookieAnaliticosFinalidade: config.categorias.analiticos,
+                  cookieMarketingFinalidade: config.categorias.marketing,
+                  cookieFuncionaisFinalidade: config.categorias.funcionais,
+                };
+                await fetch("/api/config", {
+                  method: "PATCH",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ legalPainel }),
+                });
+              } catch (err) {
+                console.error("[privacidade/cookies] falha ao salvar:", err);
+              } finally {
+                setSalvando(false);
+              }
+            }}
             className={cn(
               "w-full rounded-[var(--radius)] py-2.5 text-[13px] font-medium transition-colors",
               politicaPublicada
@@ -486,7 +520,7 @@ export default function CookiesPage() {
                 : "cursor-not-allowed bg-[var(--line)] text-[var(--ink-muted)]",
             )}
           >
-            Salvar configuração
+            {salvando ? "Salvando…" : "Salvar configuração"}
           </button>
 
         </div>

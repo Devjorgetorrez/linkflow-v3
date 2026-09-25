@@ -15,6 +15,7 @@ import {
   User,
 } from "lucide-react";
 import { useStore, type BaseLegal, type PrivacidadeConfig } from "@/lib/store";
+import type { LegalPainel } from "@/lib/legal";
 
 const BASES_LEGAIS: { id: BaseLegal; label: string; abrev: string }[] = [
   { id: "consentimento", label: "Consentimento (art. 7º, I)", abrev: "Consentimento" },
@@ -51,10 +52,11 @@ function Field({ children, className }: { children: React.ReactNode; className?:
 }
 
 function Input({
-  value, onChange, placeholder, disabled,
-}: { value: string; onChange?: (v: string) => void; placeholder?: string; disabled?: boolean }) {
+  value, onChange, placeholder, disabled, type,
+}: { value: string; onChange?: (v: string) => void; placeholder?: string; disabled?: boolean; type?: "text" | "date" }) {
   return (
     <input
+      type={type ?? "text"}
       value={value}
       onChange={onChange ? (e) => onChange(e.target.value) : undefined}
       placeholder={placeholder}
@@ -373,19 +375,35 @@ function Completeness({ cfg }: { cfg: PrivacidadeConfig }) {
 
 export default function PoliticaPage() {
   const { privacidadeConfig: cfg, setPrivacidadeConfig: set, aparencia, formularios } = useStore();
+  const [salvando, setSalvando] = useState(false);
+  const [salvo, setSalvo] = useState(false);
 
-  // Pré-preencher campos da política com dados reais do config
+  // Pré-preencher com o que já foi salvo em dados/legal.json (fonte de
+  // verdade — ver lib/legal.ts), e o e-mail real do config como reserva.
   useEffect(() => {
     fetch("/api/config")
       .then((r) => r.json())
       .then((data) => {
         if (!data.ok || !data.config) return;
         const c = data.config;
-        const legal = data.config.legal?.controlador ?? {};
+        const lp: Partial<LegalPainel> = data.config.legalPainel ?? {};
         const patch: Partial<PrivacidadeConfig> = {};
-        if (legal.cnpj && !cfg.cnpj) patch.cnpj = legal.cnpj;
-        if (legal.endereco && !cfg.endereco) patch.endereco = legal.endereco;
-        if (c.email && !cfg.emailContato) patch.emailContato = c.email;
+        if (lp.cnpj) patch.cnpj = lp.cnpj;
+        if (lp.endereco) patch.endereco = lp.endereco;
+        if (lp.emailContato) patch.emailContato = lp.emailContato;
+        else if (c.email && !cfg.emailContato) patch.emailContato = c.email;
+        if (lp.dpNome) patch.dpNome = lp.dpNome;
+        if (lp.dpEmail) patch.dpEmail = lp.dpEmail;
+        if (lp.baseLegalFormularios) patch.baseLegalFormularios = lp.baseLegalFormularios as BaseLegal;
+        if (lp.retencaoFormularios) patch.retencaoFormularios = lp.retencaoFormularios;
+        if (lp.baseLegalAnaliticos) patch.baseLegalAnaliticos = lp.baseLegalAnaliticos as BaseLegal;
+        if (lp.retencaoAnaliticos) patch.retencaoAnaliticos = lp.retencaoAnaliticos;
+        if (lp.baseLegalMarketing) patch.baseLegalMarketing = lp.baseLegalMarketing as BaseLegal;
+        if (lp.retencaoMarketing) patch.retencaoMarketing = lp.retencaoMarketing;
+        if (lp.transferenciaInternacional !== undefined) patch.transferenciaInternacional = lp.transferenciaInternacional;
+        if (lp.paisesTransferencia) patch.paisesTransferencia = lp.paisesTransferencia;
+        if (lp.versaoPolitica) patch.versao = lp.versaoPolitica;
+        if (lp.atualizadaEm) patch.dataVersao = lp.atualizadaEm;
         if (Object.keys(patch).length > 0) set(patch);
       })
       .catch(console.error);
@@ -394,6 +412,43 @@ export default function PoliticaPage() {
   const set1 = (key: keyof PrivacidadeConfig) => (v: string | boolean) =>
     set({ [key]: v } as Partial<PrivacidadeConfig>);
 
+  async function salvar() {
+    setSalvando(true);
+    try {
+      const legalPainel: Partial<LegalPainel> = {
+        cnpj: cfg.cnpj,
+        endereco: cfg.endereco,
+        emailContato: cfg.emailContato,
+        dpNome: cfg.dpNome,
+        dpEmail: cfg.dpEmail,
+        baseLegalFormularios: cfg.baseLegalFormularios,
+        retencaoFormularios: cfg.retencaoFormularios,
+        baseLegalAnaliticos: cfg.baseLegalAnaliticos,
+        retencaoAnaliticos: cfg.retencaoAnaliticos,
+        baseLegalMarketing: cfg.baseLegalMarketing,
+        retencaoMarketing: cfg.retencaoMarketing,
+        transferenciaInternacional: cfg.transferenciaInternacional,
+        paisesTransferencia: cfg.paisesTransferencia,
+        versaoPolitica: cfg.versao,
+        atualizadaEm: cfg.dataVersao,
+      };
+      const r = await fetch("/api/config", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ legalPainel }),
+      });
+      const data = await r.json();
+      if (data.ok) {
+        setSalvo(true);
+        setTimeout(() => setSalvo(false), 2200);
+      }
+    } catch (err) {
+      console.error("[privacidade/politica] falha ao salvar:", err);
+    } finally {
+      setSalvando(false);
+    }
+  }
+
   return (
     <div className="flex min-h-screen gap-6 p-6" style={{ background: "var(--surface)" }}>
       {/* ── Left: controls ── */}
@@ -401,13 +456,24 @@ export default function PoliticaPage() {
         {/* Header */}
         <div className="flex items-center gap-3">
           <FileText size={20} style={{ color: "var(--primary)" }} />
-          <div>
+          <div className="min-w-0">
             <h1 className="text-lg font-bold leading-tight" style={{ color: "var(--ink)" }}>
               Política de Privacidade
             </h1>
             <p className="text-xs mt-0.5" style={{ color: "var(--ink-muted)" }}>
               Gerada automaticamente a partir das configurações do site
             </p>
+          </div>
+          <div className="ml-auto flex items-center gap-2 shrink-0">
+            {salvo && <span className="text-xs" style={{ color: "var(--success)" }}>Salvo — publica no próximo build</span>}
+            <button
+              onClick={salvar}
+              disabled={salvando}
+              className="rounded px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+              style={{ background: "var(--primary)" }}
+            >
+              {salvando ? "Salvando…" : "Salvar"}
+            </button>
           </div>
         </div>
 
@@ -627,9 +693,9 @@ export default function PoliticaPage() {
             <Field>
               <Label>Data de entrada em vigor</Label>
               <Input
+                type="date"
                 value={cfg.dataVersao}
                 onChange={set1("dataVersao")}
-                placeholder="DD/MM/AAAA"
               />
             </Field>
           </div>

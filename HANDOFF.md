@@ -147,9 +147,55 @@ bloqueia a colisão antes de reportar "pronto").
     apontar `<link rel="sitemap">` pro `/sitemap.xml` real; `emailLogin` em
     `api/usuarios` só é exigido quando `podeAcessar: true` (autor que só
     assina não precisa de e-mail de login).
-11. **R1 — Página de categoria `/<slug>` nos 3 temas**, ver detalhe abaixo.
+11. **R1 — Página de categoria `/<slug>` nos 3 temas**, ver resumo no
+    histórico de rodadas abaixo.
+12. **R2 — Privacidade do painel ligada ao `site.legal`**, ver detalhe abaixo.
 
-## Última rodada: R1 concluída e validada (build real)
+## Última rodada: R2 concluída e validada (build real)
+
+**As 3 telas Privacidade (Política, Termos, Cookies) agora gravam de
+verdade no `site.legal` que o site publica** — antes eram só estado local
+do React, nunca chegavam a lugar nenhum (nem no `config/site.ts`, nem
+persistido entre sessões).
+
+- `dados/legal.json` (via `lib/dados.ts`, mesmo padrão de leads/formulários)
+  é a fonte de verdade da UI — as 3 telas leem/gravam nele. `config/site.ts`'s
+  `legal: {...}` passou a ser um **artefato gerado**: `painel/lib/legal.ts`
+  (`gerarBlocoLegal`) monta o bloco inteiro a cada `PATCH /api/config` com
+  `legalPainel`, e o bloco é substituído por inteiro (contagem de chaves,
+  não regex guloso — evita parar na primeira `}` errada dentro dos arrays).
+- Decisões de produto confirmadas com o Lucas antes de implementar
+  (mapeamento não era 1:1, teria feito documento legal errado se eu
+  adivinhasse):
+  - `legal.cookies[]` é sintetizado das telas Política (base legal +
+    retenção por categoria) e Cookies (texto de finalidade por categoria).
+  - `legal.transferenciaInternacional` (frase completa no schema do site) é
+    gerada a partir do toggle + campo "países/empresas" da tela Política.
+  - `legal.termos.foro` (`{cidade, uf}`) — a tela Termos trocou o campo
+    livre "jurisdição" por 2 campos (`foroCidade`/`foroUf`), 1:1 com o schema.
+  - Datas (`atualizadaEm`, `vigenciaDesde`) viraram `<input type="date">`
+    nas 2 telas — garante ISO (`yyyy-mm-dd`) sem parser frágil de "DD/MM/AAAA".
+- `formularios[]` do documento vem de `dados/formularios.json` de verdade
+  (lido no servidor a cada PATCH), nunca inventado nem editado na tela.
+- `controlador.razaoSocial` vem de `site.nome` (a tela já tratava esse
+  campo como espelho readonly do nome do site — não criei campo novo).
+- Nenhum campo vazio vira texto inventado — igual ao resto do `site.legal`,
+  campo vazio bloqueia a publicação (regra já existente do `ConteudoLegal`).
+- Botão "Salvar" novo nas telas Política e Termos (não existia — só a tela
+  Cookies tinha, e só salvava local). As 3 agora persistem no servidor.
+
+Build real: `tsc --noEmit` e `npm run build` do painel sem erro. Teste
+fim-a-fim: `PATCH /api/config` com dados reais de teste (CNPJ, endereço,
+foro, versão, transferência internacional, textos de cookie) → conferido
+o `config/site.ts` regenerado campo a campo → `npm run build` do site →
+HTML de `/politica-de-privacidade` e `/termos-de-uso` conferido com os
+dados novos (CNPJ, endereço, versão, foro cidade/UF, finalidade e base
+legal de cada cookie), sem "Publicação bloqueada", com `exemplo: true`
+preservado.
+
+## Rodada R1 (concluída antes da R2)
+
+**Página de categoria `/<slug>` nos 3 temas.**
 
 **Página de categoria `/<slug>` nos 3 temas**, mesmo padrão da rodada de autor:
 - Coleção `categorias` (+T3/T4): `nome`, `descricao`, `seoTitle`,
@@ -220,21 +266,19 @@ Resumo:
   gravavam `descricao` em vez de `metaDescription`, o que quebrava o build.
 - Números esperados no build: **19 / 19 / 19** páginas (base, tema-03, tema-04).
 
-## Pendências, em ordem (rodadas R2-R6, plano ativo)
+## Pendências, em ordem (rodadas R3-R6, plano ativo)
 
-1. **R2 — Privacidade no painel ligada ao `site.legal`:** as telas Política,
-   Termos e Cookies (cerca de 1.700 linhas) não gravam no que o site publica.
-2. **R3 — `robots.txt` e `llms.txt` na criação do site:** o guardião exige, mas só
+1. **R3 — `robots.txt` e `llms.txt` na criação do site:** o guardião exige, mas só
    o painel cria (quando alguém salva a tela).
-3. **R4 — Varredura do que não foi auditado:** o fluxo das skills no caminho
+2. **R4 — Varredura do que não foi auditado:** o fluxo das skills no caminho
    Astro (`fase3-conteudo` → `site-atualizar` → `site-publicar`), as telas
    de menus, formulários e leads, e o caminho WordPress. Checagem no
    `guardiao_construtor`: post com `autor:` ou `categoria:` inexistente.
-4. **R5 — Teste de ponta a ponta no VPS de teste** (critério de "concluído"
+3. **R5 — Teste de ponta a ponta no VPS de teste** (critério de "concluído"
    sugerido: a Torrez criada do zero pelo fluxo do agente, com site e painel
    no ar, publicando um post pelo painel sem intervenção manual). **Pedir
    autorização ao Lucas antes de tocar no VPS.**
-5. **R6 — Fechamento:** `HANDOFF.md` final e resumo do que ficou pronto/pendente.
+4. **R6 — Fechamento:** `HANDOFF.md` final e resumo do que ficou pronto/pendente.
 
 ## VPS de teste
 

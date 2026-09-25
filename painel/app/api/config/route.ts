@@ -13,6 +13,9 @@ import fs from "fs";
 import path from "path";
 import { getConfigPath, getSiteSlug } from "@/lib/fs";
 import { verificarAcesso } from "@/lib/auth";
+import { lerDados, salvarDados } from "@/lib/dados";
+import { gerarBlocoLegal, LEGAL_PAINEL_INICIAL, type LegalPainel } from "@/lib/legal";
+import type { Formulario } from "@/mock/types";
 
 // ─── Helpers de leitura ────────────────────────────────────────────────────────
 
@@ -141,8 +144,12 @@ export async function GET(req: NextRequest) {
       tiktok: redes.tiktok ?? "",
       // Horários
       horarios,
-      // Legal
+      // Legal (bloco gerado, só leitura — a fonte de verdade da UI é legalPainel)
       legal: lerLegal(raw),
+      // Legal — modelo simplificado que as telas Privacidade editam/salvam
+      // (dados/legal.json). O bloco `legal:` acima é regenerado a partir
+      // deste a cada PATCH — ver lib/legal.ts.
+      legalPainel: lerDados<LegalPainel>("legal.json", LEGAL_PAINEL_INICIAL),
       // Analytics e verificações (opcionais — adicionados ao config quando preenchidos)
       googleAnalyticsId: lerCampoSimples(raw, "googleAnalyticsId"),
       metaPixelId: lerCampoSimples(raw, "metaPixelId"),
@@ -244,6 +251,50 @@ export async function PATCH(req: NextRequest) {
           `$1'${val}'`
         );
       }
+    }
+
+    // Legal (Política, Termos, Cookies) — salva o modelo simplificado em
+    // dados/legal.json (fonte de verdade da UI) e regenera por inteiro o
+    // bloco `legal: {...}` no config/site.ts a partir dele.
+    if (body.legalPainel !== undefined) {
+      const atual = lerDados<LegalPainel>("legal.json", LEGAL_PAINEL_INICIAL);
+      const novo: LegalPainel = { ...atual, ...body.legalPainel };
+      salvarDados("legal.json", novo);
+
+      const formularios = lerDados<Formulario[]>("formularios.json", []).map((f) => ({
+        nome: f.nome,
+        campos: f.campos.map((c) => c.rotulo).join(", "),
+        finalidade: `Responder à solicitação enviada pelo formulário "${f.nome}"`,
+      }));
+
+      const exemploMatch = raw.match(/legal:\s*\{[\s\S]*?exemplo:\s*(true|false)/);
+      const exemploAtual = exemploMatch ? exemploMatch[1] === "true" : false;
+      const razaoSocial = lerCampoSimples(raw, "nome");
+
+      const blocoNovo = gerarBlocoLegal(novo, { exemploAtual, formularios, razaoSocial });
+
+      // Substitui o bloco `legal: { ... }` inteiro (do "legal: {" até o "}"
+      // que fecha ele, contando chaves — o bloco tem arrays de objetos
+      // aninhados, um regex guloso pararia na primeira "}" errada).
+      const inicioTag = "legal: {";
+      const inicio = raw.indexOf(inicioTag);
+      if (inicio === -1) {
+        return NextResponse.json({ ok: false, erro: "Bloco 'legal:' não encontrado no config/site.ts" }, { status: 500 });
+      }
+      const abre = inicio + inicioTag.length - 1;
+      let depth = 0;
+      let fim = -1;
+      for (let i = abre; i < raw.length; i++) {
+        if (raw[i] === "{") depth++;
+        else if (raw[i] === "}") {
+          depth--;
+          if (depth === 0) { fim = i; break; }
+        }
+      }
+      if (fim === -1) {
+        return NextResponse.json({ ok: false, erro: "Bloco 'legal:' malformado no config/site.ts" }, { status: 500 });
+      }
+      raw = raw.slice(0, inicio) + "legal: {\n" + blocoNovo + "\n  }" + raw.slice(fim + 1);
     }
 
     fs.writeFileSync(filePath, raw, "utf-8");
