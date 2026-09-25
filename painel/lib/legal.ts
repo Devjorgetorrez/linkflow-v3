@@ -66,6 +66,7 @@ export interface LegalPainel {
   cookieMarketingFinalidade: string;
   cookieFuncionaisFinalidade: string;
   // Termos de uso (tela Termos)
+  naoSubstitui: string; // texto do NICHO do cliente — nunca genérico (ver gerarBlocoLegal)
   foroCidade: string;
   foroUf: string;
   vigenciaDesde: string; // ISO (yyyy-mm-dd)
@@ -90,6 +91,7 @@ export const LEGAL_PAINEL_INICIAL: LegalPainel = {
   cookieAnaliticosFinalidade: "Google Analytics 4 — mede visitas, origem do tráfego e comportamento de navegação.",
   cookieMarketingFinalidade: "Meta Pixel e Google Ads — usados para exibir anúncios relevantes em outras plataformas.",
   cookieFuncionaisFinalidade: "Incorporações de mapa e vídeo que precisam de cookies para funcionar.",
+  naoSubstitui: "",
   foroCidade: "",
   foroUf: "",
   vigenciaDesde: "",
@@ -141,7 +143,7 @@ function gerarEncarregado(p: LegalPainel): { nomeado: boolean; canal: string; ob
  */
 export function gerarBlocoLegal(
   p: LegalPainel,
-  ctx: { exemploAtual: boolean; formularios: FormularioResumo[]; razaoSocial: string },
+  ctx: { exemploAtual: boolean; formularios: FormularioResumo[]; razaoSocial: string; naoSubstituiAtual: string },
 ): string {
   const encarregado = gerarEncarregado(p);
   const linhas: string[] = [];
@@ -287,8 +289,16 @@ export function gerarBlocoLegal(
   linhas.push("    ],");
   linhas.push("");
 
+  // naoSubstitui é texto do NICHO do cliente (ex: "não substitui consulta
+  // médica" vs "não substitui aconselhamento jurídico") — o agente
+  // costuma escrevê-lo na Fase 3, antes de existir tela pra isso. Nunca
+  // sobrescrever com frase genérica: se o painel não tem valor, preserva
+  // o que já está no site.ts; se não havia nada, fica vazio mesmo
+  // (ConteudoLegal.astro bloqueia a publicação até alguém preencher —
+  // regra de sempre, nunca inventar texto).
+  const naoSubstitui = p.naoSubstitui.trim() || ctx.naoSubstituiAtual;
   linhas.push("    termos: {");
-  linhas.push(linha("naoSubstitui", "O conteúdo deste site tem finalidade informativa e não substitui o atendimento profissional prestado pelo negócio. Para o seu caso específico, procure os canais de contato do site.", "      "));
+  linhas.push(linha("naoSubstitui", naoSubstitui, "      "));
   linhas.push(`      foro: { cidade: '${escaparAspaSimples(p.foroCidade)}', uf: '${escaparAspaSimples(p.foroUf)}' },`);
   linhas.push(linha("vigenciaDesde", p.vigenciaDesde, "      "));
   linhas.push("    },");

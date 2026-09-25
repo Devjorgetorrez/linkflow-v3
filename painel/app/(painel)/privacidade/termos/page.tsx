@@ -123,8 +123,12 @@ function TermosDoc({
       </TermItem>
 
       <TermItem n="2" title="NATUREZA DO CONTEÚDO">
-        O conteúdo disponível neste site é de caráter exclusivamente informativo e não substitui o
-        atendimento profissional. Para o seu caso específico, entre em contato pelos canais do site.
+        {cfg.naoSubstitui || (
+          <span style={{ color: "var(--danger)" }}>
+            ⚠️ Preencha "O que este site não substitui" abaixo — este texto é específico do seu
+            negócio (ex: não substitui consulta médica, não substitui aconselhamento jurídico).
+          </span>
+        )}
       </TermItem>
 
       <TermItem n="3" title="CONTATO">
@@ -320,6 +324,7 @@ export default function TermosPage() {
         }
         const lp: Partial<LegalPainel> = data.config?.legalPainel ?? {};
         const patch: Partial<TermosConfig> = {};
+        if (lp.naoSubstitui) patch.naoSubstitui = lp.naoSubstitui;
         if (lp.foroCidade) patch.foroCidade = lp.foroCidade;
         if (lp.foroUf) patch.foroUf = lp.foroUf;
         if (lp.vigenciaDesde) patch.dataVersao = lp.vigenciaDesde;
@@ -334,6 +339,7 @@ export default function TermosPage() {
     setSalvando(true);
     try {
       const legalPainel: Partial<LegalPainel> = {
+        naoSubstitui: cfg.naoSubstitui,
         foroCidade: cfg.foroCidade,
         foroUf: cfg.foroUf,
         vigenciaDesde: cfg.dataVersao,
@@ -426,6 +432,22 @@ export default function TermosPage() {
           )}
 
           {/* config fields — always visible so user can fill before activating */}
+          <div className="flex flex-col gap-1">
+            <Label required>O que este site não substitui</Label>
+            <p className="text-xs -mt-0.5" style={{ color: "var(--ink-muted)" }}>
+              Texto específico do seu negócio — não é genérico. Ex: "não substitui consulta médica,
+              diagnóstico ou tratamento" (saúde), "não substitui aconselhamento jurídico" (advocacia).
+            </p>
+            <textarea
+              value={cfg.naoSubstitui}
+              onChange={(e) => set({ naoSubstitui: e.target.value })}
+              rows={3}
+              placeholder="O conteúdo deste site tem finalidade informativa e não substitui..."
+              className="w-full rounded border px-3 py-2 text-sm"
+              style={{ borderColor: "var(--line)", background: "var(--surface-2)", color: "var(--ink)" }}
+            />
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1">
               <Label>Cidade do foro</Label>

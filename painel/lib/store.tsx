@@ -312,6 +312,7 @@ interface Estado {
 
 export interface TermosConfig {
   ativo: boolean;
+  naoSubstitui: string;
   foroCidade: string;
   foroUf: string;
   versao: string;
@@ -321,6 +322,7 @@ export interface TermosConfig {
 
 const TERMOS_CONFIG_INICIAL: TermosConfig = {
   ativo: false,
+  naoSubstitui: "",
   foroCidade: "",
   foroUf: "",
   versao: "1.0",

@@ -91,11 +91,14 @@ para o Astro.
 
 ### 2.1 Ler o frontmatter do artigo gerado
 
-Extrair do arquivo `.md` ou `.html`:
+Extrair do arquivo `.md` ou `.html`, já com o nome de campo FINAL do site
+(schema `posts` em `_astro/src/content.config.ts` — nunca o nome do
+gerador WordPress, mesmo como nome intermediário: já causou o build
+quebrar antes por usar `descricao`/`imagemHero` em vez do campo real):
 - `title` → `titulo`
-- `description` → `descricao`
+- `description` → `metaDescription` (nunca `descricao`)
 - `focuskw` → `palavraChave`
-- `coverImage` → `imagemHero` (se existir)
+- `coverImage` → `imagemCapa` (nunca `imagemHero` — se existir)
 - data de publicação → `publicadoEm`
 
 ### 2.2 Converter HTML para Markdown (se necessário)

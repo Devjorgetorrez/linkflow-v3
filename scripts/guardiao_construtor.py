@@ -370,6 +370,35 @@ def verificar_saida(slug):
                     "os demais ficam inacessiveis). Troque o slug do que perde a prioridade."
                 )
 
+        # ── Post com autor:/categoria: inexistente (aviso, nao bloqueia) ────
+        # O site aceita autor/categoria fora da colecao (mostra o texto sem
+        # link — lib/autores.ts e lib/categorias.ts, fallback pra posts
+        # antigos), entao nao e erro fatal. Mas geralmente e slug digitado
+        # errado ou autor/categoria que devia existir e nao existe — vale
+        # avisar em vez de passar batido.
+        autores_dir = content_dir / "autores"
+        autores_existentes = {md.stem for md in autores_dir.glob("*.md")} if autores_dir.exists() else set()
+        categorias_existentes = {md.stem for md in categorias}
+
+        for md in posts:
+            texto = md.read_text(encoding="utf-8", errors="ignore")
+            m_autor = re.search(r"^autor:[ \t]*[\"']?([^\"'\n]+?)[\"']?[ \t]*$", texto, re.MULTILINE)
+            if m_autor:
+                autor_valor = m_autor.group(1).strip()
+                if autor_valor and autor_valor not in autores_existentes:
+                    avisos.append(
+                        f"{md.name}: autor '{autor_valor}' nao existe em content/autores/ — "
+                        "aparece no artigo sem link pro perfil. Confira se o slug esta certo."
+                    )
+            m_cat = re.search(r"^categoria:[ \t]*[\"']?([^\"'\n]+?)[\"']?[ \t]*$", texto, re.MULTILINE)
+            if m_cat:
+                cat_valor = m_cat.group(1).strip()
+                if cat_valor and cat_valor not in categorias_existentes:
+                    avisos.append(
+                        f"{md.name}: categoria '{cat_valor}' nao existe em content/categorias/ — "
+                        "aparece no artigo sem link pra pagina da categoria. Confira se o slug esta certo."
+                    )
+
     # ── Arquivos técnicos de SEO ──────────────────────────────────────────────
     # robots.txt e llms.txt nascem automaticamente no build (a integração
     # _astro/integracoes/sitemap-canonico.mjs gera um básico se ainda não

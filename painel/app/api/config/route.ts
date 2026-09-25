@@ -270,8 +270,13 @@ export async function PATCH(req: NextRequest) {
       const exemploMatch = raw.match(/legal:\s*\{[\s\S]*?exemplo:\s*(true|false)/);
       const exemploAtual = exemploMatch ? exemploMatch[1] === "true" : false;
       const razaoSocial = lerCampoSimples(raw, "nome");
+      // naoSubstitui pode ter sido escrito pelo agente na Fase 3 (texto do
+      // nicho do cliente) antes de qualquer edição pelo painel — preservar
+      // se a tela Termos ainda não tem valor próprio (ver gerarBlocoLegal).
+      const naoSubstituiMatch = raw.match(/termos:\s*\{\s*naoSubstitui:\s*'((?:[^'\\]|\\.)*)'/);
+      const naoSubstituiAtual = naoSubstituiMatch ? naoSubstituiMatch[1].replace(/\\'/g, "'").replace(/\\\\/g, "\\") : "";
 
-      const blocoNovo = gerarBlocoLegal(novo, { exemploAtual, formularios, razaoSocial });
+      const blocoNovo = gerarBlocoLegal(novo, { exemploAtual, formularios, razaoSocial, naoSubstituiAtual });
 
       // Substitui o bloco `legal: { ... }` inteiro (do "legal: {" até o "}"
       // que fecha ele, contando chaves — o bloco tem arrays de objetos

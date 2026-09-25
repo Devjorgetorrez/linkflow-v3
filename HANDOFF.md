@@ -151,9 +151,59 @@ bloqueia a colisão antes de reportar "pronto").
     histórico de rodadas abaixo.
 12. **R2 — Privacidade do painel ligada ao `site.legal`**, ver resumo no
     histórico de rodadas abaixo.
-13. **R3 — `robots.txt`/`llms.txt` desde o primeiro build**, ver detalhe abaixo.
+13. **R3 — `robots.txt`/`llms.txt` desde o primeiro build**, ver resumo no
+    histórico de rodadas abaixo.
+14. **R4 — Varredura pós-implementação**, ver detalhe abaixo.
 
-## Última rodada: R3 concluída e validada (build real)
+## Última rodada: R4 concluída e validada (build real)
+
+**Varredura do que não tinha sido auditado ainda — achou 2 bugs reais,
+não só "nada encontrado":**
+
+1. **Regressão da R2, achada ao reler `fase3-conteudo`:** a skill documenta
+   que o agente escreve `site.legal.termos.naoSubstitui` com texto
+   ESPECÍFICO DO NICHO do cliente (ex: "não substitui consulta médica" vs
+   "não substitui aconselhamento jurídico") durante a Fase 3 — mas o
+   `gerarBlocoLegal()` da R2 sempre sobrescrevia esse campo com uma frase
+   genérica fixa, toda vez que qualquer uma das 3 telas Privacidade fosse
+   salva. Ou seja: cliente astro com painel ativo perderia o texto do
+   nicho na primeira edição de QUALQUER campo legal, mesmo um não
+   relacionado (ex: só mudar o foro já apagava o texto médico/jurídico
+   específico). Corrigido: `LegalPainel` ganhou o campo `naoSubstitui`
+   (editável agora na tela Termos, textarea nova); se a tela não tem
+   valor, o gerador preserva o que já existe no `config/site.ts` em vez
+   de inventar texto genérico — nunca inventar é a regra de sempre.
+   Testado com build real: `PATCH` só de `foroCidade`/`foroUf` (sem tocar
+   em `naoSubstitui`) preservou o texto médico original palavra por
+   palavra.
+2. **Resíduo em `site-publicar`:** o Passo 2.1 (extração do frontmatter do
+   gerador WordPress) mandava mapear `coverImage → imagemHero`, mas o
+   campo real do schema `posts` é `imagemCapa` — `imagemHero` nem existe
+   na coleção, o Zod removeria o campo em silêncio (mesma classe de bug
+   que já quebrou o build antes, por isso a própria skill já tinha a
+   regra "nunca `imagemHero`" mais adiante, sem que a etapa 2.1 seguisse
+   essa regra). Corrigido: a etapa de extração agora já usa os nomes
+   finais do schema (`metaDescription`, `imagemCapa`), nunca um nome
+   intermediário que discorda da regra declarada na mesma skill.
+3. **Checagem nova no `guardiao_construtor.py`:** post com `autor:` ou
+   `categoria:` que não existe em `content/autores/`/`content/categorias/`
+   agora gera aviso (não bloqueia — o site já suporta autor/categoria
+   fora da coleção, mostrando sem link) na saída da Fase 3.
+4. **Áreas conferidas e já corretas, sem achado:** `site-atualizar`
+   (sincroniza `_astro/src/` inteiro via rsync, não hardcoda nome de
+   campo — robusta a mudança de schema por design); menus/formulários/
+   leads do painel (já usam `/api/menus`, `/api/formularios`, `/api/leads`
+   reais, não mock — confirma o item 7 do "Concluído"); caminho WordPress
+   (`blog-publicar` não referencia nomes de campo do schema Astro —
+   arquiteturalmente isolado, baixo risco).
+
+Build real: 22/22/21 páginas nos 3 temas (sem mudança de contagem — só
+correção de bug). `tsc --noEmit` e `npm run build` do painel sem erro.
+`py_compile` no `guardiao_construtor.py` limpo.
+
+## Rodada R3 (concluída antes da R4)
+
+**`robots.txt`/`llms.txt` desde o primeiro build.**
 
 **`robots.txt` e `llms.txt` agora nascem automaticamente no primeiro
 build**, antes de qualquer edição no painel — o guardião exigia os dois,
@@ -295,17 +345,13 @@ Resumo:
   gravavam `descricao` em vez de `metaDescription`, o que quebrava o build.
 - Números esperados no build: **19 / 19 / 19** páginas (base, tema-03, tema-04).
 
-## Pendências, em ordem (rodadas R4-R6, plano ativo)
+## Pendências, em ordem (rodadas R5-R6, plano ativo)
 
-1. **R4 — Varredura do que não foi auditado:** o fluxo das skills no caminho
-   Astro (`fase3-conteudo` → `site-atualizar` → `site-publicar`), as telas
-   de menus, formulários e leads, e o caminho WordPress. Checagem no
-   `guardiao_construtor`: post com `autor:` ou `categoria:` inexistente.
-2. **R5 — Teste de ponta a ponta no VPS de teste** (critério de "concluído"
+1. **R5 — Teste de ponta a ponta no VPS de teste** (critério de "concluído"
    sugerido: a Torrez criada do zero pelo fluxo do agente, com site e painel
    no ar, publicando um post pelo painel sem intervenção manual). **Pedir
    autorização ao Lucas antes de tocar no VPS.**
-3. **R6 — Fechamento:** `HANDOFF.md` final e resumo do que ficou pronto/pendente.
+2. **R6 — Fechamento:** `HANDOFF.md` final e resumo do que ficou pronto/pendente.
 
 ## VPS de teste
 
