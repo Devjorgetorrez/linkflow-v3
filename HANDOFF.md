@@ -1,4 +1,4 @@
-# Handoff — SiteFlow CMS / LinkFlow (Jorge Torrez) — v2 (25/09/2026)
+# Handoff — SiteFlow CMS / LinkFlow (Jorge Torrez) — v3 (25/09/2026, R6 fechamento)
 
 > **Mudança de fluxo (25/09/2026):** a partir da rodada R0, o modelo de duas
 > sessões (chat edita / Code valida) foi encerrado. `C:\Projetos\linkflow-completo`
@@ -154,6 +154,38 @@ bloqueia a colisão antes de reportar "pronto").
 13. **R3 — `robots.txt`/`llms.txt` desde o primeiro build**, ver resumo no
     histórico de rodadas abaixo.
 14. **R4 — Varredura pós-implementação**, ver detalhe abaixo.
+
+## R6 — Fechamento (25/09/2026)
+
+**R5 (teste de ponta a ponta no VPS de teste) foi pulada a pedido do
+Lucas** — não por falha, nem por bloqueio técnico. Perguntei explicitamente
+via confirmação antes de tocar no VPS (regra "Quando parar e perguntar") e
+a resposta foi "não, pular a R5 por agora". Fica como pendência única,
+pronta pra rodar quando for autorizada — nada no código depende dela pra
+R0-R4 estarem corretas: cada uma foi validada por build real isolado, não
+pelo teste de VPS.
+
+**Estado final do repositório:** git limpo, working tree sem pendência,
+5 commits desde o início do fluxo de sessão única (`bc70a98` rodada de
+autor → `85ed0c1` R4), nada não commitado.
+
+**Resumo do que ficou pronto (R0-R4), todos com build real + commit:**
+
+| Rodada | Entrega | Validação |
+|---|---|---|
+| R0 | 3 bugs corrigidos: autor sumido nos cards de post, link de sitemap morto no tema-04, e-mail de login exigido indevidamente | build 19/19/19, HTML conferido |
+| R1 | Página de categoria `/<slug>` nos 3 temas + sincronização no painel | build 22/22/21, JSON-LD, colisão de slug testada |
+| R2 | Telas Privacidade do painel gravam de verdade em `site.legal` (antes só estado local, não persistia) | `tsc`+build painel OK, PATCH→build site→HTML conferido campo a campo |
+| R3 | `robots.txt`/`llms.txt` nascem no primeiro build, antes do painel existir | 2 cenários testados (ausente/customizado) |
+| R4 | Varredura: achou e corrigiu regressão da R2 (`naoSubstitui` sendo sobrescrito) + resíduo em `site-publicar` (`imagemHero`→`imagemCapa`) + checagem nova de autor/categoria órfão no guardião | build 22/22/21 sem mudança de contagem, `tsc`+build painel OK |
+
+**Pendência única: R5 — teste de ponta a ponta no VPS de teste**
+(`[IP-REMOVIDO]`, `LINKFLOW_DIR: /opt/linkflow-teste`,
+`LINKFLOW_SLUG: torrez-desentupidora`). Critério de "concluído": Torrez
+criada do zero pelo fluxo do agente (`novo-cliente.sh` → promoção → build
+do site e do painel), site e painel no ar, publicando um post pelo painel
+sem intervenção manual. **Precisa de autorização explícita do Lucas antes
+de qualquer ação no VPS** — nenhuma ação de VPS foi tomada até aqui.
 
 ## Última rodada: R4 concluída e validada (build real)
 
@@ -345,13 +377,16 @@ Resumo:
   gravavam `descricao` em vez de `metaDescription`, o que quebrava o build.
 - Números esperados no build: **19 / 19 / 19** páginas (base, tema-03, tema-04).
 
-## Pendências, em ordem (rodadas R5-R6, plano ativo)
+## Pendências, em ordem
 
-1. **R5 — Teste de ponta a ponta no VPS de teste** (critério de "concluído"
-   sugerido: a Torrez criada do zero pelo fluxo do agente, com site e painel
-   no ar, publicando um post pelo painel sem intervenção manual). **Pedir
-   autorização ao Lucas antes de tocar no VPS.**
-2. **R6 — Fechamento:** `HANDOFF.md` final e resumo do que ficou pronto/pendente.
+1. **R5 — Teste de ponta a ponta no VPS de teste** (única pendência ativa,
+   pulada a pedido do Lucas em 25/09/2026 — não por falha). Critério de
+   "concluído": a Torrez criada do zero pelo fluxo do agente, com site e
+   painel no ar, publicando um post pelo painel sem intervenção manual.
+   **Pedir autorização ao Lucas antes de tocar no VPS**, retomando esta
+   sessão ou uma nova com este `HANDOFF.md`.
+
+R6 (este fechamento) está concluída — ver seção "R6 — Fechamento" acima.
 
 ## VPS de teste
 
