@@ -1,0 +1,53 @@
+---
+/**
+ * Prova — diferenciais em grade (4 cards com ícone texto + título + descrição)
+ * Empty state: não renderiza se itens.length === 0 ou sem titulo.
+ */
+
+interface Item {
+  icone:    string
+  titulo:   string
+  descricao: string
+}
+
+interface Props {
+  titulo?:   string
+  descricao?: string
+  itens:     Item[]
+}
+
+const { titulo, descricao, itens = [] } = Astro.props
+
+if (itens.length === 0) return
+---
+
+<section class="bg-primary py-[var(--space-section)]">
+  <div class="container-wide">
+    {(titulo || descricao) && (
+      <div class="mb-10 text-center">
+        {titulo && (
+          <h2 class="text-[clamp(1.5rem,3vw,2.125rem)] font-bold text-primary-ink">
+            {titulo}
+          </h2>
+        )}
+        {descricao && (
+          <p class="mt-2 text-base text-primary-ink/75">{descricao}</p>
+        )}
+      </div>
+    )}
+
+    <ul class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 list-none p-0 m-0">
+      {itens.map(item => (
+        <li class="rounded-[var(--radius-card)] bg-primary-ink/10 p-6 border border-primary-ink/20">
+          <div class="mb-4 flex h-10 w-10 items-center justify-center rounded-[var(--radius-btn)] bg-primary-ink/15">
+            <span class="text-xs font-mono font-bold text-primary-ink select-none" aria-hidden="true">
+              {item.icone.slice(0, 2).toUpperCase()}
+            </span>
+          </div>
+          <p class="font-semibold text-primary-ink mb-2">{item.titulo}</p>
+          <p class="text-sm text-primary-ink/75 leading-relaxed">{item.descricao}</p>
+        </li>
+      ))}
+    </ul>
+  </div>
+</section>

@@ -1,0 +1,166 @@
+---
+/**
+ * PostLista — variantes: grade | destaque | minimalista
+ * Empty state: não renderiza se posts.length === 0.
+ */
+
+interface Post {
+  titulo:       string
+  publicadoEm:  string
+  categoria?:   string
+  imagemCapa?:  string
+  imagemCapaAlt?: string
+  autor?:       string
+  href:         string
+}
+
+interface Props {
+  variante?:  'grade' | 'destaque' | 'minimalista'
+  titulo?:    string
+  descricao?: string
+  posts:      Post[]
+  verMaisHref?: string
+}
+
+const {
+  variante   = 'grade',
+  titulo,
+  descricao,
+  posts      = [],
+  verMaisHref,
+} = Astro.props
+
+if (posts.length === 0) return
+
+const [principal, ...demais] = posts
+
+const formatarData = (s: string) =>
+  new Date(s + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
+---
+
+<section class="py-[var(--space-section)] bg-surface">
+  <div class="container-wide">
+    {(titulo || descricao) && (
+      <div class="mb-10 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          {titulo && (
+            <h2 class="text-[clamp(1.625rem,3vw,2.25rem)] font-bold text-secondary">{titulo}</h2>
+          )}
+          {descricao && (
+            <p class="mt-1 text-base text-ink-muted">{descricao}</p>
+          )}
+        </div>
+        {verMaisHref && (
+          <a href={verMaisHref}
+             class="text-sm font-semibold text-primary no-underline hover:underline shrink-0">
+            Ver todos os artigos →
+          </a>
+        )}
+      </div>
+    )}
+
+    {/* grade */}
+    {variante === 'grade' && (
+      <ul class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 list-none p-0 m-0">
+        {posts.map(p => (
+          <li>
+            <a href={p.href} class="group flex flex-col rounded-[var(--radius-card)] border border-line bg-surface-2 overflow-hidden no-underline hover:-translate-y-0.5 hover:shadow-md transition-all">
+              {p.imagemCapa && (
+                <div class="aspect-video overflow-hidden">
+                  <img src={p.imagemCapa} alt={p.imagemCapaAlt ?? p.titulo}
+                       width="400" height="225" class="h-full w-full object-cover" loading="lazy" />
+                </div>
+              )}
+              <div class="flex flex-col flex-1 p-5">
+                {p.categoria && (
+                  <p class="mb-2 text-xs font-semibold uppercase tracking-wider text-primary">{p.categoria}</p>
+                )}
+                <p class="font-semibold text-secondary group-hover:text-primary transition-colors leading-snug">
+                  {p.titulo}
+                </p>
+                <p class="mt-auto pt-3 text-xs text-ink-muted">{formatarData(p.publicadoEm)}</p>
+              </div>
+            </a>
+          </li>
+        ))}
+      </ul>
+    )}
+
+    {/* destaque: primeiro grande + demais menores */}
+    {variante === 'destaque' && (
+      <div class="grid gap-6 lg:grid-cols-[1fr_340px]">
+        {/* Card principal */}
+        <a href={principal.href}
+           class="group flex flex-col rounded-[var(--radius-card)] border border-line bg-surface-2 overflow-hidden no-underline hover:shadow-lg transition-all">
+          {principal.imagemCapa && (
+            <div class="aspect-video overflow-hidden">
+              <img src={principal.imagemCapa} alt={principal.imagemCapaAlt ?? principal.titulo}
+                   width="760" height="427" class="h-full w-full object-cover" loading="lazy" />
+            </div>
+          )}
+          <div class="p-6 flex flex-col flex-1">
+            {principal.categoria && (
+              <p class="mb-2 text-xs font-semibold uppercase tracking-wider text-primary">{principal.categoria}</p>
+            )}
+            <p class="text-xl font-bold text-secondary group-hover:text-primary transition-colors leading-snug">
+              {principal.titulo}
+            </p>
+            <p class="mt-auto pt-3 text-xs text-ink-muted">{formatarData(principal.publicadoEm)}</p>
+          </div>
+        </a>
+
+        {/* Lista dos demais */}
+        {demais.length > 0 && (
+          <ul class="list-none p-0 m-0 flex flex-col divide-y divide-line">
+            {demais.map(p => (
+              <li>
+                <a href={p.href}
+                   class="group flex gap-4 py-4 no-underline items-start hover:text-primary transition-colors">
+                  {p.imagemCapa && (
+                    <div class="w-20 shrink-0 aspect-square overflow-hidden rounded-[var(--radius-btn)]">
+                      <img src={p.imagemCapa} alt={p.imagemCapaAlt ?? p.titulo}
+                           width="80" height="80" class="h-full w-full object-cover" loading="lazy" />
+                    </div>
+                  )}
+                  <div class="min-w-0">
+                    {p.categoria && (
+                      <p class="mb-1 text-[10px] font-semibold uppercase tracking-wider text-primary">{p.categoria}</p>
+                    )}
+                    <p class="text-sm font-semibold text-secondary group-hover:text-primary transition-colors leading-snug">
+                      {p.titulo}
+                    </p>
+                    <p class="mt-1 text-xs text-ink-muted">{formatarData(p.publicadoEm)}</p>
+                  </div>
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    )}
+
+    {/* minimalista: lista simples sem imagens */}
+    {variante === 'minimalista' && (
+      <ul class="list-none p-0 m-0 divide-y divide-line max-w-[720px]">
+        {posts.map(p => (
+          <li>
+            <a href={p.href}
+               class="group flex items-center justify-between gap-4 py-4 no-underline hover:text-primary transition-colors">
+              <div class="min-w-0">
+                {p.categoria && (
+                  <span class="text-[10px] font-semibold uppercase tracking-wider text-primary mr-2">
+                    {p.categoria}
+                  </span>
+                )}
+                <span class="text-sm font-semibold text-secondary group-hover:text-primary transition-colors">
+                  {p.titulo}
+                </span>
+              </div>
+              <p class="shrink-0 text-xs text-ink-muted">{formatarData(p.publicadoEm)}</p>
+            </a>
+          </li>
+        ))}
+      </ul>
+    )}
+  </div>
+</section>

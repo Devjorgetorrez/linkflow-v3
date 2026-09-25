@@ -1,0 +1,69 @@
+{
+  "nome": "HealthCare Institutional",
+  "versao": "1.0.0",
+  "descricao": "Tema de referência SiteFlow para clínicas e serviços de saúde. Paleta verde médica, tipografia Plus Jakarta Sans + Inter, 7 tipos de página.",
+  "tokens": {
+    "primary":     "#0D7A62",
+    "primary-ink": "#FFFFFF",
+    "secondary":   "#0B3E32",
+    "accent":      "#2DC4A4",
+    "ink":         "#1A2838",
+    "ink-muted":   "#64748B",
+    "surface":     "#FFFFFF",
+    "surface-2":   "#EEF4F7",
+    "line":        "#DCE8EC",
+    "success":     "#15803D",
+    "danger":      "#DC2626"
+  },
+  "tipografia": {
+    "display": "Plus Jakarta Sans",
+    "body":    "Inter",
+    "pesos":   { "display": [600, 700], "body": [400, 500, 600, 700] }
+  },
+  "paginas": {
+    "home": {
+      "blocos": [
+        "Header:padrao",
+        "Hero:imagem",
+        "Servicos:grade",
+        "Prova",
+        "Equipe:grade",
+        "Depoimentos",
+        "Cta:padrao",
+        "Faq:padrao",
+        "PostLista:destaque",
+        "Footer:colunas"
+      ]
+    },
+    "pilar": {
+      "blocos": ["Header:padrao", "Hero:editorial", "Servicos:lista", "Faq:duas-colunas", "Cta:card", "Footer:padrao"]
+    },
+    "servico": {
+      "blocos": ["Header:padrao", "Hero:split", "Servicos:destaque", "Equipe:lista", "Faq:padrao", "Cta:padrao", "Footer:padrao"]
+    },
+    "sobre": {
+      "blocos": ["Header:padrao", "Hero:texto", "Equipe:grade", "Prova", "Depoimentos", "Footer:colunas"]
+    },
+    "contato": {
+      "blocos": ["Header:padrao", "Hero:texto", "Cta:card", "Footer:minimal"]
+    },
+    "blog-listagem": {
+      "blocos": ["Header:padrao", "Hero:editorial", "PostLista:grade", "Footer:minimal"]
+    },
+    "artigo": {
+      "blocos": ["Header:padrao", "Hero:editorial", "PostLista:minimalista", "Cta:card", "Footer:minimal"]
+    },
+    "politica-de-privacidade": {
+      "rota": "/politica-de-privacidade",
+      "blocos": ["Header:padrao", "PageHero", "ConteudoLegal:politica", "Footer:escuro"],
+      "ancoras_obrigatorias": ["#cookies", "#direitos"],
+      "campos_cliente_preenchidos_com_exemplo": true,
+      "observacao": "§6.2 — em site real os cinco campos preenchidos pelo cliente não têm texto padrão e campo vazio bloqueia a publicação. Aqui estão preenchidos com exemplo, marcado na própria página."
+    },
+    "termos-de-uso": {
+      "rota": "/termos-de-uso",
+      "blocos": ["Header:padrao", "PageHero", "ConteudoLegal:termos", "Footer:escuro"],
+      "observacao": "Obrigatória (regra do Jorge — uma das 4 institucionais da lista fechada do fase3-conteudo). Indexável. Documento próprio com as 7 seções do guardiao_institucionais (objeto e aceite, uso permitido e proibido, propriedade intelectual, limitação de responsabilidade, não substitui o atendimento profissional, foro, vigência); remete à política sem reproduzi-la. Campos do cliente em site.legal.termos — campo vazio bloqueia a publicação."
+    }
+  }
+}

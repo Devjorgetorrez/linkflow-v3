@@ -1,0 +1,96 @@
+---
+/**
+ * Depoimentos — grade de cards com nome + cidade + serviço realizado
+ * Sem aggregateRating markup (§2.1 — profissão de saúde regulamentada).
+ * Empty state: não renderiza se itens.length === 0.
+ */
+
+interface Depoimento {
+  nome:    string
+  cidade:  string
+  servico: string
+  corpo:   string
+}
+
+interface Props {
+  titulo?:    string
+  descricao?: string
+  itens:      Depoimento[]
+  /* Selo de nota agregada (opcional). Omitido, nada muda — é assim que
+     Tema 01 e Tema 03 continuam renderizando. Não emite aggregateRating
+     em JSON-LD: quem decide isso é a página, conforme o nicho. */
+  notaMedia?:       string
+  totalAvaliacoes?: string
+  fonteAvaliacoes?: string
+}
+
+const {
+  titulo,
+  descricao,
+  itens = [],
+  notaMedia,
+  totalAvaliacoes,
+  fonteAvaliacoes,
+} = Astro.props
+
+if (itens.length === 0) return
+
+const temSelo = Boolean(notaMedia || totalAvaliacoes)
+---
+
+<section class="py-[var(--space-section)] bg-surface">
+  <div class="container-wide">
+    {(titulo || descricao) && (
+      <div class="mb-10 text-center">
+        {titulo && (
+          <h2 class="text-[clamp(1.625rem,3vw,2.25rem)] font-bold text-secondary">{titulo}</h2>
+        )}
+        {descricao && (
+          <p class="mt-2 text-base text-ink-muted max-w-[560px] mx-auto">{descricao}</p>
+        )}
+      </div>
+    )}
+
+    {temSelo && (
+      <div class="mx-auto mb-10 flex w-fit flex-wrap items-center justify-center gap-x-6 gap-y-3 rounded-[var(--radius-card)] border border-line bg-surface-2 px-7 py-4">
+        {notaMedia && (
+          <div class="flex items-center gap-2.5">
+            <span class="font-display text-2xl font-bold text-secondary">{notaMedia}</span>
+            <span class="flex gap-0.5 text-accent" aria-hidden="true">
+              {[1,2,3,4,5].map(() => (
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2l2.9 6.26 6.85.72-5.1 4.6 1.42 6.72L12 16.9l-6.07 3.4 1.42-6.72-5.1-4.6 6.85-.72z"/>
+                </svg>
+              ))}
+            </span>
+          </div>
+        )}
+        {totalAvaliacoes && (
+          <p class="text-sm text-ink-muted">
+            <strong class="font-semibold text-secondary">{totalAvaliacoes}</strong>
+            {fonteAvaliacoes ? ` ${fonteAvaliacoes}` : ' avaliações'}
+          </p>
+        )}
+      </div>
+    )}
+
+    <ul class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 list-none p-0 m-0">
+      {itens.map(dep => (
+        <li class="flex flex-col rounded-[var(--radius-card)] border border-line bg-surface-2 p-6">
+          {/* Aspas decorativas */}
+          <div class="mb-4 text-4xl font-serif leading-none text-primary/30 select-none" aria-hidden="true">
+            &ldquo;
+          </div>
+          <blockquote class="flex-1 text-sm text-ink leading-relaxed mb-6">
+            {dep.corpo}
+          </blockquote>
+          <footer class="mt-auto border-t border-line pt-4">
+            <p class="font-semibold text-secondary text-sm">{dep.nome}</p>
+            <p class="text-xs text-ink-muted mt-0.5">{dep.cidade}</p>
+            <p class="text-xs text-primary font-medium mt-1">{dep.servico}</p>
+          </footer>
+        </li>
+      ))}
+    </ul>
+  </div>
+</section>

@@ -1,0 +1,119 @@
+---
+/**
+ * AreaAtendida — cobertura geográfica do serviço.
+ *
+ * Corresponde ao tipo de página `area-atendida` do §3.3 do MD, aqui como
+ * bloco reusável. Em serviço local, "vocês atendem meu bairro?" é a primeira
+ * pergunta do visitante — e responder isso na página evita um contato perdido.
+ *
+ * Deliberadamente SEM campo de busca: um select com botão que não consulta
+ * nada seria controle morto, e o handoff do projeto lista isso como armadilha
+ * ("vai ter em breve" em vez de construir ou remover). As regiões aparecem
+ * como lista real, que é a informação que o visitante procura.
+ *
+ * Empty state: não renderiza se regioes.length === 0.
+ */
+
+interface Props {
+  eyebrow?:    string
+  titulo:      string
+  descricao?:  string
+  regioes:     string[]
+  bullets?:    string[]
+  imagem?:     string
+  imagemAlt?:  string
+  selo?:       string
+  ctaTexto?:   string
+  ctaHref?:    string
+  nota?:       string
+}
+
+const {
+  eyebrow,
+  titulo,
+  descricao,
+  regioes  = [],
+  bullets  = [],
+  imagem,
+  imagemAlt = '',
+  selo,
+  ctaTexto,
+  ctaHref,
+  nota,
+} = Astro.props
+
+if (regioes.length === 0) return
+---
+
+<section class="bg-surface py-[var(--space-section)]">
+  <div class="container-wide">
+    <div class="grid gap-10 lg:grid-cols-[420px_1fr] lg:items-center lg:gap-14">
+
+      {/* ── Visual ── */}
+      <div class="relative overflow-hidden rounded-[var(--radius-card)] bg-secondary">
+        {imagem
+          ? <img src={imagem} alt={imagemAlt} width="420" height="480"
+                 class="aspect-[7/8] w-full object-cover opacity-85" loading="lazy" />
+          : <div class="aspect-[7/8] w-full" aria-hidden="true"></div>}
+
+        {selo && (
+          <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-secondary to-transparent p-6 pt-16">
+            <p class="font-display text-xl font-bold leading-tight text-surface">{selo}</p>
+          </div>
+        )}
+      </div>
+
+      {/* ── Conteúdo ── */}
+      <div>
+        {eyebrow && (
+          <p class="mb-2 text-xs font-semibold uppercase tracking-widest text-primary">{eyebrow}</p>
+        )}
+
+        <h2 class="font-display text-[clamp(1.5rem,3vw,2.125rem)] font-bold leading-tight text-secondary">
+          {titulo}
+        </h2>
+
+        {descricao && (
+          <p class="mt-3 max-w-[60ch] text-base leading-relaxed text-ink-muted">{descricao}</p>
+        )}
+
+        <ul class="mt-7 m-0 flex list-none flex-wrap gap-2 p-0">
+          {regioes.map(r => (
+            <li class="rounded-[var(--radius-pill)] border border-line bg-surface-2 px-3.5 py-1.5 text-sm text-ink">
+              {r}
+            </li>
+          ))}
+        </ul>
+
+        {bullets.length > 0 && (
+          <ul class="mt-7 m-0 flex list-none flex-col gap-2.5 p-0">
+            {bullets.map(b => (
+              <li class="flex gap-2.5 text-sm leading-snug text-ink">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2.5" class="mt-0.5 shrink-0 text-success" aria-hidden="true">
+                  <path d="m5 13 4 4L19 7"/>
+                </svg>
+                <span>{b}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {nota && <p class="mt-6 text-sm text-ink-muted">{nota}</p>}
+
+        {ctaTexto && ctaHref && (
+          <a href={ctaHref}
+             target={ctaHref.startsWith('http') ? '_blank' : undefined}
+             rel={ctaHref.startsWith('http') ? 'noopener noreferrer' : undefined}
+             class="mt-7 inline-flex items-center gap-2.5 rounded-[var(--radius-pill)] bg-success px-7 py-3.5 text-sm font-bold uppercase tracking-wide text-white no-underline transition-opacity hover:opacity-90">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12 0C5.373 0 0 5.373 0 12c0 2.126.555 4.124 1.526 5.856L.057 23.75a.5.5 0 0 0 .606.643l6.094-1.598A11.938 11.938 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0z"/>
+            </svg>
+            {ctaTexto}
+          </a>
+        )}
+      </div>
+
+    </div>
+  </div>
+</section>

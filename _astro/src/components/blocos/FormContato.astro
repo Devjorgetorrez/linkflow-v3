@@ -1,0 +1,337 @@
+---
+/**
+ * FormContato — formulário de contato + canais de atendimento
+ *
+ * variantes:
+ *   padrao        — formulário com labels e select de assunto à esquerda,
+ *                   cards de canal + card de localização à direita.
+ *                   Comportamento original; default, então o Tema 01 não muda.
+ *   institucional — card de formulário com campos pill (label em sr-only, como
+ *                   na referência de serviço profissional) e, à direita, bloco
+ *                   "Nossos contatos" em grade 2x2 de ícones circulares cheios
+ *                   mais botão de WhatsApp em largura total.
+ *                   Ignora `assuntos`: a referência não tem campo de assunto.
+ */
+
+interface Props {
+  variante?:   'padrao' | 'institucional'
+  telefone?:   string
+  telefone2?:  string
+  whatsapp?:   string
+  email?:      string
+  logradouro?: string
+  complemento?: string
+  bairro?:     string
+  cidade?:     string
+  uf?:         string
+  cep?:        string
+  horarios?:   { dia: string; hora: string }[]
+  assuntos?:   string[]
+  /* institucional */
+  eyebrow?:    string
+  titulo?:     string
+  descricao?:  string
+  chamada?:    string
+}
+
+const {
+  variante  = 'padrao',
+  telefone,
+  telefone2,
+  whatsapp,
+  email,
+  logradouro,
+  complemento,
+  bairro,
+  cidade,
+  uf,
+  cep,
+  horarios  = [],
+  assuntos  = ['Agendamento de Consulta', 'Informações sobre convênios', 'Exames e laudos', 'Telemedicina', 'Outro'],
+  eyebrow   = 'Fale com nossa equipe',
+  titulo    = 'Nossos contatos',
+  descricao = 'Envie uma mensagem para esclarecer suas dúvidas. Retornamos o mais breve possível.',
+  chamada   = 'Não fique com dúvidas, fale conosco',
+} = Astro.props
+
+const waHref = whatsapp ? `https://wa.me/${whatsapp.replace(/\D/g, '')}` : undefined
+
+const campoPill = 'w-full rounded-[var(--radius-pill)] border border-line bg-surface px-5 py-3 text-sm text-ink placeholder:text-ink-muted/70 outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20'
+
+const enderecoLinha = [logradouro, complemento].filter(Boolean).join(', ')
+const cidadeLinha   = [bairro, [cidade, uf].filter(Boolean).join(' — '), cep && `CEP ${cep}`].filter(Boolean).join(' · ')
+---
+
+{variante === 'padrao' && (
+<section class="bg-surface-2 py-[var(--space-section)]">
+  <div class="container-wide">
+    <div class="grid gap-8 lg:grid-cols-[1fr_380px] lg:items-start">
+
+      {/* ── Formulário ── */}
+      <div class="rounded-[var(--radius-card)] border border-line bg-surface p-8">
+        <h2 class="text-xl font-bold text-secondary mb-6">Envie uma Mensagem</h2>
+
+        <form class="space-y-4" novalidate>
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label for="nome" class="mb-1.5 block text-xs font-medium text-ink">Nome Completo</label>
+              <input id="nome" type="text" name="nome" placeholder="João da Silva" autocomplete="name"
+                     class="w-full rounded-[var(--radius-btn)] border border-line bg-surface-2 px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-muted/60 outline-none transition-colors focus:border-primary focus:bg-surface" />
+            </div>
+            <div>
+              <label for="email" class="mb-1.5 block text-xs font-medium text-ink">E-mail</label>
+              <input id="email" type="email" name="email" placeholder="joao@exemplo.com" autocomplete="email"
+                     class="w-full rounded-[var(--radius-btn)] border border-line bg-surface-2 px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-muted/60 outline-none transition-colors focus:border-primary focus:bg-surface" />
+            </div>
+          </div>
+
+          <div>
+            <label for="telefone" class="mb-1.5 block text-xs font-medium text-ink">Telefone</label>
+            <input id="telefone" type="tel" name="telefone" placeholder="(11) 99999-9999" autocomplete="tel"
+                   class="w-full rounded-[var(--radius-btn)] border border-line bg-surface-2 px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-muted/60 outline-none transition-colors focus:border-primary focus:bg-surface" />
+          </div>
+
+          <div>
+            <label for="assunto" class="mb-1.5 block text-xs font-medium text-ink">Assunto</label>
+            <select id="assunto" name="assunto"
+                    class="w-full rounded-[var(--radius-btn)] border border-line bg-surface-2 px-3.5 py-2.5 text-sm text-ink outline-none transition-colors focus:border-primary focus:bg-surface appearance-none">
+              {assuntos.map(a => <option value={a}>{a}</option>)}
+            </select>
+          </div>
+
+          <div>
+            <label for="mensagem" class="mb-1.5 block text-xs font-medium text-ink">Mensagem:</label>
+            <textarea id="mensagem" name="mensagem" rows={5} placeholder="Como podemos ajudar?"
+                      class="w-full rounded-[var(--radius-btn)] border border-line bg-surface-2 px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-muted/60 outline-none transition-colors focus:border-primary focus:bg-surface resize-y" />
+          </div>
+
+          <button type="submit"
+                  class="flex w-full items-center justify-center gap-2 rounded-[var(--radius-btn)] bg-primary px-6 py-3 text-sm font-semibold text-primary-ink transition-opacity hover:opacity-90">
+            Enviar Mensagem
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+            </svg>
+          </button>
+        </form>
+      </div>
+
+      {/* ── Canais + Info ── */}
+      <div class="space-y-4">
+        {/* Cards de canal */}
+        <div class="grid grid-cols-2 gap-3">
+          {waHref && (
+            <a href={waHref} target="_blank" rel="noopener noreferrer"
+               class="flex flex-col items-center gap-2 rounded-[var(--radius-card)] border border-line bg-surface p-4 text-center no-underline transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md">
+              <div class="flex h-10 w-10 items-center justify-center rounded-full bg-[#25D366]/15">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="#25D366" aria-hidden="true">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12 0C5.373 0 0 5.373 0 12c0 2.126.555 4.124 1.526 5.856L.057 23.75a.5.5 0 0 0 .606.643l6.094-1.598A11.938 11.938 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.75a9.717 9.717 0 0 1-5.078-1.427l-.363-.216-3.768.988.988-3.655-.237-.378A9.718 9.718 0 0 1 2.25 12C2.25 6.615 6.615 2.25 12 2.25S21.75 6.615 21.75 12 17.385 21.75 12 21.75z"/>
+                </svg>
+              </div>
+              <div>
+                <p class="text-sm font-semibold text-secondary">WhatsApp</p>
+                <p class="text-xs text-ink-muted">Resposta Rápida</p>
+              </div>
+            </a>
+          )}
+
+          {telefone && (
+            <a href={`tel:${telefone.replace(/\D/g,'')}`}
+               class="flex flex-col items-center gap-2 rounded-[var(--radius-card)] border border-line bg-surface p-4 text-center no-underline transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md">
+              <div class="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-primary" aria-hidden="true">
+                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.38 2 2 0 0 1 3.6 1.18h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 8.72a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                </svg>
+              </div>
+              <div>
+                <p class="text-sm font-semibold text-secondary">Telefone</p>
+                <p class="text-xs text-ink-muted">Atendimento 24h</p>
+              </div>
+            </a>
+          )}
+        </div>
+
+        {/* Card localização + horários */}
+        <div class="rounded-[var(--radius-card)] border border-line bg-surface p-6 space-y-4">
+          {(logradouro || cidade) && (
+            <div>
+              <div class="flex items-center gap-2 mb-2">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="shrink-0 text-primary" aria-hidden="true">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                  <circle cx="12" cy="10" r="3"/>
+                </svg>
+                <p class="text-sm font-semibold text-secondary">Localização</p>
+              </div>
+              <address class="not-italic pl-[23px] text-sm text-ink leading-relaxed">
+                {logradouro && <span class="block">{logradouro}{complemento ? ` — ${complemento}` : ''}</span>}
+                {cidade && <span class="block text-ink-muted">{cidade}{uf ? ` — ${uf}` : ''}{cep ? `, ${cep}` : ''}</span>}
+              </address>
+            </div>
+          )}
+
+          {horarios.length > 0 && (
+            <div class="border-t border-line pt-4">
+              <div class="flex items-center gap-2 mb-2">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="shrink-0 text-primary" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10"/>
+                  <polyline points="12 6 12 12 16 14"/>
+                </svg>
+                <p class="text-sm font-semibold text-secondary">Horário de Funcionamento</p>
+              </div>
+              <ul class="pl-[23px] space-y-1 list-none p-0 m-0">
+                {horarios.map(h => (
+                  <li class="flex items-center justify-between text-sm gap-4">
+                    <span class="text-ink-muted">{h.dia}</span>
+                    <span class:list={['font-semibold tabular-nums', h.hora === 'Fechado' ? 'text-danger' : 'text-secondary']}>
+                      {h.hora === 'Fechado' ? 'Fechado' : h.hora.replace(' às ', ' – ')}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+)}
+
+{variante === 'institucional' && (
+<section class="bg-surface py-[var(--space-section)]">
+  <div class="container-wide">
+    <div class="grid gap-12 lg:grid-cols-2 lg:items-start lg:gap-16">
+
+      {/* ── Card do formulário ── */}
+      <div class="rounded-[var(--radius-card)] border border-line bg-surface p-8 shadow-[0_4px_24px_rgba(15,41,66,0.07)]">
+        <p class="text-sm font-bold uppercase tracking-wide text-primary">{eyebrow}</p>
+        <p class="mt-3 text-sm leading-relaxed text-ink-muted">{descricao}</p>
+
+        <form class="mt-6 space-y-3.5" novalidate>
+          <div>
+            <label for="fc-nome" class="sr-only">Seu nome</label>
+            <input id="fc-nome" type="text" name="nome" placeholder="Seu nome" autocomplete="name" class={campoPill} />
+          </div>
+          <div>
+            <label for="fc-email" class="sr-only">Seu e-mail</label>
+            <input id="fc-email" type="email" name="email" placeholder="Seu e-mail" autocomplete="email" class={campoPill} />
+          </div>
+          <div>
+            <label for="fc-tel" class="sr-only">Seu telefone ou WhatsApp</label>
+            <input id="fc-tel" type="tel" name="telefone" placeholder="Seu telefone ou WhatsApp" autocomplete="tel" class={campoPill} />
+          </div>
+          <div>
+            <label for="fc-msg" class="sr-only">Sua mensagem</label>
+            <textarea id="fc-msg" name="mensagem" rows={4} placeholder="Sua mensagem"
+                      class="w-full resize-y rounded-[var(--radius-card)] border border-line bg-surface px-5 py-3.5 text-sm text-ink placeholder:text-ink-muted/70 outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20" />
+          </div>
+
+          <button type="submit"
+                  class="rounded-[var(--radius-pill)] bg-primary px-8 py-3.5 text-sm font-bold uppercase tracking-wide text-primary-ink transition-opacity hover:opacity-90">
+            Enviar mensagem
+          </button>
+        </form>
+      </div>
+
+      {/* ── Nossos contatos ── */}
+      <div>
+        <div class="flex items-center gap-3">
+          <span class="h-0.5 w-10 shrink-0 bg-secondary" aria-hidden="true"></span>
+          <p class="text-sm text-ink-muted">{chamada}</p>
+        </div>
+
+        <h2 class="mt-2 font-display text-[clamp(1.25rem,2.5vw,1.625rem)] font-bold uppercase tracking-wide text-secondary">
+          {titulo}
+        </h2>
+
+        <dl class="mt-8 grid gap-x-6 gap-y-7 sm:grid-cols-2">
+
+          {(enderecoLinha || cidadeLinha) && (
+            <div class="flex items-start gap-4">
+              <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary text-primary-ink" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+                </svg>
+              </span>
+              <div class="min-w-0 pt-1">
+                <dt class="sr-only">Endereço</dt>
+                <dd class="m-0 text-sm leading-snug text-ink">
+                  {enderecoLinha}
+                  {cidadeLinha && <span class="mt-0.5 block text-ink-muted">{cidadeLinha}</span>}
+                </dd>
+              </div>
+            </div>
+          )}
+
+          {telefone && (
+            <div class="flex items-start gap-4">
+              <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary text-primary-ink" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.38 2 2 0 0 1 3.6 1.18h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 8.72a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                </svg>
+              </span>
+              <div class="min-w-0 pt-1">
+                <dt class="sr-only">Telefone</dt>
+                <dd class="m-0 text-sm leading-snug">
+                  <a href={`tel:${telefone.replace(/\D/g,'')}`} class="text-ink no-underline hover:text-primary">{telefone}</a>
+                  {telefone2 && (
+                    <a href={`tel:${telefone2.replace(/\D/g,'')}`} class="mt-0.5 block text-ink-muted no-underline hover:text-primary">{telefone2}</a>
+                  )}
+                </dd>
+              </div>
+            </div>
+          )}
+
+          {email && (
+            <div class="flex items-start gap-4">
+              <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary text-primary-ink" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/>
+                </svg>
+              </span>
+              <div class="min-w-0 pt-1">
+                <dt class="sr-only">E-mail</dt>
+                <dd class="m-0 text-sm leading-snug">
+                  <a href={`mailto:${email}`} class="break-all text-ink no-underline hover:text-primary">{email}</a>
+                </dd>
+              </div>
+            </div>
+          )}
+
+          {horarios.length > 0 && (
+            <div class="flex items-start gap-4">
+              <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary text-primary-ink" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                </svg>
+              </span>
+              <div class="min-w-0 pt-1">
+                <dt class="sr-only">Horário de atendimento</dt>
+                <dd class="m-0 text-sm leading-snug">
+                  {horarios.map(h => (
+                    <span class="block">
+                      <strong class="font-semibold text-secondary">{h.dia}:</strong>{' '}
+                      <span class="text-ink-muted">{h.hora}</span>
+                    </span>
+                  ))}
+                </dd>
+              </div>
+            </div>
+          )}
+
+        </dl>
+
+        {waHref && (
+          <a href={waHref} target="_blank" rel="noopener noreferrer"
+             class="mt-9 flex w-full items-center justify-center gap-2.5 rounded-[var(--radius-btn)] bg-success px-6 py-3.5 text-sm font-bold uppercase tracking-wide text-white no-underline transition-opacity hover:opacity-90">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12 0C5.373 0 0 5.373 0 12c0 2.126.555 4.124 1.526 5.856L.057 23.75a.5.5 0 0 0 .606.643l6.094-1.598A11.938 11.938 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0z"/>
+            </svg>
+            Se preferir, chame no WhatsApp
+          </a>
+        )}
+      </div>
+
+    </div>
+  </div>
+</section>
+)}

@@ -1,0 +1,91 @@
+---
+/**
+ * Equipe — variantes: grade | lista
+ * Empty state: não renderiza se membros.length === 0.
+ * Foto ausente: iniciais do nome como avatar.
+ */
+
+interface Membro {
+  nome:          string
+  cargo:         string
+  crm?:          string
+  especialidade?: string
+  foto?:         string
+}
+
+interface Props {
+  variante?:  'grade' | 'lista'
+  titulo?:    string
+  descricao?: string
+  membros:    Membro[]
+}
+
+const {
+  variante  = 'grade',
+  titulo,
+  descricao,
+  membros   = [],
+} = Astro.props
+
+if (membros.length === 0) return
+
+const iniciais = (nome: string) =>
+  nome.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()
+---
+
+<section class="bg-surface-2 py-[var(--space-section)]">
+  <div class="container-wide">
+    {(titulo || descricao) && (
+      <div class="mb-10 text-center">
+        {titulo && (
+          <h2 class="text-[clamp(1.625rem,3vw,2.25rem)] font-bold text-secondary">{titulo}</h2>
+        )}
+        {descricao && (
+          <p class="mt-2 text-base text-ink-muted max-w-[560px] mx-auto">{descricao}</p>
+        )}
+      </div>
+    )}
+
+    {variante === 'grade' && (
+      <ul class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 list-none p-0 m-0">
+        {membros.map(m => (
+          <li class="flex flex-col items-center rounded-[var(--radius-card)] border border-line bg-surface p-8 text-center">
+            {/* Foto ou avatar com iniciais */}
+            <div class="mb-4 h-20 w-20 overflow-hidden rounded-[var(--radius-pill)] bg-primary/10 flex items-center justify-center shrink-0">
+              {m.foto
+                ? <img src={m.foto} alt={m.nome} width="80" height="80" class="h-full w-full object-cover" loading="lazy" />
+                : <span class="text-xl font-bold text-primary select-none">{iniciais(m.nome)}</span>
+              }
+            </div>
+            <p class="font-bold text-secondary">{m.nome}</p>
+            <p class="mt-0.5 text-sm text-primary font-medium">{m.cargo}</p>
+            {m.crm && <p class="mt-0.5 text-xs text-ink-muted">{m.crm}</p>}
+            {m.especialidade && (
+              <p class="mt-2 text-sm text-ink-muted leading-relaxed">{m.especialidade}</p>
+            )}
+          </li>
+        ))}
+      </ul>
+    )}
+
+    {variante === 'lista' && (
+      <ul class="list-none p-0 m-0 divide-y divide-line">
+        {membros.map(m => (
+          <li class="flex items-center gap-5 py-5">
+            <div class="h-14 w-14 overflow-hidden rounded-[var(--radius-pill)] bg-primary/10 flex items-center justify-center shrink-0">
+              {m.foto
+                ? <img src={m.foto} alt={m.nome} width="56" height="56" class="h-full w-full object-cover" loading="lazy" />
+                : <span class="text-base font-bold text-primary select-none">{iniciais(m.nome)}</span>
+              }
+            </div>
+            <div class="min-w-0">
+              <p class="font-bold text-secondary">{m.nome}</p>
+              <p class="text-sm text-primary font-medium">{m.cargo}</p>
+              {m.crm && <p class="text-xs text-ink-muted">{m.crm}</p>}
+            </div>
+          </li>
+        ))}
+      </ul>
+    )}
+  </div>
+</section>

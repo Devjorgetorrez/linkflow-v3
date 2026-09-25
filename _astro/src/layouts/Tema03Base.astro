@@ -1,0 +1,58 @@
+---
+/**
+ * Tema03Base — layout do Tema 03 (Vértice Institucional).
+ *
+ * data-tema="tema-03" no <html> ativa o escopo de tokens definido no fim de
+ * src/styles/tokens.css. O Tema 01 continua usando os tokens globais — nenhum
+ * token é sobrescrito fora deste escopo.
+ */
+import '../styles/global.css'
+
+interface Props {
+  titulo:          string
+  metaDescription: string
+  canonical:       string
+  jsonLd?:         object | object[]
+  nodeId?:         string
+  noindex?:        boolean
+}
+
+const {
+  titulo,
+  metaDescription,
+  canonical,
+  jsonLd,
+  nodeId  = 'page',
+  noindex = false,
+} = Astro.props
+---
+
+<!doctype html>
+<html lang="pt-BR" data-tema="tema-03">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{titulo}</title>
+  <meta name="description" content={metaDescription} />
+  <link rel="canonical" href={canonical} />
+  <link rel="sitemap" href="/sitemap.xml" />
+  {noindex && <meta name="robots" content="noindex, follow" />}
+
+  {/* Fontes do tema: Source Serif 4 (display) + Inter (corpo) */}
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&family=Inter:wght@400;500;600;700&display=swap"
+    rel="stylesheet"
+  />
+
+  {jsonLd && (
+    <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+  )}
+</head>
+<body class="bg-surface font-sans text-ink antialiased">
+  <main data-node-id={nodeId}>
+    <slot />
+  </main>
+</body>
+</html>

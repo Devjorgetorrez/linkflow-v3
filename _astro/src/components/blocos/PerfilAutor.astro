@@ -1,0 +1,145 @@
+---
+/**
+ * PerfilAutor — corpo da página /autor/<slug>, compartilhado pelos 3 temas
+ * (cada tema só monta layout, Header e Footer em volta).
+ *
+ * Modelo de referência do Jorge (página de autor do iDinheiro): perfil com
+ * foto, cargo e credencial, experiência, certificações e formação, na mídia,
+ * e os artigos em dois blocos — "Seleção do autor" (3) e "Últimos
+ * artigos" (7). Seção sem dado não renderiza — nada de texto de exemplo.
+ */
+import PostLista from './PostLista.astro'
+
+interface Card {
+  titulo: string
+  publicadoEm: string
+  categoria?: string
+  imagemCapa?: string
+  imagemCapaAlt?: string
+  autor?: string
+  href: string
+}
+
+interface Props {
+  nome: string
+  cargo?: string
+  credencial?: string
+  foto?: string
+  fotoAlt?: string
+  bioCurta?: string
+  bioLonga?: string
+  formacao?: string[]
+  especialidades?: string[]
+  naMidia?: string[]
+  redes?: Record<string, string | undefined>
+  email?: string
+  selecao: Card[]
+  ultimos: Card[]
+}
+
+const {
+  nome, cargo, credencial, foto, fotoAlt, bioCurta, bioLonga,
+  formacao = [], especialidades = [], naMidia = [], redes = {}, email,
+  selecao, ultimos,
+} = Astro.props
+
+const iniciais = nome.split(' ').filter(Boolean).slice(0, 2).map((n) => n[0]).join('').toUpperCase()
+const linhaCargo = [cargo, credencial].filter(Boolean).join(' · ')
+
+const ROTULOS: Record<string, string> = {
+  linkedin: 'LinkedIn', instagram: 'Instagram', facebook: 'Facebook', x: 'X',
+  youtube: 'YouTube', tiktok: 'TikTok', site: 'Site', lattes: 'Currículo Lattes',
+}
+const links = Object.entries(redes)
+  .filter(([, href]) => Boolean(href))
+  .map(([rede, href]) => ({ rotulo: ROTULOS[rede] ?? rede, href: href as string }))
+---
+
+<section class="border-b border-line bg-surface-2 py-[var(--space-section)]">
+  <div class="container-wide flex flex-col gap-8 md:flex-row md:items-start">
+    {foto
+      ? <img src={foto} alt={fotoAlt ?? nome} width="160" height="160"
+             class="h-32 w-32 shrink-0 rounded-full border-4 border-surface object-cover shadow-sm md:h-40 md:w-40"
+             loading="eager" />
+      : <span class="flex h-32 w-32 shrink-0 items-center justify-center rounded-full bg-primary/10 text-3xl font-bold text-primary md:h-40 md:w-40">
+          {iniciais}
+        </span>
+    }
+    <div class="min-w-0">
+      <p class="mb-2 text-xs font-semibold uppercase tracking-wider text-primary">Autor</p>
+      <h1 class="font-display text-[clamp(1.75rem,4vw,2.5rem)] font-bold leading-tight text-secondary">{nome}</h1>
+      {linhaCargo && <p class="mt-2 text-sm font-medium text-ink-muted">{linhaCargo}</p>}
+      {bioCurta && <p class="mt-4 max-w-2xl text-base leading-relaxed text-ink">{bioCurta}</p>}
+      {(links.length > 0 || email) && (
+        <div class="mt-5 flex flex-wrap gap-2">
+          {links.map((l) => (
+            <a href={l.href} target="_blank" rel="noopener noreferrer me"
+               class="rounded-[var(--radius-btn)] border border-line px-3 py-1.5 text-xs font-semibold text-ink no-underline transition-colors hover:border-primary hover:text-primary">
+              {l.rotulo}
+            </a>
+          ))}
+          {email && (
+            <a href={`mailto:${email}`}
+               class="rounded-[var(--radius-btn)] border border-line px-3 py-1.5 text-xs font-semibold text-ink no-underline transition-colors hover:border-primary hover:text-primary">
+              E-mail
+            </a>
+          )}
+        </div>
+      )}
+    </div>
+  </div>
+</section>
+
+{(bioLonga || formacao.length > 0 || especialidades.length > 0 || naMidia.length > 0) && (
+  <section class="py-[var(--space-section)]">
+    <div class="container-wide grid gap-10 md:grid-cols-2">
+      {bioLonga && (
+        <div>
+          <h2 class="mb-3 font-display text-xl font-bold text-secondary">Experiência</h2>
+          <p class="leading-relaxed text-ink">{bioLonga}</p>
+        </div>
+      )}
+      {formacao.length > 0 && (
+        <div>
+          <h2 class="mb-3 font-display text-xl font-bold text-secondary">Certificações e formação</h2>
+          <ul class="list-disc space-y-1.5 pl-5 text-ink">
+            {formacao.map((f) => <li>{f}</li>)}
+          </ul>
+        </div>
+      )}
+      {especialidades.length > 0 && (
+        <div>
+          <h2 class="mb-3 font-display text-xl font-bold text-secondary">Especialidades</h2>
+          <div class="flex flex-wrap gap-2">
+            {especialidades.map((e) => (
+              <span class="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">{e}</span>
+            ))}
+          </div>
+        </div>
+      )}
+      {naMidia.length > 0 && (
+        <div>
+          <h2 class="mb-3 font-display text-xl font-bold text-secondary">Na mídia</h2>
+          <ul class="list-disc space-y-1.5 pl-5 text-ink">
+            {naMidia.map((m) => <li>{m}</li>)}
+          </ul>
+        </div>
+      )}
+    </div>
+  </section>
+)}
+
+<PostLista variante="grade" titulo="Seleção do autor" posts={selecao} />
+<PostLista
+  variante="grade"
+  titulo={selecao.length > 0 ? 'Últimos artigos' : `Artigos de ${nome}`}
+  posts={ultimos}
+/>
+
+{selecao.length === 0 && ultimos.length === 0 && (
+  <section class="py-[var(--space-section)]">
+    <div class="container-wide">
+      <p class="text-ink-muted">{nome} ainda não publicou artigos neste site.</p>
+    </div>
+  </section>
+)}

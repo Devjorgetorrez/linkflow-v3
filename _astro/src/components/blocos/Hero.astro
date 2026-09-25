@@ -1,0 +1,377 @@
+---
+/**
+ * Hero — variantes: texto | imagem | video | landing | split | editorial | destaque
+ *
+ * Campo compartilhado (todos opcionais exceto titulo):
+ *   eyebrow, titulo*, lead, ctaPrimTexto, ctaPrimHref,
+ *   ctaSecTexto, ctaSecHref, imagem, imagemAlt, nota, videoUrl
+ *
+ * --header-offset (CSS var): definido pelo Header.transparente no ancestral.
+ *   Cada variante adiciona esse valor ao seu padding-top via style inline.
+ *   Padrão: 0 (nenhum header transparente acima).
+ *
+ * Fallbacks (sem transformar em outra variante):
+ *   split  sem imagem → coluna visual com bg-surface-2 (mesma proporção)
+ *   video  sem videoUrl → usa imagem se disponível, senão bg-secondary puro
+ *   video/split sem nada → mantêm estrutura com cor de fundo
+ *
+ * Empty state: bloco não renderiza sem `titulo`.
+ * Imagens: width+height explícitos (CLS), loading="lazy" fora da 1ª dobra.
+ */
+
+interface Props {
+  variante?:      'texto' | 'imagem' | 'video' | 'landing' | 'split' | 'editorial' | 'destaque'
+  eyebrow?:       string
+  titulo:         string
+  lead?:          string
+  ctaPrimTexto?:  string
+  ctaPrimHref?:   string
+  ctaSecTexto?:   string
+  ctaSecHref?:    string
+  imagem?:        string
+  imagemAlt?:     string
+  nota?:          string
+  videoUrl?:      string
+  provaNumero?:   string
+  provaTexto?:    string
+}
+
+const {
+  variante     = 'texto',
+  eyebrow,
+  titulo,
+  lead,
+  ctaPrimTexto,
+  ctaPrimHref  = '#',
+  ctaSecTexto,
+  ctaSecHref   = '#',
+  imagem,
+  imagemAlt    = '',
+  nota,
+  videoUrl,
+  provaNumero,
+  provaTexto,
+} = Astro.props
+
+if (!titulo) return  // empty state: bloco não renderiza sem título
+---
+
+{/* ── texto ──────────────────────────────────────────────────────── */}
+{variante === 'texto' && (
+  <section class="bg-surface-2"
+           style="padding-top: calc(var(--space-hero) + var(--header-offset, 0)); padding-bottom: var(--space-hero)">
+    <div class="container-wide max-w-[720px]">
+      {eyebrow && (
+        <p class="mb-3 text-sm font-semibold uppercase tracking-widest text-primary">
+          {eyebrow}
+        </p>
+      )}
+      <h1 class="text-[clamp(2rem,5vw,3.25rem)] font-bold leading-tight text-secondary">
+        {titulo}
+      </h1>
+      {lead && (
+        <p class="mt-4 text-lg text-ink-muted leading-relaxed">{lead}</p>
+      )}
+      {(ctaPrimTexto || ctaSecTexto) && (
+        <div class="mt-8 flex flex-wrap gap-3">
+          {ctaPrimTexto && (
+            <a href={ctaPrimHref}
+               class="rounded-btn bg-primary px-6 py-3 text-sm font-semibold text-primary-ink no-underline transition-opacity hover:opacity-90">
+              {ctaPrimTexto}
+            </a>
+          )}
+          {ctaSecTexto && (
+            <a href={ctaSecHref}
+               class="rounded-btn border border-line bg-surface px-6 py-3 text-sm font-medium text-ink no-underline transition-colors hover:border-primary hover:text-primary">
+              {ctaSecTexto}
+            </a>
+          )}
+        </div>
+      )}
+      {nota && <p class="mt-4 text-xs text-ink-muted">{nota}</p>}
+    </div>
+  </section>
+)}
+
+{/* ── imagem ─────────────────────────────────────────────────────── */}
+{variante === 'imagem' && (
+  <section class="bg-surface-2"
+           style="padding-top: calc(var(--space-hero) + var(--header-offset, 0)); padding-bottom: var(--space-hero)">
+    <div class="container-wide grid gap-12 md:grid-cols-2 md:items-center">
+      <div>
+        {eyebrow && (
+          <p class="mb-3 text-sm font-semibold uppercase tracking-widest text-primary">
+            {eyebrow}
+          </p>
+        )}
+        <h1 class="text-[clamp(2rem,4vw,3rem)] font-bold leading-tight text-secondary">
+          {titulo}
+        </h1>
+        {lead && (
+          <p class="mt-4 text-lg text-ink-muted leading-relaxed">{lead}</p>
+        )}
+        {(ctaPrimTexto || ctaSecTexto) && (
+          <div class="mt-8 flex flex-wrap gap-3">
+            {ctaPrimTexto && (
+              <a href={ctaPrimHref}
+                 class="rounded-btn bg-primary px-6 py-3 text-sm font-semibold text-primary-ink no-underline transition-opacity hover:opacity-90">
+                {ctaPrimTexto}
+              </a>
+            )}
+            {ctaSecTexto && (
+              <a href={ctaSecHref}
+                 class="rounded-btn border border-line bg-surface px-6 py-3 text-sm font-medium text-ink no-underline transition-colors hover:border-primary hover:text-primary">
+                {ctaSecTexto}
+              </a>
+            )}
+          </div>
+        )}
+        {nota && <p class="mt-4 text-xs text-ink-muted">{nota}</p>}
+      </div>
+
+      {/* Coluna visual: imagem real ou placeholder médico */}
+      <div class="relative overflow-hidden rounded-[var(--radius-card)]">
+        {imagem ? (
+          <img src={imagem} alt={imagemAlt}
+               width="560" height="480"
+               class="h-full w-full object-cover"
+               loading="lazy" />
+        ) : (
+          <div class="min-h-[340px] bg-primary/10 flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24"
+                 fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round"
+                 class="text-primary/30" aria-hidden="true">
+              <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+            </svg>
+          </div>
+        )}
+        {/* Badge de prova social */}
+        {provaNumero && (
+          <div class="absolute bottom-4 left-4 flex items-center gap-2 rounded-[var(--radius-card)] bg-surface px-4 py-3 shadow-md">
+            <span class="text-2xl font-bold text-primary">{provaNumero}</span>
+            <span class="text-xs text-ink-muted leading-tight max-w-[80px]">{provaTexto}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  </section>
+)}
+
+{/* ── video ──────────────────────────────────────────────────────── */}
+{variante === 'video' && (
+  <section class="relative min-h-[520px] flex items-center overflow-hidden bg-secondary">
+    {/* Fundo: vídeo > imagem > cor pura — estrutura mantida em todos os casos */}
+    {videoUrl ? (
+      <video autoplay muted loop playsinline
+             class="absolute inset-0 h-full w-full object-cover opacity-40"
+             aria-hidden="true">
+        <source src={videoUrl} type="video/mp4" />
+      </video>
+    ) : imagem ? (
+      <img src={imagem} alt="" aria-hidden="true"
+           width="1440" height="640"
+           class="absolute inset-0 h-full w-full object-cover opacity-40"
+           loading="lazy" />
+    ) : null}
+
+    <div class="absolute inset-0 bg-secondary/60" aria-hidden="true" />
+
+    <div class="container-wide relative z-10 text-center"
+         style="padding-top: calc(var(--space-hero) + var(--header-offset, 0)); padding-bottom: var(--space-hero)">
+      {eyebrow && (
+        <p class="mb-3 text-sm font-semibold uppercase tracking-widest text-accent">
+          {eyebrow}
+        </p>
+      )}
+      <h1 class="mx-auto max-w-[700px] text-[clamp(2.25rem,5vw,3.5rem)] font-bold leading-tight text-surface">
+        {titulo}
+      </h1>
+      {lead && (
+        <p class="mx-auto mt-4 max-w-[560px] text-lg text-surface/80 leading-relaxed">{lead}</p>
+      )}
+      {(ctaPrimTexto || ctaSecTexto) && (
+        <div class="mt-8 flex flex-wrap justify-center gap-3">
+          {ctaPrimTexto && (
+            <a href={ctaPrimHref}
+               class="rounded-btn bg-primary px-6 py-3 text-sm font-semibold text-primary-ink no-underline transition-opacity hover:opacity-90">
+              {ctaPrimTexto}
+            </a>
+          )}
+          {ctaSecTexto && (
+            <a href={ctaSecHref}
+               class="rounded-btn border border-surface/40 px-6 py-3 text-sm font-medium text-surface no-underline transition-colors hover:border-surface hover:bg-surface/10">
+              {ctaSecTexto}
+            </a>
+          )}
+        </div>
+      )}
+      {nota && <p class="mt-4 text-xs text-surface/60">{nota}</p>}
+    </div>
+  </section>
+)}
+
+{/* ── landing ────────────────────────────────────────────────────── */}
+{variante === 'landing' && (
+  <section class="bg-secondary"
+           style="padding-top: calc(var(--space-hero) + var(--header-offset, 0)); padding-bottom: var(--space-hero)">
+    <div class="container-wide text-center">
+      {eyebrow && (
+        <p class="mb-3 text-sm font-semibold uppercase tracking-widest text-accent">
+          {eyebrow}
+        </p>
+      )}
+      <h1 class="mx-auto max-w-[680px] text-[clamp(2.25rem,5vw,3.5rem)] font-bold leading-tight text-surface">
+        {titulo}
+      </h1>
+      {lead && (
+        <p class="mx-auto mt-4 max-w-[520px] text-lg text-surface/75 leading-relaxed">{lead}</p>
+      )}
+      {ctaPrimTexto && (
+        <div class="mt-8 flex flex-col items-center gap-3">
+          <a href={ctaPrimHref}
+             class="rounded-btn bg-primary px-8 py-3.5 text-base font-bold text-primary-ink no-underline transition-opacity hover:opacity-90">
+            {ctaPrimTexto}
+          </a>
+          {nota && <p class="text-xs text-surface/55">{nota}</p>}
+        </div>
+      )}
+    </div>
+  </section>
+)}
+
+{/* ── split ──────────────────────────────────────────────────────── */}
+{variante === 'split' && (
+  <section class="grid md:grid-cols-2 min-h-[520px] overflow-hidden">
+    {/* Coluna visual (esquerda no desktop): imagem ou bloco de cor */}
+    <div class="order-2 md:order-1 min-h-[300px] overflow-hidden">
+      {imagem
+        ? <img src={imagem} alt={imagemAlt}
+               width="720" height="640"
+               class="h-full w-full object-cover"
+               loading="lazy" />
+        : <div class="h-full w-full bg-surface-2" aria-hidden="true" />
+      }
+    </div>
+
+    {/* Coluna de texto (direita no desktop): sempre preserva a proporção */}
+    <div class="order-1 md:order-2 flex items-center bg-surface px-8 lg:px-16"
+         style="padding-top: calc(var(--space-hero) + var(--header-offset, 0)); padding-bottom: var(--space-hero)">
+      <div>
+        {eyebrow && (
+          <p class="mb-3 text-sm font-semibold uppercase tracking-widest text-primary">
+            {eyebrow}
+          </p>
+        )}
+        <h1 class="text-[clamp(1.875rem,3.5vw,2.75rem)] font-bold leading-tight text-secondary">
+          {titulo}
+        </h1>
+        {lead && (
+          <p class="mt-4 text-base text-ink-muted leading-relaxed">{lead}</p>
+        )}
+        {(ctaPrimTexto || ctaSecTexto) && (
+          <div class="mt-8 flex flex-wrap gap-3">
+            {ctaPrimTexto && (
+              <a href={ctaPrimHref}
+                 class="rounded-btn bg-primary px-6 py-3 text-sm font-semibold text-primary-ink no-underline transition-opacity hover:opacity-90">
+                {ctaPrimTexto}
+              </a>
+            )}
+            {ctaSecTexto && (
+              <a href={ctaSecHref}
+                 class="rounded-btn border border-line bg-surface px-6 py-3 text-sm font-medium text-ink no-underline transition-colors hover:border-primary hover:text-primary">
+                {ctaSecTexto}
+              </a>
+            )}
+          </div>
+        )}
+        {nota && <p class="mt-4 text-xs text-ink-muted">{nota}</p>}
+      </div>
+    </div>
+  </section>
+)}
+
+{/* ── editorial ──────────────────────────────────────────────────── */}
+{variante === 'editorial' && (
+  <section class="bg-surface border-b border-line"
+           style="padding-top: calc(var(--space-hero) + var(--header-offset, 0)); padding-bottom: var(--space-hero)">
+    <div class="container-wide">
+      <div class="mb-8 h-px w-16 bg-primary" aria-hidden="true" />
+
+      <h1 class="max-w-[900px] text-[clamp(2.75rem,7vw,6rem)] font-bold leading-[1.05] tracking-tight text-secondary">
+        {titulo}
+      </h1>
+
+      {(lead || ctaPrimTexto) && (
+        <div class="mt-10 flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between border-t border-line pt-8">
+          {lead && (
+            <p class="max-w-[480px] text-base text-ink-muted leading-relaxed">{lead}</p>
+          )}
+          {ctaPrimTexto && (
+            <a href={ctaPrimHref}
+               class="shrink-0 rounded-btn bg-primary px-6 py-3 text-sm font-semibold text-primary-ink no-underline transition-opacity hover:opacity-90">
+              {ctaPrimTexto}
+            </a>
+          )}
+        </div>
+      )}
+    </div>
+  </section>
+)}
+
+{/* ── destaque ───────────────────────────────────────────────────── */}
+{/* Faixa escura com texto à esquerda e imagem à direita. É a abertura
+    típica de serviço local: promessa + prova + ação, sobre cor cheia.
+    Nenhuma outra variante fazia fundo escuro com imagem lateral. */}
+{variante === 'destaque' && (
+  <section class="bg-secondary"
+           style="padding-top: calc(var(--space-hero) + var(--header-offset, 0)); padding-bottom: var(--space-hero)">
+    <div class="container-wide grid gap-12 md:grid-cols-2 md:items-center">
+      <div>
+        {eyebrow && (
+          <p class="mb-3 text-sm font-semibold uppercase tracking-widest text-surface/70">
+            {eyebrow}
+          </p>
+        )}
+        <h1 class="font-display text-[clamp(1.875rem,4vw,2.875rem)] font-bold leading-tight text-surface">
+          {titulo}
+        </h1>
+        {lead && (
+          <p class="mt-4 text-lg leading-relaxed text-surface/75">{lead}</p>
+        )}
+        {(ctaPrimTexto || ctaSecTexto) && (
+          <div class="mt-8 flex flex-wrap gap-3">
+            {ctaPrimTexto && (
+              <a href={ctaPrimHref}
+                 target={ctaPrimHref.startsWith('http') ? '_blank' : undefined}
+                 rel={ctaPrimHref.startsWith('http') ? 'noopener noreferrer' : undefined}
+                 class="rounded-[var(--radius-pill)] bg-success px-7 py-3.5 text-sm font-bold uppercase tracking-wide text-white no-underline transition-opacity hover:opacity-90">
+                {ctaPrimTexto}
+              </a>
+            )}
+            {ctaSecTexto && (
+              <a href={ctaSecHref}
+                 class="rounded-[var(--radius-pill)] border border-surface/35 px-7 py-3.5 text-sm font-semibold text-surface no-underline transition-colors hover:bg-surface/10">
+                {ctaSecTexto}
+              </a>
+            )}
+          </div>
+        )}
+        {nota && <p class="mt-5 text-xs text-surface/60">{nota}</p>}
+      </div>
+
+      <div class="relative overflow-hidden rounded-[var(--radius-card)]">
+        {imagem
+          ? <img src={imagem} alt={imagemAlt} width="560" height="460"
+                 class="h-full w-full object-cover" loading="eager" />
+          : <div class="min-h-[320px] w-full bg-surface/10" aria-hidden="true"></div>}
+
+        {provaNumero && (
+          <div class="absolute bottom-4 left-4 flex items-center gap-2.5 rounded-[var(--radius-card)] bg-surface px-4 py-3 shadow-lg">
+            <span class="font-display text-2xl font-bold text-primary">{provaNumero}</span>
+            <span class="max-w-[110px] text-xs leading-tight text-ink-muted">{provaTexto}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  </section>
+)}

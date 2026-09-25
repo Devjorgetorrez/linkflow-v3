@@ -1,0 +1,128 @@
+---
+import ThemeBase   from '../layouts/ThemeBase.astro'
+import Header      from '../components/blocos/Header.astro'
+import Hero        from '../components/blocos/Hero.astro'
+import Pilares     from '../components/blocos/Pilares.astro'
+import Trajetoria  from '../components/blocos/Trajetoria.astro'
+import Proposito   from '../components/blocos/Proposito.astro'
+import Depoimentos from '../components/blocos/Depoimentos.astro'
+import Footer      from '../components/blocos/Footer.astro'
+import { site }    from '../config/site.ts'
+import { getCollection } from 'astro:content'
+
+const todosDepoi = await getCollection('depoimentos')
+const depoimentos = todosDepoi
+  .sort((a, b) => a.data.ordem - b.data.ordem)
+  .map(d => ({
+    nome:    d.data.nome,
+    cidade:  d.data.cidade,
+    servico: d.data.servico,
+    corpo:   d.body.trim(),
+  }))
+
+const canonical = `${site.dominio}/sobre`
+---
+
+<ThemeBase
+  titulo={`Sobre — ${site.nome}`}
+  metaDescription="Conheça a VitalCare Saúde: nossa missão, valores, trajetória desde 2014 e a equipe que transforma o cuidado com a saúde em São Paulo."
+  canonical={canonical}
+  nodeId="sobre"
+>
+  <Header
+    variante="padrao"
+    nomeSite={site.nome}
+    telefone={site.nap.telefone}
+    whatsapp={site.nap.whatsapp}
+    nav={site.nav}
+    ctaTexto="Agendar Consulta"
+    ctaHref="/contato"
+  />
+
+  <Hero
+    variante="split"
+    titulo="Cuidando de Vidas com Propósito e Precisão"
+    imagem="https://images.unsplash.com/photo-1585842378054-ee2e52f94ba2?w=720&h=640&fit=crop&auto=format"
+    imagemAlt="Médicos da VitalCare em conversa com paciente"
+    lead="Na VitalCare, acreditamos que a saúde vai além do tratamento clínico. É sobre construir uma relação de confiança, onde a tecnologia de ponta encontra o calor humano em cada atendimento."
+    ctaPrimTexto="Conheça nossa equipe"
+    ctaPrimHref="/servicos"
+    ctaSecTexto="Fale conosco"
+    ctaSecHref="/contato"
+  />
+
+  <Pilares
+    titulo="Nossos Pilares"
+    descricao="O que nos guia todos os dias no cuidado com nossos pacientes."
+    itens={[
+      {
+        icone: '🎯',
+        titulo: 'Missão',
+        corpo: 'Proporcionar um atendimento de excelência, unindo conhecimento científico rigoroso a um cuidado verdadeiramente humanizado, focado na melhoria contínua da qualidade de vida.',
+      },
+      {
+        icone: '👁',
+        titulo: 'Visão',
+        corpo: 'Ser referência nacional em saúde integrada, reconhecida por inovar na jornada do paciente e por criar um ambiente onde a tecnologia potencializa o cuidado, não o substitui.',
+      },
+      {
+        icone: '💚',
+        titulo: 'Valores',
+        corpo: 'Princípios que orientam cada decisão e cada atendimento.',
+        lista: ['Empatia e Respeito', 'Excelência Clínica', 'Ética e Transparência', 'Inovação Responsável'],
+      },
+    ]}
+  />
+
+  <Trajetoria
+    titulo="Nossa Trajetória"
+    marcos={[
+      {
+        ano: '2014',
+        titulo: 'A Fundação',
+        corpo: 'A VitalCare nasceu do sonho de três médicos de transformar a experiência de saúde, abrindo as portas do nosso primeiro consultório com foco em atendimento personalizado.',
+      },
+      {
+        ano: '2018',
+        titulo: 'Expansão e Especialização',
+        corpo: 'Inauguramos nossa clínica principal, incorporando mais de 10 especialidades médicas e tecnologia avançada de diagnóstico, sempre mantendo a abordagem humanizada.',
+      },
+      {
+        ano: 'Hoje',
+        titulo: 'Reconhecimento Nacional',
+        corpo: 'Com uma equipe de mais de 50 profissionais de saúde, a VitalCare é hoje um modelo de gestão em saúde integrada e acolhimento.',
+        atual: true,
+      },
+    ]}
+  />
+
+  <Proposito
+    eyebrow="Quem somos"
+    titulo="Por Trás do Jaleco: Nosso Propósito"
+    paragrafos={[
+      'Entendemos que cada paciente carrega uma história única. Nosso propósito é escutar antes de prescrever, entender o contexto de vida antes de diagnosticar.',
+      'Acreditamos que a cura começa no acolhimento. Na VitalCare, o ambiente é desenhado para reduzir a ansiedade, a comunicação é clara e sem jargões desnecessários, e o paciente é sempre o protagonista de sua jornada de saúde.',
+    ]}
+  />
+
+  <Depoimentos
+    titulo="Somos a Clínica mais bem avaliada da região"
+    descricao="Com mais de 4.600 avaliações e média de 4,8 a 4,9, somos referência em cuidado e satisfação. Confira o que nossos pacientes dizem."
+    itens={depoimentos}
+  />
+
+  <Footer
+    variante="escuro"
+    nomeSite={site.nome}
+    slogan={site.slogan}
+    telefone={site.nap.telefone}
+    email={site.nap.email}
+    endereco={`${site.nap.logradouro}, ${site.nap.complemento}`}
+    cidade={`${site.nap.bairro}, ${site.nap.cidade} — ${site.nap.uf}`}
+    cnpj={site.cnpj}
+    anoFundacao={site.anoFundacao}
+    redes={site.redes}
+    nav={site.nav}
+    colunas={site.navFooterColunas}
+  />
+</ThemeBase>

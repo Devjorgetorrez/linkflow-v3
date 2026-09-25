@@ -1,0 +1,257 @@
+---
+import Tema03Base      from '../../layouts/Tema03Base.astro'
+import Header          from '../../components/blocos/Header.astro'
+import Hero            from '../../components/blocos/Hero.astro'
+import Servicos        from '../../components/blocos/Servicos.astro'
+import Proposito       from '../../components/blocos/Proposito.astro'
+import Prova           from '../../components/blocos/Prova.astro'
+import Abordagem       from '../../components/blocos/Abordagem.astro'
+import Depoimentos     from '../../components/blocos/Depoimentos.astro'
+import Faq             from '../../components/blocos/Faq.astro'
+import Localizacao     from '../../components/blocos/Localizacao.astro'
+import PostLista       from '../../components/blocos/PostLista.astro'
+import Cta             from '../../components/blocos/Cta.astro'
+import Tags            from '../../components/blocos/Tags.astro'
+import BuscasFrequentes from '../../components/blocos/BuscasFrequentes.astro'
+import Footer          from '../../components/blocos/Footer.astro'
+import { site }        from '../../config/tema-03.ts'
+import { getCollection } from 'astro:content'
+import { ehPublicado } from '../../lib/publicacao.ts'
+import { nomeAutor } from '../../lib/autores.ts'
+
+const servicos = (await getCollection('servicosT3'))
+  .sort((a, b) => a.data.ordem - b.data.ordem)
+  .map(s => ({
+    titulo:    s.data.titulo,
+    descricao: s.data.resumo,
+    icone:     s.data.icone ?? '',
+    imagem:    s.data.imagem,
+    imagemAlt: s.data.imagemAlt,
+    href:      `/tema-03/${s.id}`,
+    categoria: s.data.categoria,
+  }))
+
+const depoimentos = (await getCollection('depoimentosT3'))
+  .sort((a, b) => a.data.ordem - b.data.ordem)
+  .map(d => ({
+    nome:    d.data.nome,
+    cidade:  d.data.cidade,
+    servico: d.data.servico,
+    corpo:   d.body.trim(),
+  }))
+
+const autores = await getCollection('autoresT3')
+const posts = (await getCollection('postsT3', ehPublicado))
+  .sort((a, b) => new Date(b.data.publicadoEm).getTime() - new Date(a.data.publicadoEm).getTime())
+  .map(p => ({
+    titulo:        p.data.titulo,
+    publicadoEm:   p.data.publicadoEm,
+    categoria:     p.data.categoria,
+    imagemCapa:    p.data.imagemCapa,
+    imagemCapaAlt: p.data.imagemCapaAlt,
+    autor:         nomeAutor(p.data, autores),
+    href:          `/tema-03/${p.id}`,
+  }))
+
+const anos      = new Date().getFullYear() - site.anoFundacao
+const canonical = `${site.dominio}/`
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type':   ['AccountingService', 'LocalBusiness'],
+      '@id':     `${site.dominio}/#organization`,
+      name:      site.nome,
+      url:       site.dominio,
+      telephone: site.nap.telefone,
+      email:     site.nap.email,
+      slogan:    site.slogan,
+      foundingDate: String(site.anoFundacao),
+      address: {
+        '@type':         'PostalAddress',
+        streetAddress:   `${site.nap.logradouro}, ${site.nap.complemento}`,
+        addressLocality: site.nap.cidade,
+        addressRegion:   site.nap.uf,
+        postalCode:      site.nap.cep,
+        addressCountry:  'BR',
+      },
+      openingHoursSpecification: [
+        { '@type': 'OpeningHoursSpecification', dayOfWeek: ['Monday','Tuesday','Wednesday','Thursday'], opens: '08:00', closes: '18:00' },
+        { '@type': 'OpeningHoursSpecification', dayOfWeek: ['Friday'], opens: '08:00', closes: '17:00' },
+      ],
+      areaServed: [
+        { '@type': 'City', name: 'Londrina' },
+        { '@type': 'State', name: 'Paraná' },
+      ],
+    },
+    {
+      '@type':    'WebSite',
+      '@id':      `${site.dominio}/#website`,
+      url:        site.dominio,
+      name:       site.nome,
+      publisher:  { '@id': `${site.dominio}/#organization` },
+      inLanguage: 'pt-BR',
+    },
+    {
+      '@type':    'WebPage',
+      '@id':      `${canonical}#webpage`,
+      url:        canonical,
+      name:       `${site.nome} — Escritório de Contabilidade em Londrina`,
+      isPartOf:   { '@id': `${site.dominio}/#website` },
+      about:      { '@id': `${site.dominio}/#organization` },
+      inLanguage: 'pt-BR',
+    },
+    {
+      '@type': 'BreadcrumbList',
+      '@id':   `${canonical}#breadcrumb`,
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home', item: canonical },
+      ],
+    },
+    {
+      '@type': 'FAQPage',
+      '@id':   `${canonical}#faq`,
+      mainEntity: site.faq.map(f => ({
+        '@type': 'Question',
+        name: f.pergunta,
+        acceptedAnswer: { '@type': 'Answer', text: f.resposta },
+      })),
+    },
+  ],
+}
+---
+
+<Tema03Base
+  titulo={`${site.nome} — Escritório de Contabilidade em Londrina — PR`}
+  metaDescription="Escritório de contabilidade em Londrina há mais de 20 anos. Contabilidade consultiva, gestão fiscal, departamento pessoal e BPO financeiro, com contador responsável e relatório gerencial mensal."
+  canonical={canonical}
+  jsonLd={jsonLd}
+  nodeId="home"
+>
+
+  <Header
+    variante="padrao"
+    nomeSite={site.nome}
+    telefone={site.nap.telefone}
+    whatsapp={site.nap.whatsapp}
+    nav={site.nav}
+    ctaTexto="Falar com um contador"
+    ctaHref="/tema-03/contato"
+  />
+
+  <Hero
+    variante="split"
+    eyebrow={`Contabilidade e consultoria · ${site.nap.cidade} — ${site.nap.uf}`}
+    titulo="Contabilidade que responde antes de você decidir"
+    lead="Fechamento no prazo é o mínimo. O que muda o seu negócio é ter um contador que senta com você para revisar margem, carga tributária e caixa antes da decisão — não depois do prejuízo."
+    ctaPrimTexto="Solicitar proposta"
+    ctaPrimHref="/tema-03/contato"
+    ctaSecTexto="Ver como trabalhamos"
+    ctaSecHref="/tema-03/contabilidade-consultiva"
+    nota="Atendemos Londrina, região e empresas de outros estados por atendimento remoto."
+    imagem="https://images.unsplash.com/photo-1600880292089-90a7e086ee0c?w=720&h=560&fit=crop&auto=format"
+    imagemAlt="Contadora da Vértice revisando resultados com um cliente"
+    provaNumero={`+${anos} anos`}
+    provaTexto="de escritório aberto em Londrina"
+  />
+
+  <Servicos
+    variante="grade"
+    titulo="O que fazemos pela sua empresa"
+    descricao="Seis frentes que cobrem a rotina obrigatória e a decisão que vem depois dela."
+    itens={servicos}
+  />
+
+  <Proposito
+    eyebrow="Quem somos"
+    titulo="Um escritório que cresceu junto com a carteira, não em cima dela"
+    paragrafos={[
+      `A Vértice abriu em ${site.anoFundacao} com duas salas no centro de Londrina e nove clientes. Hoje são pouco mais de duzentas empresas atendidas — número que segue limitado de propósito, porque cada cliente tem um contador designado e isso não escala sem perder qualidade.`,
+      'O que mudou nesses anos foi o tipo de pergunta que chega. No começo eram guias e prazos. Hoje é qual regime adotar, se compensa contratar, quanto o sócio pode retirar sem comprometer o caixa. A contabilidade continua sendo a base — o que se faz com ela é o serviço.',
+      'Não vendemos software, não indicamos banco e não ganhamos comissão de nenhum fornecedor. A recomendação que damos é a que serve para a empresa.',
+    ]}
+    imagemSrc="https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=760&h=620&fit=crop&auto=format"
+    imagemAlt="Equipe da Vértice Contabilidade no escritório"
+  />
+
+  <Prova
+    titulo="Por que empresas trocam de escritório e ficam"
+    descricao="Quatro compromissos que valem para toda a carteira, do MEI que saiu do teto à indústria com cem funcionários."
+    itens={site.diferenciais}
+  />
+
+  <Abordagem
+    titulo="Setores que já conhecemos por dentro"
+    descricao="Cada atividade tem uma armadilha fiscal própria. Estes são os segmentos em que já erramos, aprendemos e hoje entregamos sem sobressalto."
+    itens={site.setores}
+  />
+
+  <Depoimentos
+    titulo="O que dizem os clientes"
+    descricao="Depoimentos de empresários atendidos pelo escritório."
+    itens={depoimentos}
+  />
+
+  <Faq
+    variante="duas-colunas"
+    titulo="Perguntas que chegam antes da proposta"
+    itens={site.faq}
+  />
+
+  <Localizacao
+    titulo="Onde estamos"
+    descricao="Escritório no centro de Londrina, com estacionamento no próprio edifício. Atendimento presencial com hora marcada."
+    logradouro={site.nap.logradouro}
+    complemento={site.nap.complemento}
+    bairro={site.nap.bairro}
+    cidade={site.nap.cidade}
+    uf={site.nap.uf}
+    cep={site.nap.cep}
+    telefone={site.nap.telefone}
+    whatsapp={site.nap.whatsapp}
+    email={site.nap.email}
+    horarios={site.horarios}
+    mapaSrc={site.mapaSrc}
+    mapaHref={`https://maps.google.com/?q=${encodeURIComponent(site.nap.enderecoFormatado)}`}
+  />
+
+  <PostLista
+    variante="destaque"
+    titulo="Do blog"
+    descricao="Explicações escritas pelos contadores do escritório, sem jargão e sem promessa de economia mágica."
+    posts={posts}
+    verMaisHref="/tema-03/blog"
+  />
+
+  <Cta
+    variante="padrao"
+    titulo="Quer saber quanto a sua empresa está pagando a mais?"
+    descricao="Enviamos um comparativo dos três regimes sobre os seus últimos doze meses, sem custo e sem compromisso de contratação."
+    ctaPrimTexto="Solicitar o comparativo"
+    ctaPrimHref="/tema-03/contato"
+    ctaSecTexto="Falar no WhatsApp"
+    ctaSecHref={`https://wa.me/${site.nap.whatsapp}`}
+    nota="Retorno em até um dia útil, feito pelo contador — não por atendente."
+  />
+
+  <Tags titulo="Temas relacionados" itens={site.tags} />
+
+  <BuscasFrequentes titulo={`Buscas frequentes — ${site.nome}`} itens={site.buscasFrequentes} />
+
+  <Footer
+    variante="colunas"
+    nomeSite={site.nome}
+    slogan={site.slogan}
+    telefone={site.nap.telefone}
+    email={site.nap.email}
+    endereco={`${site.nap.logradouro}, ${site.nap.complemento}`}
+    cidade={`${site.nap.bairro}, ${site.nap.cidade} — ${site.nap.uf}`}
+    cnpj={site.cnpj}
+    anoFundacao={site.anoFundacao}
+    redes={site.redes}
+    nav={site.nav}
+    colunas={site.navFooterColunas}
+  />
+
+</Tema03Base>

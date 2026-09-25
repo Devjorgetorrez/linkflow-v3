@@ -1,0 +1,60 @@
+---
+/**
+ * Abordagem — seção "Uma abordagem diferente"
+ * Fundo escuro (secondary), layout 2 colunas: texto à esquerda, grade de itens à direita.
+ * Empty state: não renderiza sem titulo.
+ */
+
+interface Item {
+  icone:    string
+  titulo:   string
+  descricao?: string
+}
+
+interface Props {
+  titulo:     string
+  descricao?: string
+  itens:      Item[]
+}
+
+const { titulo, descricao, itens = [] } = Astro.props
+
+if (!titulo) return
+---
+
+<section class="bg-secondary py-[var(--space-section)]">
+  <div class="container-wide">
+    <div class="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] lg:items-center">
+      {/* Texto */}
+      <div>
+        <h2 class="text-[clamp(1.625rem,3vw,2.25rem)] font-bold text-primary-ink leading-tight">
+          {titulo}
+        </h2>
+        {descricao && (
+          <p class="mt-4 text-base text-primary-ink/70 leading-relaxed max-w-[420px]">
+            {descricao}
+          </p>
+        )}
+      </div>
+
+      {/* Grade de itens */}
+      {itens.length > 0 && (
+        <ul class="grid grid-cols-2 gap-4 list-none p-0 m-0">
+          {itens.map(item => (
+            <li class="rounded-[var(--radius-card)] bg-primary-ink/8 border border-primary-ink/15 p-5">
+              <div class="mb-3 flex h-10 w-10 items-center justify-center rounded-[var(--radius-btn)] bg-accent/20">
+                <span class="text-xs font-mono font-bold text-accent select-none" aria-hidden="true">
+                  {item.icone.slice(0, 2).toUpperCase()}
+                </span>
+              </div>
+              <p class="font-semibold text-primary-ink text-sm leading-snug">{item.titulo}</p>
+              {item.descricao && (
+                <p class="mt-1.5 text-xs text-primary-ink/65 leading-relaxed">{item.descricao}</p>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  </div>
+</section>

@@ -1,0 +1,118 @@
+---
+/**
+ * Rota unificada para serviços e posts de blog — URL plana, sem
+ * categoria no caminho (/[slug], nunca /servicos/[slug] nem /blog/[slug]).
+ * O slug sozinho decide o que é o quê, igual permalink do WordPress.
+ *
+ * Não renderiza o corpo aqui — só decide qual componente usar
+ * (ServicoDetalhe ou PostDetalhe) e monta o <ThemeBase> em volta.
+ */
+import ThemeBase from '../layouts/ThemeBase.astro'
+import ServicoDetalhe from '../components/paginas/ServicoDetalhe.astro'
+import PostDetalhe from '../components/paginas/PostDetalhe.astro'
+import { site } from '../config/site.ts'
+import { getCollection } from 'astro:content'
+import { ehPublicado } from '../lib/publicacao.ts'
+import { resolverAutor } from '../lib/autores.ts'
+
+export async function getStaticPaths() {
+  const servicos = await getCollection('servicos')
+  const posts = await getCollection('posts', ehPublicado)
+
+  const slugsServicos = new Set(servicos.map(s => s.id))
+
+  const pathsServicos = servicos.map(s => ({
+    params: { slug: s.id },
+    props: { tipo: 'servico' as const, entry: s },
+  }))
+
+  // Serviço sempre prevalece sobre post no mesmo slug — colisão deveria
+  // ter sido barrada antes de chegar aqui (checagem de slug único na
+  // Fase 3), mas o build não pode quebrar por causa disso: ignora o post
+  // duplicado e avisa no log, em vez de gerar duas páginas na mesma URL.
+  const pathsPosts = posts
+    .filter(p => {
+      if (slugsServicos.has(p.id)) {
+        console.error(
+          `[slug].astro: colisão de slug "${p.id}" entre servicos e posts — ` +
+          `o post foi ignorado nesta URL, o serviço prevalece. Troque o slug do post.`
+        )
+        return false
+      }
+      return true
+    })
+    .map(p => ({
+      params: { slug: p.id },
+      props: { tipo: 'post' as const, entry: p },
+    }))
+
+  return [...pathsServicos, ...pathsPosts]
+}
+
+const { tipo, entry } = Astro.props
+
+const titulo = `${entry.data.titulo} — ${site.nome}`
+const metaDescription = entry.data.metaDescription
+const canonical = `${site.dominio}/${entry.id}`
+const noindex = tipo === 'servico' ? (entry.data.noindex ?? false) : false
+const nodeId = tipo === 'servico' ? 'servico-detalhe' : 'post'
+
+// JSON-LD do artigo (o tema base não emitia nenhum). O autor aponta para a
+// página dele (/autor/<slug>) com o mesmo @id que a página de autor usa.
+let jsonLd: object | undefined
+if (tipo === 'post') {
+  const autores = await getCollection('autores')
+  const autor = resolverAutor(entry.data, autores)
+  const autorNode = autor
+    ? {
+        '@type': 'Person',
+        ...(autor.href ? { '@id': `${site.dominio}${autor.href}#person`, url: `${site.dominio}${autor.href}` } : {}),
+        name: autor.nome,
+        ...(autor.cargo ? { jobTitle: autor.cargo } : {}),
+        ...(autor.foto ? { image: autor.foto } : {}),
+        ...(autor.sameAs.length ? { sameAs: autor.sameAs } : {}),
+      }
+    : undefined
+  jsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'BlogPosting',
+        '@id': `${canonical}#article`,
+        headline: entry.data.titulo,
+        description: entry.data.metaDescription,
+        datePublished: entry.data.publicadoEm,
+        dateModified: entry.data.publicadoEm,
+        inLanguage: 'pt-BR',
+        ...(entry.data.imagemCapa ? { image: entry.data.imagemCapa } : {}),
+        ...(autorNode ? { author: autorNode } : {}),
+        publisher: { '@id': `${site.dominio}/#organization` },
+        mainEntityOfPage: { '@id': `${canonical}#webpage` },
+      },
+      {
+        '@type': 'BreadcrumbList',
+        '@id': `${canonical}#breadcrumb`,
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Home', item: `${site.dominio}/` },
+          { '@type': 'ListItem', position: 2, name: 'Blog', item: `${site.dominio}/blog` },
+          { '@type': 'ListItem', position: 3, name: entry.data.titulo, item: canonical },
+        ],
+      },
+    ],
+  }
+}
+---
+
+<ThemeBase
+  titulo={titulo}
+  metaDescription={metaDescription}
+  canonical={canonical}
+  nodeId={nodeId}
+  noindex={noindex}
+  jsonLd={jsonLd}
+>
+  {tipo === 'servico'
+    ? <ServicoDetalhe entry={entry} />
+    : <PostDetalhe entry={entry} />
+  }
+</ThemeBase>

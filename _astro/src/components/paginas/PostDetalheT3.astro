@@ -1,0 +1,237 @@
+---
+/**
+ * Artigo do Tema 03.
+ * Item C da composição:
+ *   - <Autor variante="byline">     logo abaixo do H1, ANTES do corpo
+ *   - <Autor variante="assinatura"> ao fim, com foto, cargo, bio e redes
+ * Ambos usam o bloco compartilhado components/blocos/Autor.astro.
+ */
+import Autor       from '../../components/blocos/Autor.astro'
+import Cta         from '../../components/blocos/Cta.astro'
+import Footer      from '../../components/blocos/Footer.astro'
+import Header      from '../../components/blocos/Header.astro'
+import PostLista   from '../../components/blocos/PostLista.astro'
+import Tema03Base  from '../../layouts/Tema03Base.astro'
+import { site }    from '../../config/tema-03.ts'
+import { getCollection, render } from 'astro:content'
+import { ehPublicado } from '../../lib/publicacao.ts'
+import { resolverAutor, nomeAutor } from '../../lib/autores.ts'
+
+interface Props {
+  entry: Awaited<ReturnType<typeof getCollection<'postsT3'>>>[number]
+}
+
+const { entry }   = Astro.props
+const { Content } = await render(entry)
+const canonical   = `${site.dominio}/${entry.id}`
+
+const dataFormatada = new Intl.DateTimeFormat('pt-BR', {
+  day: 'numeric', month: 'long', year: 'numeric',
+}).format(new Date(entry.data.publicadoEm + 'T12:00:00'))
+
+// Autor: perfil em content/autores (slug em `autor:`), com link /autor/<slug>
+const autores = await getCollection('autoresT3')
+const autor   = resolverAutor(entry.data, autores, '/tema-03')
+const autorJsonLd = autor
+  ? {
+      '@type': 'Person',
+      ...(autor.href ? { '@id': `${site.dominio}${autor.href}#person`, url: `${site.dominio}${autor.href}` } : {}),
+      name: autor.nome,
+      ...(autor.cargo ? { jobTitle: autor.cargo } : {}),
+      ...(autor.foto ? { image: autor.foto } : {}),
+      worksFor: { '@id': `${site.dominio}/#organization` },
+      ...(autor.sameAs.length ? { sameAs: autor.sameAs } : {}),
+    }
+  : undefined
+
+const relacionados = (await getCollection('postsT3', ehPublicado))
+  .filter(p => p.id !== entry.id)
+  .sort((a, b) => new Date(b.data.publicadoEm).getTime() - new Date(a.data.publicadoEm).getTime())
+  .map(p => ({
+    titulo:        p.data.titulo,
+    publicadoEm:   p.data.publicadoEm,
+    categoria:     p.data.categoria,
+    imagemCapa:    p.data.imagemCapa,
+    imagemCapaAlt: p.data.imagemCapaAlt,
+    autor:         nomeAutor(p.data, autores),
+    href:          `/tema-03/${p.id}`,
+  }))
+
+const shareUrl  = encodeURIComponent(canonical)
+const shareText = encodeURIComponent(entry.data.titulo)
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type':         'BlogPosting',
+      '@id':           `${canonical}#article`,
+      headline:        entry.data.titulo,
+      description:     entry.data.metaDescription,
+      datePublished:   entry.data.publicadoEm,
+      dateModified:    entry.data.publicadoEm,
+      inLanguage:      'pt-BR',
+      image:           entry.data.imagemCapa,
+      articleSection:  entry.data.categoria,
+      ...(autorJsonLd ? { author: autorJsonLd } : {}),
+      publisher:       { '@id': `${site.dominio}/#organization` },
+      mainEntityOfPage: { '@id': `${canonical}#webpage` },
+    },
+    {
+      '@type': 'BreadcrumbList',
+      '@id':   `${canonical}#breadcrumb`,
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home', item: `${site.dominio}/` },
+        { '@type': 'ListItem', position: 2, name: 'Blog', item: `${site.dominio}/blog` },
+        { '@type': 'ListItem', position: 3, name: entry.data.titulo, item: canonical },
+      ],
+    },
+  ],
+}
+---
+
+<Tema03Base
+  titulo={`${entry.data.titulo} — ${site.nome}`}
+  metaDescription={entry.data.metaDescription}
+  canonical={canonical}
+  jsonLd={jsonLd}
+  nodeId="post"
+>
+  <Header
+    variante="padrao"
+    nomeSite={site.nome}
+    telefone={site.nap.telefone}
+    whatsapp={site.nap.whatsapp}
+    nav={site.nav}
+    ctaTexto="Falar com um contador"
+    ctaHref="/tema-03/contato"
+  />
+
+  <article>
+    {/* ── Cabeçalho: H1 e, logo abaixo, o autor ─────────────────────── */}
+    <div class="border-b border-line bg-surface-2 py-12">
+      <div class="container-wide max-w-[760px]">
+
+        <nav class="mb-5 text-xs text-ink-muted" aria-label="Breadcrumb">
+          <a href="/tema-03" class="no-underline transition-colors hover:text-primary">Home</a>
+          <span class="mx-1.5 text-ink-muted/50">›</span>
+          <a href="/tema-03/blog" class="no-underline transition-colors hover:text-primary">Blog</a>
+          {entry.data.categoria && (
+            <>
+              <span class="mx-1.5 text-ink-muted/50">›</span>
+              <span>{entry.data.categoria}</span>
+            </>
+          )}
+        </nav>
+
+        {entry.data.categoria && (
+          <span class="mb-3 inline-block rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+            {entry.data.categoria}
+          </span>
+        )}
+
+        <h1 class="mb-6 font-display text-[clamp(1.625rem,4vw,2.5rem)] font-bold leading-tight text-secondary">
+          {entry.data.titulo}
+        </h1>
+
+        {/* Item C — autor ANTES do corpo do artigo */}
+        <Autor
+          variante="byline"
+          nome={autor?.nome ?? ""}
+          foto={autor?.foto}
+          cargo={autor?.cargo}
+          href={autor?.href}
+          data={dataFormatada}
+        />
+      </div>
+    </div>
+
+    {entry.data.imagemCapa && (
+      <div class="container-wide max-w-[760px] pt-10">
+        <div class="overflow-hidden rounded-[var(--radius-card)]">
+          <img src={entry.data.imagemCapa}
+               alt={entry.data.imagemCapaAlt ?? entry.data.titulo}
+               width="760" height="420"
+               class="max-h-[420px] w-full object-cover"
+               loading="eager" />
+        </div>
+      </div>
+    )}
+
+    <div class="container-wide max-w-[760px] py-12">
+      <div class="article-body">
+        <Content />
+      </div>
+
+      {/* Compartilhar */}
+      <div class="mt-10 border-t border-line pt-8">
+        <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-ink-muted">
+          Compartilhar
+        </p>
+        <div class="flex flex-wrap gap-2">
+          <a href={`https://wa.me/?text=${shareText}%20${shareUrl}`}
+             target="_blank" rel="noopener noreferrer"
+             class="rounded-[var(--radius-btn)] border border-line px-4 py-2 text-xs font-semibold text-ink no-underline transition-colors hover:border-primary hover:text-primary">
+            WhatsApp
+          </a>
+          <a href={`https://www.linkedin.com/sharing/share-offsite/?url=${shareUrl}`}
+             target="_blank" rel="noopener noreferrer"
+             class="rounded-[var(--radius-btn)] border border-line px-4 py-2 text-xs font-semibold text-ink no-underline transition-colors hover:border-primary hover:text-primary">
+            LinkedIn
+          </a>
+          <a href={`mailto:?subject=${shareText}&body=${shareUrl}`}
+             class="rounded-[var(--radius-btn)] border border-line px-4 py-2 text-xs font-semibold text-ink no-underline transition-colors hover:border-primary hover:text-primary">
+            E-mail
+          </a>
+        </div>
+      </div>
+
+      {/* Item C — assinatura completa ao fim do artigo */}
+      <Autor
+        variante="assinatura"
+        nome={autor?.nome ?? ""}
+        foto={autor?.foto}
+        cargo={autor?.cargo}
+        credencial={autor?.credencial}
+        bio={autor?.bio}
+        linkedin={autor?.linkedin}
+        instagram={autor?.instagram}
+        email={autor?.email}
+        href={autor?.href}
+        whatsapp={site.nap.whatsapp}
+      />
+    </div>
+  </article>
+
+  <PostLista
+    variante="grade"
+    titulo="Outros artigos"
+    posts={relacionados}
+    verMaisHref="/tema-03/blog"
+  />
+
+  <Cta
+    variante="padrao"
+    titulo="Quer essa conta feita para a sua empresa?"
+    descricao="O artigo explica a regra. A aplicação depende do seu faturamento, da sua folha e do seu mix de receita — e isso a gente calcula com você."
+    ctaPrimTexto="Solicitar análise"
+    ctaPrimHref="/tema-03/contato"
+    ctaSecTexto="Falar no WhatsApp"
+    ctaSecHref={`https://wa.me/${site.nap.whatsapp}`}
+  />
+
+  <Footer
+    variante="colunas"
+    nomeSite={site.nome}
+    slogan={site.slogan}
+    telefone={site.nap.telefone}
+    email={site.nap.email}
+    endereco={`${site.nap.logradouro}, ${site.nap.complemento}`}
+    cidade={`${site.nap.bairro}, ${site.nap.cidade} — ${site.nap.uf}`}
+    cnpj={site.cnpj}
+    anoFundacao={site.anoFundacao}
+    redes={site.redes}
+    nav={site.nav}
+    colunas={site.navFooterColunas}
+  />
+</Tema03Base>

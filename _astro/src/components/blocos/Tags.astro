@@ -1,0 +1,45 @@
+---
+/**
+ * Tags — nuvem de termos/hashtags em formato pill
+ * Empty state: não renderiza se itens.length === 0.
+ */
+
+interface Tag {
+  label: string
+  href?: string
+}
+
+interface Props {
+  titulo?:    string
+  itens:      Tag[]
+}
+
+const { titulo, itens = [] } = Astro.props
+
+if (itens.length === 0) return
+---
+
+<section class="bg-surface border-y border-line py-8">
+  <div class="container-wide">
+    {titulo && (
+      <p class="mb-4 text-[10px] font-semibold uppercase tracking-widest text-ink-muted">
+        {titulo}
+      </p>
+    )}
+    <ul class="flex flex-wrap gap-2 list-none p-0 m-0">
+      {itens.map(tag => (
+        <li>
+          {tag.href
+            ? <a href={tag.href}
+                 class="inline-block rounded-[var(--radius-pill)] border border-line bg-surface-2 px-3.5 py-1.5 text-sm text-ink-muted no-underline transition-colors hover:border-primary hover:text-primary">
+                {tag.label}
+              </a>
+            : <span class="inline-block rounded-[var(--radius-pill)] border border-line bg-surface-2 px-3.5 py-1.5 text-sm text-ink-muted">
+                {tag.label}
+              </span>
+          }
+        </li>
+      ))}
+    </ul>
+  </div>
+</section>

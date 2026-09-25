@@ -1,0 +1,78 @@
+---
+import ThemeBase   from '../layouts/ThemeBase.astro'
+import Header      from '../components/blocos/Header.astro'
+import PageHero    from '../components/blocos/PageHero.astro'
+import FormContato from '../components/blocos/FormContato.astro'
+import Localizacao from '../components/blocos/Localizacao.astro'
+import Faq         from '../components/blocos/Faq.astro'
+import Footer      from '../components/blocos/Footer.astro'
+import { site }    from '../config/site.ts'
+
+const canonical = `${site.dominio}/contato`
+---
+
+<ThemeBase
+  titulo={`Contato — ${site.nome}`}
+  metaDescription="Entre em contato com a VitalCare Saúde. Agende sua consulta pelo WhatsApp, telefone ou formulário online. Av. Paulista, 1966 — Bela Vista, São Paulo."
+  canonical={canonical}
+  nodeId="contato"
+>
+  <Header
+    variante="padrao"
+    nomeSite={site.nome}
+    telefone={site.nap.telefone}
+    whatsapp={site.nap.whatsapp}
+    nav={site.nav}
+    ctaTexto="Agendar Consulta"
+    ctaHref="/contato"
+  />
+
+  <PageHero
+    titulo="Entre em Contato"
+    descricao="Estamos aqui para ajudar. Preencha o formulário abaixo ou utilize nossos canais diretos de atendimento para falar com nossa equipe médica e agendar sua consulta."
+  />
+
+  <FormContato
+    telefone={site.nap.telefone}
+    whatsapp={site.nap.whatsapp}
+    email={site.nap.email}
+    logradouro={site.nap.logradouro}
+    complemento={site.nap.complemento}
+    cidade={site.nap.cidade}
+    uf={site.nap.uf}
+    cep={site.nap.cep}
+    horarios={site.horarios}
+  />
+
+  <Localizacao
+    titulo=""
+    logradouro={site.nap.logradouro}
+    complemento={site.nap.complemento}
+    bairro={site.nap.bairro}
+    cidade={site.nap.cidade}
+    uf={site.nap.uf}
+    cep={site.nap.cep}
+    mapaHref={`https://maps.google.com/?q=${encodeURIComponent(site.nap.enderecoFormatado)}`}
+  />
+
+  <Faq
+    variante="padrao"
+    titulo="Perguntas Frequentes"
+    itens={site.faq}
+  />
+
+  <Footer
+    variante="escuro"
+    nomeSite={site.nome}
+    slogan={site.slogan}
+    telefone={site.nap.telefone}
+    email={site.nap.email}
+    endereco={`${site.nap.logradouro}, ${site.nap.complemento}`}
+    cidade={`${site.nap.bairro}, ${site.nap.cidade} — ${site.nap.uf}`}
+    cnpj={site.cnpj}
+    anoFundacao={site.anoFundacao}
+    redes={site.redes}
+    nav={site.nav}
+    colunas={site.navFooterColunas}
+  />
+</ThemeBase>

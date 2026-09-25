@@ -1,0 +1,38 @@
+# Dados de clientes — nunca versionar
+projetos/
+_memoria/
+credenciais/
+
+# Arquivos de trabalho e saídas
+*.csv
+coletas/
+checkpoints/
+rascunhos/
+saidas/
+
+# Credenciais e configurações locais
+.env
+.env.*
+!.env.example
+*.env
+config.local.yaml
+credentials*.json
+token*.json
+
+# Dependências e builds (Astro e Next.js)
+node_modules/
+.next/
+dist/
+.astro/
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/

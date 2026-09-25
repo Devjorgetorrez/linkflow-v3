@@ -1,0 +1,245 @@
+---
+import Base from '../layouts/Base.astro'
+import Header from '../components/blocos/Header.astro'
+import Hero   from '../components/blocos/Hero.astro'
+import Servicos from '../components/blocos/Servicos.astro'
+import Footer from '../components/blocos/Footer.astro'
+
+/* ── Dados Vilares Psicologia — Renata ─────────────────────────── */
+
+const nav = [
+  { label: 'Serviços',  href: '/servicos' },
+  { label: 'Sobre',     href: '/sobre' },
+  { label: 'Blog',      href: '/blog' },
+  { label: 'Contato',   href: '/contato' },
+]
+
+const hdr = {
+  nomeSite: 'Vilares Psicologia',
+  telefone: '(11) 4522-0000',
+  whatsapp: '11945220000',
+  nav,
+}
+
+const hero = {
+  eyebrow:       'Psicóloga · CRP 06/128455',
+  titulo:        'Cuidar da saúde mental é o maior investimento que você pode fazer',
+  lead:          'Atendimento individual, familiar e organizacional. Presencial em Caieiras e online para todo o Brasil.',
+  ctaPrimTexto:  'Agende uma consulta',
+  ctaPrimHref:   'https://wa.me/5511945220000',
+  ctaSecTexto:   'Conheça os serviços',
+  ctaSecHref:    '/servicos',
+  nota:          'Primeira conversa gratuita. Resposta em até 24h.',
+  imagemAlt:     'Dra. Renata Vilares, psicóloga',
+}
+
+const servicos = [
+  {
+    titulo:    'Psicoterapia Individual',
+    descricao: 'Atendimento semanal com abordagem humanista-existencial para adultos e adolescentes.',
+    icone:     'Brain',
+    categoria: 'Clínica',
+    href:      '/psicoterapia-individual',
+  },
+  {
+    titulo:    'Terapia de Casal',
+    descricao: 'Espaço seguro para trabalhar conflitos e fortalecer o vínculo afetivo.',
+    icone:     'Heart',
+    categoria: 'Clínica',
+    href:      '/terapia-casal',
+  },
+  {
+    titulo:    'Orientação Parental',
+    descricao: 'Apoio para pais que enfrentam desafios na criação dos filhos.',
+    icone:     'Users',
+    categoria: 'Clínica',
+    href:      '/orientacao-parental',
+  },
+  {
+    titulo:    'Avaliação Psicológica',
+    descricao: 'Laudos e pareceres para fins clínicos, educacionais e trabalhistas.',
+    icone:     'Clipboard',
+    categoria: 'Avaliação',
+    href:      '/avaliacao-psicologica',
+  },
+  {
+    titulo:    'Perícia Psicológica',
+    descricao: 'Pareceres técnicos para processos judiciais e concursos públicos.',
+    icone:     'Shield',
+    categoria: 'Avaliação',
+    href:      '/pericia-psicologica',
+  },
+]
+
+const footer = {
+  nomeSite:    'Vilares Psicologia',
+  telefone:    '(11) 4522-0000',
+  endereco:    'Rua Voluntários da Pátria, 220 — sala 4',
+  cidade:      'Caieiras — SP · CEP 07700-000',
+  cnpj:        '12.345.678/0001-99',
+  anoFundacao: 2015,
+  redes: [
+    { nome: 'Instagram', href: 'https://instagram.com/virarespsicologia' },
+    { nome: 'Facebook',  href: 'https://facebook.com/virarespsicologia' },
+    { nome: 'LinkedIn',  href: 'https://linkedin.com/in/renatavilares' },
+  ],
+  nav: [
+    { label: 'Serviços',          href: '/servicos' },
+    { label: 'Sobre a Dra. Renata', href: '/sobre' },
+    { label: 'Blog',              href: '/blog' },
+    { label: 'Política de Privacidade', href: '/politica-de-privacidade' },
+    { label: 'Contato',           href: '/contato' },
+  ],
+  colunas: [
+    {
+      titulo: 'Serviços',
+      itens: [
+        { label: 'Psicoterapia Individual', href: '/psicoterapia-individual' },
+        { label: 'Terapia de Casal',        href: '/terapia-casal' },
+        { label: 'Orientação Parental',     href: '/orientacao-parental' },
+        { label: 'Avaliação Psicológica',   href: '/avaliacao-psicologica' },
+      ],
+    },
+    {
+      titulo: 'Institucional',
+      itens: [
+        { label: 'Sobre a Dra. Renata', href: '/sobre' },
+        { label: 'Formação e CRP',      href: '/sobre#formacao' },
+        { label: 'Blog',                href: '/blog' },
+        { label: 'Contato',             href: '/contato' },
+      ],
+    },
+    {
+      titulo: 'Legal',
+      itens: [
+        { label: 'Política de Privacidade', href: '/politica-de-privacidade' },
+        { label: 'Termos de uso',           href: '/termos-de-uso' },
+      ],
+    },
+  ],
+}
+
+/* ── helper de rótulo de seção ─────────────────────────────────── */
+---
+
+<Base titulo="SiteFlow — Demo de Blocos">
+
+  {/* ── indicador de seção ────────────────────────────────────────── */}
+  <style>
+    .demo-label {
+      background: var(--color-secondary);
+      color: var(--color-surface);
+      font-family: var(--font-sans);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      padding: 6px 16px;
+    }
+    .demo-sep {
+      height: 2px;
+      background: var(--color-primary);
+      margin: 0;
+    }
+  </style>
+
+  {/* ══════════════════════════════════════════════════════════════ */}
+  {/*  HEADER — 4 variantes                                         */}
+  {/* ══════════════════════════════════════════════════════════════ */}
+
+  <div class="demo-label">Header · padrao</div>
+  <Header variante="padrao" {...hdr} />
+  <hr class="demo-sep" />
+
+  <div class="demo-label">Header · minimal</div>
+  <Header variante="minimal" {...hdr} />
+  <hr class="demo-sep" />
+
+  <div class="demo-label">Header · centrado</div>
+  <Header variante="centrado" {...hdr} />
+  <hr class="demo-sep" />
+
+  {/*
+    transparente: Header gerencia o <slot> internamente.
+    Hero split é passado como filho — aparece abaixo do header absoluto,
+    com --header-offset aplicado automaticamente na coluna de texto.
+  */}
+  <div class="demo-label">Header · transparente  →  com Hero split abaixo</div>
+  <Header variante="transparente" {...hdr}>
+    <Hero variante="split" {...hero} imagem="/demo-foto.jpg" />
+  </Header>
+  <hr class="demo-sep" />
+
+  {/* ══════════════════════════════════════════════════════════════ */}
+  {/*  HERO — 6 variantes (cada um com Header padrao para contexto)  */}
+  {/* ══════════════════════════════════════════════════════════════ */}
+
+  <div class="demo-label">Hero · texto</div>
+  <Hero variante="texto" {...hero} />
+  <hr class="demo-sep" />
+
+  <div class="demo-label">Hero · imagem  (fallback sem foto — coluna colapsa)</div>
+  <Hero variante="imagem" {...hero} />
+  <hr class="demo-sep" />
+
+  <div class="demo-label">Hero · video  (sem videoUrl → bg-secondary puro)</div>
+  <Hero variante="video" {...hero} />
+  <hr class="demo-sep" />
+
+  <div class="demo-label">Hero · landing</div>
+  <Hero variante="landing" {...hero} />
+  <hr class="demo-sep" />
+
+  <div class="demo-label">Hero · split  (sem imagem → coluna bg-surface-2)</div>
+  <Hero variante="split" {...hero} />
+  <hr class="demo-sep" />
+
+  <div class="demo-label">Hero · editorial</div>
+  <Hero variante="editorial" {...hero} />
+  <hr class="demo-sep" />
+
+  {/* ══════════════════════════════════════════════════════════════ */}
+  {/*  SERVICOS — 4 variantes                                        */}
+  {/* ══════════════════════════════════════════════════════════════ */}
+
+  <div class="demo-label">Servicos · grade</div>
+  <Servicos variante="grade"
+            titulo="Serviços"
+            descricao="Atendimento presencial em Caieiras e online para todo o Brasil."
+            itens={servicos} />
+  <hr class="demo-sep" />
+
+  <div class="demo-label">Servicos · lista</div>
+  <Servicos variante="lista"
+            titulo="O que oferecemos"
+            itens={servicos} />
+  <hr class="demo-sep" />
+
+  <div class="demo-label">Servicos · destaque</div>
+  <Servicos variante="destaque"
+            titulo="Serviços"
+            itens={servicos} />
+  <hr class="demo-sep" />
+
+  <div class="demo-label">Servicos · tabs  (por categoria: Clínica · Avaliação)</div>
+  <Servicos variante="tabs"
+            titulo="Serviços por área"
+            itens={servicos} />
+  <hr class="demo-sep" />
+
+  {/* ══════════════════════════════════════════════════════════════ */}
+  {/*  FOOTER — 3 variantes                                          */}
+  {/* ══════════════════════════════════════════════════════════════ */}
+
+  <div class="demo-label">Footer · padrao</div>
+  <Footer variante="padrao" {...footer} />
+  <hr class="demo-sep" />
+
+  <div class="demo-label">Footer · minimal</div>
+  <Footer variante="minimal" {...footer} />
+  <hr class="demo-sep" />
+
+  <div class="demo-label">Footer · colunas</div>
+  <Footer variante="colunas" {...footer} />
+
+</Base>

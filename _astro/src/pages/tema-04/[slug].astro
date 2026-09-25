@@ -1,0 +1,48 @@
+---
+/**
+ * Rota unificada para serviços e posts do Tema 04 — mesmo padrão do
+ * tema-03 e do tema base: slug decide o quê, sem /servicos/ nem /blog/
+ * no caminho do item individual.
+ */
+import ServicoDetalheT4 from '../../components/paginas/ServicoDetalheT4.astro'
+import PostDetalheT4 from '../../components/paginas/PostDetalheT4.astro'
+import { getCollection } from 'astro:content'
+import { ehPublicado } from '../../lib/publicacao.ts'
+
+export async function getStaticPaths() {
+  const servicos = await getCollection('servicosT4')
+  const posts = await getCollection('postsT4', ehPublicado)
+
+  const slugsServicos = new Set(servicos.map(s => s.id))
+
+  const pathsServicos = servicos.map(s => ({
+    params: { slug: s.id },
+    props: { tipo: 'servico' as const, entry: s },
+  }))
+
+  const pathsPosts = posts
+    .filter(p => {
+      if (slugsServicos.has(p.id)) {
+        console.error(
+          `tema-04/[slug].astro: colisão de slug "${p.id}" entre servicosT4 e postsT4 — ` +
+          `o post foi ignorado nesta URL, o serviço prevalece. Troque o slug do post.`
+        )
+        return false
+      }
+      return true
+    })
+    .map(p => ({
+      params: { slug: p.id },
+      props: { tipo: 'post' as const, entry: p },
+    }))
+
+  return [...pathsServicos, ...pathsPosts]
+}
+
+const { tipo, entry } = Astro.props
+---
+
+{tipo === 'servico'
+  ? <ServicoDetalheT4 entry={entry} />
+  : <PostDetalheT4 entry={entry} />
+}

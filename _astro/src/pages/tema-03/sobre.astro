@@ -1,0 +1,149 @@
+---
+import Tema03Base  from '../../layouts/Tema03Base.astro'
+import Header      from '../../components/blocos/Header.astro'
+import PageHero    from '../../components/blocos/PageHero.astro'
+import Proposito   from '../../components/blocos/Proposito.astro'
+import Pilares     from '../../components/blocos/Pilares.astro'
+import Trajetoria  from '../../components/blocos/Trajetoria.astro'
+import Equipe      from '../../components/blocos/Equipe.astro'
+import Prova       from '../../components/blocos/Prova.astro'
+import Depoimentos from '../../components/blocos/Depoimentos.astro'
+import Cta         from '../../components/blocos/Cta.astro'
+import Footer      from '../../components/blocos/Footer.astro'
+import { site }    from '../../config/tema-03.ts'
+import { getCollection } from 'astro:content'
+
+const equipe = (await getCollection('equipeT3'))
+  .sort((a, b) => a.data.ordem - b.data.ordem)
+  .map(m => ({
+    nome:          m.data.nome,
+    cargo:         m.data.cargo,
+    crm:           m.data.registro,
+    especialidade: m.data.especialidade,
+    foto:          m.data.foto,
+  }))
+
+const depoimentos = (await getCollection('depoimentosT3'))
+  .sort((a, b) => a.data.ordem - b.data.ordem)
+  .map(d => ({
+    nome:    d.data.nome,
+    cidade:  d.data.cidade,
+    servico: d.data.servico,
+    corpo:   d.body.trim(),
+  }))
+
+const anos      = new Date().getFullYear() - site.anoFundacao
+const canonical = `${site.dominio}/sobre`
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type':    'AboutPage',
+      '@id':      `${canonical}#webpage`,
+      url:        canonical,
+      name:       `Sobre — ${site.nome}`,
+      about:      { '@id': `${site.dominio}/#organization` },
+      inLanguage: 'pt-BR',
+    },
+    {
+      '@type': 'BreadcrumbList',
+      '@id':   `${canonical}#breadcrumb`,
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home',  item: `${site.dominio}/` },
+        { '@type': 'ListItem', position: 2, name: 'Sobre', item: canonical },
+      ],
+    },
+  ],
+}
+---
+
+<Tema03Base
+  titulo={`Sobre a ${site.nome} — ${anos} anos em Londrina`}
+  metaDescription={`Escritório de contabilidade em Londrina desde ${site.anoFundacao}. Conheça a equipe, a trajetória e o modo de trabalho da ${site.nome}, com contador responsável por cliente.`}
+  canonical={canonical}
+  jsonLd={jsonLd}
+  nodeId="sobre"
+>
+  <Header
+    variante="padrao"
+    nomeSite={site.nome}
+    telefone={site.nap.telefone}
+    whatsapp={site.nap.whatsapp}
+    nav={site.nav}
+    ctaTexto="Falar com um contador"
+    ctaHref="/tema-03/contato"
+  />
+
+  <PageHero
+    eyebrow="Sobre o escritório"
+    titulo={`${anos} anos atendendo empresas do Paraná`}
+    descricao="Um escritório de porte médio, por opção. Carteira limitada para que cada cliente continue tendo um contador com nome, telefone e responsabilidade sobre o resultado."
+  />
+
+  <Proposito
+    eyebrow="Como chegamos aqui"
+    titulo="Começou com nove clientes e a mesma regra de hoje"
+    paragrafos={[
+      `A Vértice abriu em ${site.anoFundacao}, em duas salas no centro de Londrina. A carteira inicial era quase toda do comércio da região, e o serviço era o que se esperava de um escritório na época: escrituração, guia e obrigação entregue.`,
+      'A mudança veio quando os clientes começaram a trazer perguntas que a guia não respondia. Se contratar mais um funcionário muda o meu anexo? Vale a pena manter essa linha de produto? Foi para responder isso que o relatório gerencial virou entrega padrão, e não serviço à parte.',
+      'Hoje são pouco mais de duzentas empresas. O número cresce devagar de propósito: cada cliente tem um contador designado, e isso deixa de funcionar quando a carteira por profissional passa de certo ponto.',
+    ]}
+    imagemSrc="https://images.unsplash.com/photo-1497366754035-f200968a6e72?w=760&h=620&fit=crop&auto=format"
+    imagemAlt="Escritório da Vértice Contabilidade no centro de Londrina"
+  />
+
+  <Pilares
+    titulo="Missão, visão e valores"
+    descricao="Não como quadro na parede — como critério para decidir o que aceitamos e o que recusamos."
+    itens={site.pilares}
+  />
+
+  <Trajetoria
+    titulo="Linha do tempo"
+    descricao="Os marcos que mudaram o que o escritório entrega."
+    marcos={site.marcos}
+  />
+
+  <Equipe
+    variante="grade"
+    titulo="Quem responde pelo seu atendimento"
+    descricao="Contadores com registro ativo no CRC-PR. O responsável pela sua empresa é apresentado na primeira reunião e não muda sem aviso."
+    membros={equipe}
+  />
+
+  <Prova
+    titulo="Compromissos que valem para toda a carteira"
+    itens={site.diferenciais}
+  />
+
+  <Depoimentos
+    titulo="O que dizem os clientes"
+    itens={depoimentos}
+  />
+
+  <Cta
+    variante="card"
+    titulo="Quer conhecer o escritório antes de decidir?"
+    descricao="Agende uma visita ou uma conversa por vídeo com o contador que atenderia a sua empresa. Sem apresentação comercial no meio."
+    ctaPrimTexto="Agendar conversa"
+    ctaPrimHref="/tema-03/contato"
+    ctaSecTexto="Ver os serviços"
+    ctaSecHref="/tema-03/servicos"
+  />
+
+  <Footer
+    variante="colunas"
+    nomeSite={site.nome}
+    slogan={site.slogan}
+    telefone={site.nap.telefone}
+    email={site.nap.email}
+    endereco={`${site.nap.logradouro}, ${site.nap.complemento}`}
+    cidade={`${site.nap.bairro}, ${site.nap.cidade} — ${site.nap.uf}`}
+    cnpj={site.cnpj}
+    anoFundacao={site.anoFundacao}
+    redes={site.redes}
+    nav={site.nav}
+    colunas={site.navFooterColunas}
+  />
+</Tema03Base>

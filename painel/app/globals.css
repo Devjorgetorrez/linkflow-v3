@@ -1,0 +1,264 @@
+@import "tailwindcss";
+
+/* ==========================================================================
+   SiteFlow — 11 tokens semânticos.
+   Nenhum componente usa cor literal: tudo passa por estas variáveis.
+   ========================================================================== */
+
+:root {
+  --primary: #0b5cff;
+  --primary-ink: #ffffff;
+  --secondary: #eef2f9;
+  --accent: #f5a524;
+  --ink: #1b2a4a;
+  --ink-muted: #667694;
+  --surface: #f5f7fb;
+  --surface-2: #ffffff;
+  --line: #e3e8f0;
+  --success: #10b981;
+  --danger: #ef3e5c;
+
+  --radius: 8px;
+  --shadow-card: 0 1px 2px rgb(16 24 40 / 0.05), 0 1px 3px rgb(16 24 40 / 0.04);
+
+  /* marca — fixa nos dois temas, e identidade e nao cromia de interface */
+  --marca-a1: #22314f;
+  --marca-a2: #a02a6d;
+  --marca-a3: #ee2757;
+  --marca-a4: #ff3355;
+  --marca-b1: #fbb03b;
+  --marca-b2: #f2a93b;
+  --marca-b3: #a8c84a;
+  --marca-b4: #17c39a;
+  --density-y: 0.5rem;
+
+  /* sidebar */
+  --sidebar: #2b3a55;
+  --sidebar-active-bg: #ffffff;
+  --sidebar-active-ink: #0d41c0;
+  --sidebar-active-shadow: 0 1px 4px rgba(0,0,0,0.14), 0 1px 2px rgba(0,0,0,0.10);
+  --sidebar-flyout: #3a5078;
+  --sidebar-flyout-shadow: 4px 2px 16px rgba(0,0,0,0.24);
+  --sidebar-header-bg: #ffffff;
+  --sidebar-header-border: rgba(255,255,255,0.10);
+
+  --font-display: ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
+  --font-body: ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Mono", "Consolas", monospace;
+}
+
+[data-theme="dark"] {
+  --primary: #4c8dff;
+  --primary-ink: #06122b;
+  --secondary: #1a2436;
+  --accent: #f5a524;
+  --ink: #e6ecf7;
+  --ink-muted: #8a99b5;
+  --surface: #0b1220;
+  --surface-2: #131c2e;
+  --line: #22304a;
+  --success: #34d399;
+  --danger: #f2556c;
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.28);
+
+  /* sidebar — dark */
+  --sidebar: #0a1528;
+  --sidebar-active-bg: #1a5af5;
+  --sidebar-active-ink: #ffffff;
+  --sidebar-active-shadow: 0 2px 8px rgba(26,90,245,0.35), 0 1px 3px rgba(0,0,0,0.20);
+  --sidebar-flyout: #132040;
+  --sidebar-flyout-shadow: 4px 2px 16px rgba(0,0,0,0.42);
+  --sidebar-header-bg: #ccd5e3;
+  --sidebar-header-border: rgba(255,255,255,0.08);
+}
+
+@theme inline {
+  --color-primary: var(--primary);
+  --color-primary-ink: var(--primary-ink);
+  --color-secondary: var(--secondary);
+  --color-accent: var(--accent);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-active-bg: var(--sidebar-active-bg);
+  --color-sidebar-active-ink: var(--sidebar-active-ink);
+  --color-sidebar-header-bg: var(--sidebar-header-bg);
+
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+  --font-mono: var(--font-mono);
+
+  --radius-card: var(--radius);
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  border-color: var(--line);
+}
+
+::selection {
+  background: color-mix(in srgb, var(--primary) 35%, transparent);
+}
+
+/* scrollbar de painel */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 999px;
+  border: 3px solid var(--surface);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ink-muted);
+}
+
+/* o preflight do Tailwind já herda a fonte nos campos; repetir aqui fora de
+   camada faria esta regra ganhar de utilitários como text-[26px] */
+
+select {
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--ink-muted) 50%),
+    linear-gradient(135deg, var(--ink-muted) 50%, transparent 50%);
+  background-position: calc(100% - 14px) calc(50% + 1px), calc(100% - 9px) calc(50% + 1px);
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 26px;
+}
+
+[contenteditable]:focus {
+  outline: none;
+}
+
+[contenteditable] h1 {
+  font-size: 1.6rem;
+  font-weight: 700;
+  margin: 1rem 0 0.5rem;
+  font-family: var(--font-display);
+}
+[contenteditable] h2 {
+  font-size: 1.25rem;
+  font-weight: 650;
+  margin: 0.9rem 0 0.4rem;
+  font-family: var(--font-display);
+}
+[contenteditable] h3 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 0.75rem 0 0.35rem;
+  font-family: var(--font-display);
+}
+[contenteditable] p {
+  margin: 0.55rem 0;
+}
+[contenteditable] ul,
+[contenteditable] ol {
+  margin: 0.55rem 0 0.55rem 1.25rem;
+}
+[contenteditable] ul {
+  list-style: disc;
+}
+[contenteditable] ol {
+  list-style: decimal;
+}
+[contenteditable] blockquote {
+  border-left: 2px solid var(--primary);
+  padding-left: 0.75rem;
+  color: var(--ink-muted);
+  margin: 0.6rem 0;
+}
+[contenteditable] pre {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0.6rem 0.75rem;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  overflow-x: auto;
+  margin: 0.6rem 0;
+}
+[contenteditable] code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 0.05em 0.3em;
+}
+[contenteditable] hr {
+  border: none;
+  border-top: 1px solid var(--line);
+  margin: 1rem 0;
+}
+[contenteditable] figure {
+  margin: 0.9rem 0;
+}
+[contenteditable] figcaption {
+  margin-top: 0.35rem;
+  font-size: 11px;
+  color: var(--ink-muted);
+}
+[contenteditable] [data-ancora] {
+  display: inline-block;
+  width: 0.6rem;
+  height: 1rem;
+  border-left: 2px dashed var(--primary);
+  vertical-align: middle;
+}
+
+[contenteditable] a {
+  color: var(--primary);
+  text-decoration: underline;
+}
+[contenteditable] table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.6rem 0;
+  font-size: 12px;
+}
+[contenteditable] td,
+[contenteditable] th {
+  border: 1px solid var(--line);
+  padding: 0.3rem 0.5rem;
+  text-align: left;
+}
+
+@keyframes sf-pulse {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 0.8; }
+}
+.sf-skeleton {
+  background: var(--line);
+  border-radius: 4px;
+  animation: sf-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes sf-spin {
+  to { transform: rotate(360deg); }
+}
+.sf-spin {
+  animation: sf-spin 0.7s linear infinite;
+}

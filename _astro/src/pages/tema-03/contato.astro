@@ -1,0 +1,147 @@
+---
+/**
+ * Contato do Tema 03 — composição derivada da referência de serviço profissional:
+ *   faixa de cor com H1  →  card de formulário + bloco "Nossos contatos"  →
+ *   prova social  →  CTA  →  rodapé.
+ *
+ * O mapa embedado é acréscimo nosso à referência: o tema é de negócio local e
+ * a página de contato é onde o mapa mais rende. Fica logo após os contatos.
+ */
+import Tema03Base   from '../../layouts/Tema03Base.astro'
+import Header       from '../../components/blocos/Header.astro'
+import PageHero     from '../../components/blocos/PageHero.astro'
+import FormContato  from '../../components/blocos/FormContato.astro'
+import Localizacao  from '../../components/blocos/Localizacao.astro'
+import Depoimentos  from '../../components/blocos/Depoimentos.astro'
+import Cta          from '../../components/blocos/Cta.astro'
+import Footer       from '../../components/blocos/Footer.astro'
+import { site }     from '../../config/tema-03.ts'
+import { getCollection } from 'astro:content'
+
+const depoimentos = (await getCollection('depoimentosT3'))
+  .sort((a, b) => a.data.ordem - b.data.ordem)
+  .map(d => ({
+    nome:    d.data.nome,
+    cidade:  d.data.cidade,
+    servico: d.data.servico,
+    corpo:   d.body.trim(),
+  }))
+
+const canonical = `${site.dominio}/contato`
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type':    'ContactPage',
+      '@id':      `${canonical}#webpage`,
+      url:        canonical,
+      name:       `Contato — ${site.nome}`,
+      inLanguage: 'pt-BR',
+      about:      { '@id': `${site.dominio}/#organization` },
+    },
+    {
+      '@type': 'BreadcrumbList',
+      '@id':   `${canonical}#breadcrumb`,
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home',    item: `${site.dominio}/` },
+        { '@type': 'ListItem', position: 2, name: 'Contato', item: canonical },
+      ],
+    },
+  ],
+}
+---
+
+<Tema03Base
+  titulo={`Contato — Fale com a ${site.nome} em ${site.nap.cidade}`}
+  metaDescription="Fale com a Vértice Contabilidade em Londrina. Solicite proposta, tire dúvidas sobre troca de escritório ou abertura de empresa. Retorno em até um dia útil."
+  canonical={canonical}
+  jsonLd={jsonLd}
+  nodeId="contato"
+>
+  <Header
+    variante="padrao"
+    nomeSite={site.nome}
+    telefone={site.nap.telefone}
+    whatsapp={site.nap.whatsapp}
+    nav={site.nav}
+    ctaTexto="Peça sua proposta"
+    ctaHref="#formulario"
+  />
+
+  <PageHero
+    variante="destaque"
+    titulo={`Contato — Fale com a ${site.nome} em ${site.nap.cidade}`}
+    descricao="Solicite uma proposta sem compromisso para contabilidade, folha de pagamento ou abertura de empresa. Quem responde é contador, em até um dia útil."
+  />
+
+  <div id="formulario">
+    <FormContato
+      variante="institucional"
+      eyebrow="Fale com nossa equipe"
+      descricao="Envie uma mensagem para esclarecer suas dúvidas. Retornamos o mais breve possível."
+      chamada="Não fique com dúvidas, fale conosco"
+      titulo="Nossos contatos"
+      telefone={site.nap.telefone}
+      telefone2={site.nap.telefone2}
+      whatsapp={site.nap.whatsapp}
+      email={site.nap.email}
+      logradouro={site.nap.logradouro}
+      complemento={site.nap.complemento}
+      bairro={site.nap.bairro}
+      cidade={site.nap.cidade}
+      uf={site.nap.uf}
+      cep={site.nap.cep}
+      horarios={site.horarios}
+    />
+  </div>
+
+  <Localizacao
+    titulo="Como chegar até o escritório"
+    descricao="Centro de Londrina, com estacionamento no próprio edifício. Atendimento presencial com hora marcada."
+    logradouro={site.nap.logradouro}
+    complemento={site.nap.complemento}
+    bairro={site.nap.bairro}
+    cidade={site.nap.cidade}
+    uf={site.nap.uf}
+    cep={site.nap.cep}
+    telefone={site.nap.telefone}
+    whatsapp={site.nap.whatsapp}
+    email={site.nap.email}
+    horarios={site.horarios}
+    mapaSrc={site.mapaSrc}
+    mapaHref={`https://maps.google.com/?q=${encodeURIComponent(site.nap.enderecoFormatado)}`}
+  />
+
+  <Depoimentos
+    titulo="Quem já fez esse contato antes"
+    descricao="Empresários que escreveram por aqui e hoje são atendidos pelo escritório."
+    itens={depoimentos}
+  />
+
+  <Cta
+    variante="padrao"
+    titulo="Prefere começar pelo diagnóstico?"
+    descricao="Analisamos os seus últimos doze meses e mostramos o que encontramos, antes de qualquer proposta. Se não houver nada relevante para melhorar, dizemos isso também."
+    ctaPrimTexto="Solicitar diagnóstico"
+    ctaPrimHref="#formulario"
+    ctaSecTexto="Falar no WhatsApp"
+    ctaSecHref={`https://wa.me/${site.nap.whatsapp}`}
+    nota="Sem custo e sem compromisso de contratação."
+  />
+
+  <Footer
+    variante="colunas"
+    nomeSite={site.nome}
+    slogan={site.slogan}
+    telefone={site.nap.telefone}
+    email={site.nap.email}
+    endereco={`${site.nap.logradouro}, ${site.nap.complemento}`}
+    cidade={`${site.nap.bairro}, ${site.nap.cidade} — ${site.nap.uf}`}
+    cnpj={site.cnpj}
+    anoFundacao={site.anoFundacao}
+    redes={site.redes}
+    nav={site.nav}
+    colunas={site.navFooterColunas}
+  />
+</Tema03Base>

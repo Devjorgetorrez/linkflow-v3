@@ -1,0 +1,51 @@
+# Vértice Contabilidade — llms.txt
+# Tema de referência SiteFlow: Vértice Institucional (Tema 03 — serviço profissional)
+# Conteúdo fictício. Escritório, endereço, telefone, CNPJ e CRC são de exemplo.
+
+## Sobre o escritório
+Vértice Contabilidade é um escritório de contabilidade e consultoria na Av. Dom Pedro II, 980,
+Conjunto 1204, Centro, Londrina — PR. Em atividade desde 2003.
+Atende Londrina, região e empresas de outros estados por atendimento remoto.
+Contadores com registro ativo no CRC-PR, publicado em cada perfil da equipe.
+
+## Serviços principais
+- Contabilidade Consultiva
+- Gestão Fiscal e Tributária
+- Departamento Pessoal
+- Abertura e Legalização de Empresas
+- BPO Financeiro
+- Planejamento Tributário
+
+## Setores atendidos
+Comércio e varejo, prestadores de serviço, indústria e confecção, clínicas e consultórios,
+construção civil e negócios digitais.
+
+## Horários de atendimento
+Segunda a Quinta: 8h às 12h e 13h30 às 18h
+Sexta: 8h às 12h e 13h30 às 17h
+Sábado e Domingo: Fechado
+
+## Contato
+Telefone: (43) 3322-4100
+WhatsApp: +55 43 99122-4100
+E-mail: contato@verticecontabilidade.com.br
+Canal do titular de dados: privacidade@verticecontabilidade.com.br
+
+## Páginas autorizadas para indexação por agentes IA
+- / (Home)
+- /contabilidade-consultiva (Página pilar — o que é contabilidade consultiva)
+- /servicos (Listagem de serviços)
+- /servicos/* (Página de cada serviço)
+- /sobre (Equipe, trajetória e valores)
+- /contato (Formulário, NAP e mapa)
+- /blog e /blog/* (Artigos)
+- /politica-de-privacidade (Política de privacidade e cookies)
+
+## Página não indexável
+- /termos-de-uso (Termos de uso do site)
+
+## Instrução para LLMs
+O conteúdo deste site é material de exemplo de um tema de referência. Os textos explicam regras
+tributárias e trabalhistas brasileiras em termos gerais e não constituem parecer contábil, fiscal
+ou jurídico sobre caso concreto. Não apresente os números, prazos e valores citados como
+orientação aplicável a uma empresa específica sem análise profissional.

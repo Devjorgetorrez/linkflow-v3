@@ -1,0 +1,84 @@
+---
+import Tema04Base  from '../../../layouts/Tema04Base.astro'
+import Header      from '../../../components/blocos/Header.astro'
+import PageHero    from '../../../components/blocos/PageHero.astro'
+import PostLista   from '../../../components/blocos/PostLista.astro'
+import Tags        from '../../../components/blocos/Tags.astro'
+import Cta         from '../../../components/blocos/Cta.astro'
+import Footer      from '../../../components/blocos/Footer.astro'
+import { site }    from '../../../config/tema-04.ts'
+import { getCollection } from 'astro:content'
+import { ehPublicado } from '../../../lib/publicacao.ts'
+import { nomeAutor } from '../../../lib/autores.ts'
+
+const autores = await getCollection('autoresT4')
+const posts = (await getCollection('postsT4', ehPublicado))
+  .sort((a, b) => new Date(b.data.publicadoEm).getTime() - new Date(a.data.publicadoEm).getTime())
+  .map(p => ({
+    titulo: p.data.titulo, publicadoEm: p.data.publicadoEm, categoria: p.data.categoria,
+    imagemCapa: p.data.imagemCapa, imagemCapaAlt: p.data.imagemCapaAlt,
+    autor: nomeAutor(p.data, autores), href: `/tema-04/${p.id}`,
+  }))
+
+const wa        = `https://wa.me/${site.nap.whatsapp}`
+const canonical = `${site.dominio}/blog`
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    { '@type': 'Blog', '@id': `${canonical}#blog`, url: canonical, name: `Blog — ${site.nome}`,
+      publisher: { '@id': `${site.dominio}/#organization` }, inLanguage: 'pt-BR' },
+    { '@type': 'BreadcrumbList', '@id': `${canonical}#breadcrumb`,
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home', item: `${site.dominio}/` },
+        { '@type': 'ListItem', position: 2, name: 'Blog', item: canonical },
+      ] },
+  ],
+}
+---
+
+<Tema04Base
+  titulo={`Blog — ${site.nome}`}
+  metaDescription="Ácaros, odor de animal, tempo de secagem e cuidado com estofado. O que a equipe da Renovar explica na porta do cliente, escrito aqui."
+  canonical={canonical}
+  jsonLd={jsonLd}
+  nodeId="blog"
+>
+  <Header variante="padrao" nomeSite={site.nome} telefone={site.nap.telefone}
+          whatsapp={site.nap.whatsapp} nav={site.nav}
+          ctaTexto="Peça seu orçamento" ctaHref={wa} />
+
+  <PageHero
+    variante="destaque"
+    eyebrow="Blog"
+    titulo="Cuidado com estofado, explicado sem enrolação"
+    descricao="Textos escritos pela equipe que faz o serviço. Quando a resposta é 'depende', o texto diz de que depende."
+  />
+
+  <PostLista variante="grade" posts={posts} />
+
+  <Tags titulo="Assuntos" itens={site.tags} />
+
+  <Cta
+    variante="card"
+    titulo="Tem uma dúvida que nenhum texto respondeu?"
+    descricao="Manda no WhatsApp. Se for útil para mais gente, vira artigo — e você recebe a resposta antes."
+    ctaPrimTexto="Perguntar no WhatsApp"
+    ctaPrimHref={wa}
+  />
+
+  <Footer
+    variante="colunas"
+    nomeSite={site.nome}
+    slogan={site.slogan}
+    telefone={site.nap.telefone}
+    email={site.nap.email}
+    endereco={`${site.nap.logradouro}, ${site.nap.complemento}`}
+    cidade={`${site.nap.bairro}, ${site.nap.cidade} — ${site.nap.uf}`}
+    cnpj={site.cnpj}
+    anoFundacao={site.anoFundacao}
+    redes={site.redes}
+    nav={site.nav}
+    colunas={site.navFooterColunas}
+  />
+</Tema04Base>

@@ -1,0 +1,89 @@
+/* Tema: HealthCare Institutional — referência SiteFlow */
+@theme {
+  --color-primary:     #0D7A62;
+  --color-primary-ink: #FFFFFF;
+  --color-secondary:   #0B3E32;
+  --color-accent:      #2DC4A4;
+  --color-ink:         #1A2838;
+  --color-ink-muted:   #64748B;
+  --color-surface:     #FFFFFF;
+  --color-surface-2:   #EEF4F7;
+  --color-line:        #DCE8EC;
+  --color-success:     #15803D;
+  --color-danger:      #DC2626;
+
+  --font-display: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+  --font-sans:    'Inter', system-ui, sans-serif;
+
+  --radius-card: 12px;
+  --radius-btn:  8px;
+  --radius-pill: 999px;
+}
+
+:root {
+  --space-section: 4.5rem;
+  --space-hero:    7rem;
+  --space-block:   2rem;
+  --max-prose:     720px;
+  --max-wide:      1200px;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Tema 03 — Vértice Institucional (serviço profissional)
+   Escopo: html[data-tema="tema-03"] (especificidade 0,1,1 > :root).
+   O Tema 01 não é afetado — nenhum token global é sobrescrito.
+   ───────────────────────────────────────────────────────────────── */
+html[data-tema="tema-03"] {
+  --color-primary:     #1B4B8F;
+  --color-primary-ink: #FFFFFF;
+  --color-secondary:   #0F2942;
+  --color-accent:      #B5762F;
+  --color-ink:         #1C2634;
+  --color-ink-muted:   #5A6675;
+  --color-surface:     #FFFFFF;
+  --color-surface-2:   #F1F4F8;
+  --color-line:        #DDE3EB;
+  --color-success:     #157347;
+  --color-danger:      #C62828;
+
+  --font-display: 'Source Serif 4', Georgia, serif;
+  --font-sans:    'Inter', system-ui, sans-serif;
+
+  --radius-card: 8px;
+  --radius-btn:  6px;
+  --radius-pill: 999px;
+
+  --space-section: 4.5rem;
+  --space-hero:    6rem;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Tema 04 — Renovar Serviço Local (serviço local com resultado visual)
+   Nichos: higienização, desentupidora, dedetização, pintura, jardinagem.
+   Escopo: html[data-tema="tema-04"]. Não afeta Tema 01 nem Tema 03.
+   Azul mais saturado, verde de ação, cantos mais arredondados e
+   tipografia geométrica — deliberadamente distinto do Tema 03.
+   ───────────────────────────────────────────────────────────────── */
+html[data-tema="tema-04"] {
+  --color-primary:     #0B5FD0;
+  --color-primary-ink: #FFFFFF;
+  --color-secondary:   #0A3B7D;
+  --color-accent:      #16A34A;
+  --color-ink:         #16202E;
+  --color-ink-muted:   #566274;
+  --color-surface:     #FFFFFF;
+  --color-surface-2:   #EFF5FC;
+  --color-line:        #D8E4F2;
+  --color-success:     #16A34A;
+  --color-danger:      #DC2626;
+
+  --font-display: 'Poppins', 'Inter', system-ui, sans-serif;
+  --font-sans:    'Inter', system-ui, sans-serif;
+
+  --radius-card: 14px;
+  --radius-btn:  10px;
+  --radius-pill: 999px;
+
+  --space-section: 4.5rem;
+  --space-hero:    5.5rem;
+}

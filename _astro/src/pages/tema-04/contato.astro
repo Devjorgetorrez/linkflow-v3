@@ -1,0 +1,128 @@
+---
+import Tema04Base   from '../../layouts/Tema04Base.astro'
+import Header       from '../../components/blocos/Header.astro'
+import PageHero     from '../../components/blocos/PageHero.astro'
+import FormContato  from '../../components/blocos/FormContato.astro'
+import AreaAtendida from '../../components/blocos/AreaAtendida.astro'
+import Localizacao  from '../../components/blocos/Localizacao.astro'
+import Depoimentos  from '../../components/blocos/Depoimentos.astro'
+import Cta          from '../../components/blocos/Cta.astro'
+import Footer       from '../../components/blocos/Footer.astro'
+import { site }     from '../../config/tema-04.ts'
+import { getCollection } from 'astro:content'
+
+const depoimentos = (await getCollection('depoimentosT4'))
+  .sort((a, b) => a.data.ordem - b.data.ordem)
+  .map(d => ({ nome: d.data.nome, cidade: d.data.cidade, servico: d.data.servico, corpo: d.body.trim() }))
+
+const wa        = `https://wa.me/${site.nap.whatsapp}`
+const canonical = `${site.dominio}/contato`
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    { '@type': 'ContactPage', '@id': `${canonical}#webpage`, url: canonical,
+      name: `Contato — ${site.nome}`, about: { '@id': `${site.dominio}/#organization` }, inLanguage: 'pt-BR' },
+    { '@type': 'BreadcrumbList', '@id': `${canonical}#breadcrumb`,
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home',    item: `${site.dominio}/` },
+        { '@type': 'ListItem', position: 2, name: 'Contato', item: canonical },
+      ] },
+  ],
+}
+---
+
+<Tema04Base
+  titulo={`Contato — Peça seu orçamento na ${site.nome}`}
+  metaDescription="Fale com a Renovar Higienização em Campinas. Mande a foto da peça pelo WhatsApp e receba o valor fechado, sem visita técnica cobrada."
+  canonical={canonical}
+  jsonLd={jsonLd}
+  nodeId="contato"
+>
+  <Header variante="padrao" nomeSite={site.nome} telefone={site.nap.telefone}
+          whatsapp={site.nap.whatsapp} nav={site.nav}
+          ctaTexto="Peça seu orçamento" ctaHref={wa} />
+
+  <PageHero
+    variante="destaque"
+    titulo={`Contato — Peça seu orçamento na ${site.nome}`}
+    descricao="O caminho mais rápido é a foto no WhatsApp: devolvemos o valor fechado e a primeira data livre, normalmente no mesmo dia."
+  />
+
+  <div id="formulario">
+    <FormContato
+      variante="institucional"
+      eyebrow="Fale com a nossa equipe"
+      descricao="Conte qual é a peça e qual é o problema. Se puder, mande também uma foto pelo WhatsApp — acelera muito o orçamento."
+      chamada="Atendimento de segunda a sábado"
+      titulo="Nossos contatos"
+      telefone={site.nap.telefone}
+      telefone2={site.nap.telefone2}
+      whatsapp={site.nap.whatsapp}
+      email={site.nap.email}
+      logradouro={site.nap.logradouro}
+      complemento={site.nap.complemento}
+      bairro={site.nap.bairro}
+      cidade={site.nap.cidade}
+      uf={site.nap.uf}
+      cep={site.nap.cep}
+      horarios={site.horarios}
+    />
+  </div>
+
+  <AreaAtendida
+    eyebrow="Cobertura"
+    titulo="Seu bairro está na nossa rota?"
+    descricao="Esta é a lista das regiões que atendemos com frequência. Fora dela, consulte: dependendo da semana conseguimos encaixar."
+    regioes={site.regioes}
+    bullets={site.regioesBullets}
+    imagem="https://images.unsplash.com/photo-1449844908441-8829872d2607?w=420&h=480&fit=crop&auto=format"
+    imagemAlt="Rua residencial arborizada"
+    selo="Campinas e região metropolitana"
+    ctaTexto="Consultar meu bairro"
+    ctaHref={wa}
+  />
+
+  <Localizacao
+    titulo="Nossa base"
+    descricao="O atendimento é em domicílio. A base recebe apenas peças que precisam de secagem controlada, como tapete de fibra natural."
+    logradouro={site.nap.logradouro} complemento={site.nap.complemento}
+    bairro={site.nap.bairro} cidade={site.nap.cidade} uf={site.nap.uf} cep={site.nap.cep}
+    telefone={site.nap.telefone} whatsapp={site.nap.whatsapp} email={site.nap.email}
+    horarios={site.horarios} mapaSrc={site.mapaSrc}
+    mapaHref={`https://maps.google.com/?q=${encodeURIComponent(site.nap.enderecoFormatado)}`}
+  />
+
+  <Depoimentos
+    titulo="Quem já nos chamou"
+    itens={depoimentos}
+    notaMedia={site.avaliacao.nota}
+    totalAvaliacoes={site.avaliacao.total}
+    fonteAvaliacoes={site.avaliacao.fonte}
+  />
+
+  <Cta
+    variante="padrao"
+    titulo="Prefere resolver agora?"
+    descricao="No WhatsApp o orçamento sai na hora, com foto da peça. É o canal em que mais gente fecha."
+    ctaPrimTexto="Chamar no WhatsApp"
+    ctaPrimHref={wa}
+    ctaSecTexto="Preencher o formulário"
+    ctaSecHref="#formulario"
+  />
+
+  <Footer
+    variante="colunas"
+    nomeSite={site.nome}
+    slogan={site.slogan}
+    telefone={site.nap.telefone}
+    email={site.nap.email}
+    endereco={`${site.nap.logradouro}, ${site.nap.complemento}`}
+    cidade={`${site.nap.bairro}, ${site.nap.cidade} — ${site.nap.uf}`}
+    cnpj={site.cnpj}
+    anoFundacao={site.anoFundacao}
+    redes={site.redes}
+    nav={site.nav}
+    colunas={site.navFooterColunas}
+  />
+</Tema04Base>

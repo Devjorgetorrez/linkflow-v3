@@ -1,0 +1,347 @@
+---
+/**
+ * Servicos — variantes: grade | lista | destaque | tabs
+ *
+ * Campo compartilhado:
+ *   titulo, descricao, itens[]: { titulo*, descricao, icone, imagem, imagemAlt, href, categoria }
+ *
+ * Empty state: bloco não renderiza se itens.length === 0.
+ * destaque com 1 item: só destaque, sem grade menor.
+ * tabs sem categoria em nenhum item: degrada para grade (sem abas).
+ * Imagem ausente: icone se disponível; senão card sem visual de topo.
+ *
+ * servicos-tabs: CSS-only via input[radio] + :has(). Zero JS.
+ *   Abas derivam de itens[].categoria (campo livre no editor).
+ *   Origem: nó.* — não há arquitetura.json ou coleção externa.
+ */
+
+interface Item {
+  titulo:      string
+  descricao?:  string
+  icone?:      string
+  imagem?:     string
+  imagemAlt?:  string
+  href?:       string
+  categoria?:  string
+}
+
+interface Props {
+  variante?:   'grade' | 'lista' | 'destaque' | 'tabs'
+  titulo?:     string
+  descricao?:  string
+  itens:       Item[]
+}
+
+const {
+  variante  = 'grade',
+  titulo,
+  descricao,
+  itens     = [],
+} = Astro.props
+
+if (itens.length === 0) return  // empty state
+
+// Para tabs: extrai categorias únicas na ordem em que aparecem
+const categorias = variante === 'tabs'
+  ? [...new Set(itens.map(i => i.categoria).filter(Boolean))]
+  : []
+
+// Se tabs mas sem nenhuma categoria, cai para grade
+const efetivo = (variante === 'tabs' && categorias.length === 0) ? 'grade' : variante
+
+// Destaque = primeiro item; resto = grade
+const [destaque, ...demais] = itens
+---
+
+{/* ── grade ─────────────────────────────────────────────────────── */}
+{efetivo === 'grade' && (
+  <section class="py-[var(--space-section)]">
+    <div class="container-wide">
+      {(titulo || descricao) && (
+        <div class="mb-10 text-center">
+          {titulo && <h2 class="text-[clamp(1.625rem,3vw,2.25rem)] font-bold text-secondary">{titulo}</h2>}
+          {descricao && <p class="mt-2 text-base text-ink-muted max-w-[560px] mx-auto">{descricao}</p>}
+        </div>
+      )}
+      <ul class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 list-none p-0 m-0">
+        {itens.map(item => (
+          <li class="flex">
+            <a href={item.href ?? '#'}
+               class:list={[
+                 'group flex flex-col w-full rounded-[var(--radius-card)] border border-line bg-surface',
+                 'overflow-hidden no-underline transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md',
+                 !item.href && 'pointer-events-none',
+               ]}>
+              {/* Imagem de topo */}
+              {item.imagem ? (
+                <div class="aspect-video overflow-hidden bg-primary/10">
+                  <img src={item.imagem} alt={item.imagemAlt ?? item.titulo}
+                       width="400" height="225"
+                       class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                       loading="lazy" />
+                </div>
+              ) : item.icone ? (
+                <div class="flex aspect-video items-center justify-center bg-primary/10">
+                  <span class="text-4xl font-mono font-bold text-primary/30 select-none" aria-hidden="true">
+                    {item.icone.slice(0, 2).toUpperCase()}
+                  </span>
+                </div>
+              ) : null}
+
+              <div class="flex flex-col flex-1 p-6 text-center">
+                <p class="text-base font-bold text-primary mb-2 group-hover:text-secondary transition-colors">
+                  {item.titulo}
+                </p>
+                {item.descricao && (
+                  <p class="text-sm text-ink-muted leading-relaxed flex-1">{item.descricao}</p>
+                )}
+                {item.href && (
+                  <div class="mt-5">
+                    <span class="inline-block rounded-full bg-secondary px-6 py-2 text-xs font-bold uppercase tracking-wider text-surface group-hover:bg-primary transition-colors">
+                      Saiba mais
+                    </span>
+                  </div>
+                )}
+              </div>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </section>
+)}
+
+{/* ── lista ─────────────────────────────────────────────────────── */}
+{efetivo === 'lista' && (
+  <section class="py-[var(--space-section)] bg-surface-2">
+    <div class="container-wide max-w-[720px]">
+      {(titulo || descricao) && (
+        <div class="mb-10">
+          {titulo && <h2 class="text-[clamp(1.625rem,3vw,2.25rem)] font-bold text-secondary">{titulo}</h2>}
+          {descricao && <p class="mt-2 text-base text-ink-muted">{descricao}</p>}
+        </div>
+      )}
+      <ul class="list-none p-0 m-0 divide-y divide-line">
+        {itens.map(item => (
+          <li>
+            <a href={item.href ?? '#'}
+               class:list={[
+                 'group flex items-start gap-4 py-5 no-underline transition-colors',
+                 'hover:text-primary',
+                 !item.href && 'pointer-events-none',
+               ]}>
+              {item.icone && (
+                <div class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-btn)] bg-primary/10">
+                  <span class="text-[10px] font-mono font-bold text-primary" aria-hidden="true">
+                    {item.icone.slice(0, 2).toUpperCase()}
+                  </span>
+                </div>
+              )}
+              <div class="min-w-0 flex-1">
+                <p class="font-semibold text-secondary group-hover:text-primary transition-colors">
+                  {item.titulo}
+                </p>
+                {item.descricao && (
+                  <p class="mt-1 text-sm text-ink-muted">{item.descricao}</p>
+                )}
+              </div>
+              {item.href && (
+                <svg class="mt-1 shrink-0 text-ink-muted group-hover:text-primary transition-colors"
+                     width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              )}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </section>
+)}
+
+{/* ── destaque ──────────────────────────────────────────────────── */}
+{efetivo === 'destaque' && (
+  <section class="py-[var(--space-section)]">
+    <div class="container-wide">
+      {(titulo || descricao) && (
+        <div class="mb-10">
+          {titulo && <h2 class="text-[clamp(1.625rem,3vw,2.25rem)] font-bold text-secondary">{titulo}</h2>}
+          {descricao && <p class="mt-2 text-base text-ink-muted">{descricao}</p>}
+        </div>
+      )}
+
+      {/* Card em destaque full-width */}
+      <a href={destaque.href ?? '#'}
+         class:list={[
+           'group mb-8 flex flex-col md:flex-row rounded-[var(--radius-card)] border border-line bg-surface-2',
+           'overflow-hidden no-underline transition-all hover:-translate-y-0.5 hover:shadow-lg hover:border-primary/40',
+           !destaque.href && 'pointer-events-none',
+         ]}>
+        {/* Visual do destaque: imagem > bloco de cor */}
+        <div class="md:w-2/5 shrink-0 min-h-[200px] overflow-hidden">
+          {destaque.imagem
+            ? <img src={destaque.imagem} alt={destaque.imagemAlt ?? destaque.titulo}
+                   width="480" height="320"
+                   class="h-full w-full object-cover"
+                   loading="lazy" />
+            : <div class="h-full w-full bg-primary/10 flex items-center justify-center">
+                {destaque.icone && (
+                  <span class="text-3xl font-mono font-bold text-primary/40" aria-hidden="true">
+                    {destaque.icone.slice(0, 2).toUpperCase()}
+                  </span>
+                )}
+              </div>
+          }
+        </div>
+        <div class="flex flex-col justify-center p-8">
+          <p class="text-xs font-semibold uppercase tracking-widest text-primary mb-2">
+            Destaque
+          </p>
+          <h3 class="text-2xl font-bold text-secondary group-hover:text-primary transition-colors">
+            {destaque.titulo}
+          </h3>
+          {destaque.descricao && (
+            <p class="mt-3 text-base text-ink-muted leading-relaxed">{destaque.descricao}</p>
+          )}
+        </div>
+      </a>
+
+      {/* Grade dos demais (só se existirem) */}
+      {demais.length > 0 && (
+        <ul class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 list-none p-0 m-0">
+          {demais.map(item => (
+            <li class="flex">
+              <a href={item.href ?? '#'}
+                 class:list={[
+                   'group flex flex-col w-full rounded-[var(--radius-card)] border border-line bg-surface',
+                   'overflow-hidden no-underline transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md',
+                   !item.href && 'pointer-events-none',
+                 ]}>
+                {item.imagem ? (
+                  <div class="aspect-video overflow-hidden bg-primary/10">
+                    <img src={item.imagem} alt={item.imagemAlt ?? item.titulo}
+                         width="400" height="225"
+                         class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                         loading="lazy" />
+                  </div>
+                ) : item.icone ? (
+                  <div class="flex aspect-video items-center justify-center bg-primary/10">
+                    <span class="text-4xl font-mono font-bold text-primary/30" aria-hidden="true">
+                      {item.icone.slice(0, 2).toUpperCase()}
+                    </span>
+                  </div>
+                ) : null}
+                <div class="flex flex-col flex-1 p-6 text-center">
+                  <p class="font-bold text-primary mb-2 group-hover:text-secondary transition-colors">
+                    {item.titulo}
+                  </p>
+                  {item.descricao && (
+                    <p class="text-sm text-ink-muted leading-relaxed flex-1">{item.descricao}</p>
+                  )}
+                  {item.href && (
+                    <div class="mt-5">
+                      <span class="inline-block rounded-full bg-secondary px-6 py-2 text-xs font-bold uppercase tracking-wider text-surface group-hover:bg-primary transition-colors">
+                        Saiba mais
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  </section>
+)}
+
+{/* ── tabs (CSS-only via :has()) ────────────────────────────────── */}
+{efetivo === 'tabs' && (
+  <section class="py-[var(--space-section)]">
+    <div class="container-wide">
+      {(titulo || descricao) && (
+        <div class="mb-10">
+          {titulo && <h2 class="text-[clamp(1.625rem,3vw,2.25rem)] font-bold text-secondary">{titulo}</h2>}
+          {descricao && <p class="mt-2 text-base text-ink-muted">{descricao}</p>}
+        </div>
+      )}
+
+      {/* Radio inputs ocultos — controlam qual painel está ativo */}
+      {categorias.map((cat, i) => (
+        <input type="radio"
+               name="svc-tabs"
+               id={`svc-tab-${i}`}
+               class="sr-only"
+               checked={i === 0}
+               aria-label={cat} />
+      ))}
+
+      {/* Barra de abas */}
+      <div class="mb-8 flex flex-wrap gap-2 border-b border-line pb-0" role="tablist">
+        {categorias.map((cat, i) => (
+          <label for={`svc-tab-${i}`}
+                 role="tab"
+                 class:list={[
+                   'cursor-pointer rounded-t-[var(--radius-btn)] px-5 py-2.5',
+                   'text-sm font-medium transition-colors',
+                   'border border-b-0 border-line',
+                   // Aba ativa: fundo branco + borda primária + texto primário
+                   // Controlado por :has() no painel wrapper (ver abaixo via CSS inline)
+                   'bg-surface text-ink-muted hover:text-primary',
+                 ]}>
+            {cat}
+          </label>
+        ))}
+      </div>
+
+      {/* Painéis: visibilidade controlada por :has() no ancestral section */}
+      {categorias.map((cat, i) => {
+        const itensDaAba = itens.filter(item => item.categoria === cat)
+        return (
+          <div id={`svc-panel-${i}`}
+               data-tab-panel={i}>
+            <ul class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 list-none p-0 m-0">
+              {itensDaAba.map(item => (
+                <li>
+                  <a href={item.href ?? '#'}
+                     class:list={[
+                       'group flex flex-col rounded-[var(--radius-card)] border border-line bg-surface-2',
+                       'p-6 no-underline transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md',
+                       !item.href && 'pointer-events-none',
+                     ]}>
+                    {item.icone && (
+                      <div class="mb-4 flex h-9 w-9 items-center justify-center rounded-[var(--radius-btn)] bg-primary/10">
+                        <span class="text-xs font-mono font-bold text-primary" aria-hidden="true">
+                          {item.icone.slice(0, 2).toUpperCase()}
+                        </span>
+                      </div>
+                    )}
+                    <p class="font-semibold text-secondary group-hover:text-primary transition-colors">
+                      {item.titulo}
+                    </p>
+                    {item.descricao && (
+                      <p class="mt-1.5 text-sm text-ink-muted leading-relaxed">{item.descricao}</p>
+                    )}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )
+      })}
+
+      {/* CSS inline: esconde todos os painéis por padrão; :has() mostra o ativo */}
+      <Fragment set:html={`<style>
+        [data-tab-panel] { display: none; }
+        ${categorias.map((_, i) => `
+          section:has(#svc-tab-${i}:checked) [data-tab-panel="${i}"] { display: block; }
+          section:has(#svc-tab-${i}:checked) label[for="svc-tab-${i}"] {
+            background-color: var(--color-surface);
+            color: var(--color-primary);
+            border-color: var(--color-primary);
+          }
+        `).join('')}
+      </style>`} />
+    </div>
+  </section>
+)}

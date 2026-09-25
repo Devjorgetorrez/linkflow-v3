@@ -1,0 +1,80 @@
+---
+import ThemeBase  from '../../layouts/ThemeBase.astro'
+import Header     from '../../components/blocos/Header.astro'
+import PageHero   from '../../components/blocos/PageHero.astro'
+import Servicos   from '../../components/blocos/Servicos.astro'
+import Cta        from '../../components/blocos/Cta.astro'
+import Footer     from '../../components/blocos/Footer.astro'
+import { site }   from '../../config/site.ts'
+import { getCollection } from 'astro:content'
+
+const todosServicos = await getCollection('servicos')
+const itens = todosServicos
+  .sort((a, b) => a.data.ordem - b.data.ordem)
+  .map(s => ({
+    titulo:    s.data.titulo,
+    descricao: s.body.split('\n').find(l => l.trim().length > 0) ?? '',
+    icone:     s.data.icone ?? '',
+    imagem:    s.data.imagem,
+    imagemAlt: s.data.imagemAlt,
+    href:      `/${s.id}`,
+    categoria: s.data.categoria,
+  }))
+
+const canonical = `${site.dominio}/servicos`
+const metaServicos = itens.length > 0
+  ? `${itens.slice(0, 5).map(i => i.titulo).join(', ')}. Conheça todos os serviços da ${site.nome}.`
+  : `Conheça todos os serviços da ${site.nome}.`
+---
+
+<ThemeBase
+  titulo={`Serviços — ${site.nome}`}
+  metaDescription={metaServicos}
+  canonical={canonical}
+  nodeId="servicos"
+>
+  <Header
+    variante="padrao"
+    nomeSite={site.nome}
+    telefone={site.nap.telefone}
+    whatsapp={site.nap.whatsapp}
+    nav={site.nav}
+    ctaTexto="Agendar Consulta"
+    ctaHref="/contato"
+  />
+
+  <PageHero
+    titulo="Nossos Serviços Especializados"
+    descricao="Oferecemos uma gama completa de cuidados médicos com a excelência técnica e o acolhimento humano que você e sua família merecem. Explore nossas especialidades abaixo."
+  />
+
+  <Servicos
+    variante="grade"
+    itens={itens}
+  />
+
+  <Cta
+    variante="padrao"
+    titulo="Não sabe qual especialidade precisa?"
+    descricao="Nossa equipe de triagem está pronta para direcionar você ao especialista correto. Entre em contato para uma avaliação inicial."
+    ctaPrimTexto="Falar com a equipe"
+    ctaPrimHref={`https://wa.me/${site.nap.whatsapp}`}
+    ctaSecTexto="Ver localização"
+    ctaSecHref="/contato"
+  />
+
+  <Footer
+    variante="escuro"
+    nomeSite={site.nome}
+    slogan={site.slogan}
+    telefone={site.nap.telefone}
+    email={site.nap.email}
+    endereco={`${site.nap.logradouro}, ${site.nap.complemento}`}
+    cidade={`${site.nap.bairro}, ${site.nap.cidade} — ${site.nap.uf}`}
+    cnpj={site.cnpj}
+    anoFundacao={site.anoFundacao}
+    redes={site.redes}
+    nav={site.nav}
+    colunas={site.navFooterColunas}
+  />
+</ThemeBase>
