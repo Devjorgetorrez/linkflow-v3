@@ -96,7 +96,11 @@ export async function PATCH(
     // ── Campos de acesso ───────────────────────────────────────────────────────
 
     // podeAcessar e podeAssinar (admin ou próprio)
-    if (body.podeAcessar !== undefined && (isAdmin || isProprioUsuario)) {
+    if (body.podeAcessar !== undefined) {
+      // Acesso ao painel é decisão do administrador: o próprio usuário não pode se tirar (nem se dar) o acesso.
+      if (!isAdmin && Boolean(body.podeAcessar) !== (u.podeAcessar !== false)) {
+        return NextResponse.json({ ok: false, erro: "Apenas administradores podem alterar dados de acesso" }, { status: 403 });
+      }
       u.podeAcessar = Boolean(body.podeAcessar);
     }
     if (body.podeAssinar !== undefined && (isAdmin || isProprioUsuario)) {
