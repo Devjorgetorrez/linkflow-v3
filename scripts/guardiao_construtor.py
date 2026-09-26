@@ -274,7 +274,28 @@ def verificar_construcao(slug):
 # que sobra da promocao E o config de demonstracao: se qualquer um destes
 # valores continuar no site do cliente, dado FICTICIO (CNPJ, telefone, e-mail,
 # nome de empresa) iria ao ar como se fosse dele.
-_CAMPOS_DEMO = ("nome", "nomeLongo", "cnpj", "telefone", "whatsapp", "email", "dominio", "logradouro", "enderecoFormatado")
+_CAMPOS_DEMO = ("nome", "nomeLongo", "razaoSocial", "descricao", "cnpj", "telefone", "whatsapp", "email", "dominio", "logradouro", "enderecoFormatado")
+
+# Listas que alimentam o JSON-LD (horarios e area atendida). Se o bloco do cliente for IGUAL ao de
+# um layout de demonstracao, dados estruturados FALSOS (horario/cidade da demo) iriam ao ar.
+_LISTAS_DEMO = ("funcionamento", "areaAtendimento")
+
+
+def _bloco_lista(texto, chave):
+    """Texto (sem espacos) do array `chave: [ ... ]` de primeiro nivel, ou None."""
+    m = re.search(rf"^  {chave}\s*:\s*\[", texto, re.MULTILINE)
+    if not m:
+        return None
+    i = m.end() - 1
+    d = 0
+    for k in range(i, len(texto)):
+        if texto[k] == "[":
+            d += 1
+        elif texto[k] == "]":
+            d -= 1
+            if d == 0:
+                return re.sub(r"\s+", "", texto[i:k + 1])
+    return None
 
 
 def valores_de_demonstracao(astro_dir_cliente):
@@ -292,6 +313,7 @@ def valores_de_demonstracao(astro_dir_cliente):
             continue
         mesmo_que_cliente = ref.resolve() == cliente
         valores = {}
+        listas = {}
         for arq in sorted(cfg.glob("*.ts")):
             if arq.name == "site.ts" and mesmo_que_cliente:
                 continue  # aqui site.ts e o config do CLIENTE, nao uma demonstracao
@@ -299,17 +321,24 @@ def valores_de_demonstracao(astro_dir_cliente):
             for campo in _CAMPOS_DEMO:
                 for m in re.finditer(rf"^[ \t]+{campo}\s*:\s*['\"]([^'\"]{{4,}})['\"]", texto, re.MULTILINE):
                     valores.setdefault(m.group(1).strip(), f"{campo} de {arq.name}")
-        if valores:
-            return valores
+            for lista in _LISTAS_DEMO:
+                bloco = _bloco_lista(texto, lista)
+                if bloco and bloco != "[]":
+                    listas.setdefault((lista, bloco), f"{lista} de {arq.name}")
+        if valores or listas:
+            return {"valores": valores, "listas": listas}
     return {}
 
 
 def demonstracao_que_sobrou(config_conteudo, astro_dir_cliente):
     ref = valores_de_demonstracao(astro_dir_cliente)
     achados = []
-    for valor, origem in ref.items():
+    for valor, origem in ref.get("valores", {}).items():
         if re.search(r"['\"]" + re.escape(valor) + r"['\"]", config_conteudo):
             achados.append((valor, origem))
+    for (lista, bloco), origem in ref.get("listas", {}).items():
+        if _bloco_lista(config_conteudo, lista) == bloco:
+            achados.append((f"{lista}: bloco identico ao da demonstracao", origem))
     return achados, bool(ref)
 
 

@@ -117,11 +117,11 @@ restricoes_legais ← se regulado: true
 
 | Segmento | tipo_schema |
 |---|---|
-| psicólogo, terapeuta | `Psychologist` |
+| psicólogo, terapeuta | `MedicalBusiness` (não existe tipo `Psychologist` no schema.org; descrever em `especialidade`) |
 | dentista, odontologia | `Dentist` |
 | clínica médica | `MedicalClinic` |
 | fisioterapeuta | `Physiotherapy` |
-| nutricionista | `Nutritionist` |
+| nutricionista | `MedicalBusiness` (não existe tipo `Nutritionist` no schema.org; descrever em `especialidade`) |
 | advogado, advocacia | `LegalService` |
 | contador, contabilidade | `AccountingService` |
 | corretor de seguros, corretora de plano de saúde | `InsuranceAgency` |
@@ -345,6 +345,16 @@ link direto para cada um.
 - `nome`, `cnpj`, `nap.*`, `horarios`, `redes`, `legal.controlador.*`
 - `nap` (nunca `negocio`); `redes` como array, mesmo que vazio `[]`
 - `nav` com o pilar (+ `filhos`) e `navFooterColunas` preenchida
+- **Campos que alimentam o JSON-LD, o rodapé e o compartilhamento** — nenhum pode
+  ficar com o valor da demonstração (o guardião reprova bloco igual ao do layout):
+  `funcionamento` (horários estruturados: dias `seg`…`dom`, `abre`, `fecha`; o texto
+  exibido em `horarios` é derivado), `areaAtendimento` (cidades/regiões que o cliente
+  realmente atende), `schemaTipo` (tabela da ETAPA 0; só tipos que existem no
+  schema.org), `descricao`, `razaoSocial`, `credencial` (`conselho`, `registro`,
+  `responsavel`, só se o negócio for regulado), `logo` (`src` = `/midia/...`),
+  `favicon`, `ogImagem`. Sem dado do cliente: **remova o campo** (a página omite a
+  propriedade) — nunca deixe o exemplo. `atendimentoOnline` e `faixaPreco` só se o
+  cliente informou.
 - `dominio` = `https://seudominio.com.br` (provisório) — nunca o domínio do layout de demonstração
 
 ### 4.3 Gerar páginas de serviço

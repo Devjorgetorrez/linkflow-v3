@@ -3,7 +3,7 @@
 Uso: python scripts/testes/testar_guardiao.py
 Cria um projeto temporario em cada cenario (construcao sem dominio, layout invalido,
 publicacao bloqueada/liberada, previa com dominio provisorio, saida, pilar /planos).
-Esperado: 19 cenarios OK e a linha final "TUDO OK".
+Esperado: 21 cenarios OK e a linha final "TUDO OK".
 """
 import os, shutil, subprocess, sys, tempfile
 from pathlib import Path
@@ -140,6 +140,29 @@ try:
     p, l, s = montar(tmp / "m", pilar="/servicos")
     rc, out = rodar("previa", p, l, s)
     checar("tema sem rotaPilar usa /servicos (padrao)", rc == 0, out)
+
+    # 7. dado de demonstracao no config: horarios/area IGUAIS aos de um layout reprovam (JSON-LD falso)
+    import re as _re
+    ref_proj = tmp / "ref"
+    (ref_proj / "projetos" / "teste").mkdir(parents=True)
+    (ref_proj / "projetos" / "teste" / "projeto.md").write_text("slug: teste\n## Raio-X\n", encoding="utf-8")
+    shutil.copytree(REAL / "_astro" / "src" / "config", ref_proj / "_astro" / "src" / "config")
+    cli = tmp / "cli"
+    (cli / "_astro" / "src" / "config").mkdir(parents=True)
+    (cli / "_astro" / "dist").mkdir(parents=True)
+    cfg = (REAL / "_astro" / "src" / "config" / "tema-05.ts").read_text(encoding="utf-8")
+    for campo in ("nome", "nomeBreve", "nomeLongo", "razaoSocial", "descricao", "cnpj", "telefone", "whatsapp", "email", "logradouro", "enderecoFormatado"):
+        cfg = _re.sub(rf"^([ 	]+{campo}\s*:\s*)['\"][^'\"]*['\"]", r"'Cliente Real'", cfg, flags=_re.M)
+    cfg = _re.sub(r"^  dominio:\s*['\"][^'\"]*['\"]", "  dominio: 'https://seudominio.com.br'", cfg, flags=_re.M)
+    (cli / "_astro" / "src" / "config" / "site.ts").write_text(cfg, encoding="utf-8")
+    env = dict(os.environ, CLAUDE_PROJECT_DIR=str(ref_proj), LINKFLOW_DIR=str(cli), PYTHONIOENCODING="utf-8")
+    r = subprocess.run([sys.executable, str(GUARD), "--slug", "teste", "--fase", "previa"], env=env, capture_output=True, text=True, encoding="utf-8")
+    checar("horario/area de demonstracao esquecidos REPROVAM a previa", r.returncode == 1 and "funcionamento: bloco identico" in r.stdout and "areaAtendimento: bloco identico" in r.stdout, r.stdout)
+    cfg2 = _re.sub(r"^  areaAtendimento:\s*\[[^\]]*\]", "  areaAtendimento: ['Campinas']", cfg, flags=_re.M)
+    cfg2 = _re.sub(r"^  funcionamento:\s*\[.*?^  \]", "  funcionamento: []", cfg2, flags=_re.M | _re.S)
+    (cli / "_astro" / "src" / "config" / "site.ts").write_text(cfg2, encoding="utf-8")
+    r = subprocess.run([sys.executable, str(GUARD), "--slug", "teste", "--fase", "previa"], env=env, capture_output=True, text=True, encoding="utf-8")
+    checar("com area e horario do cliente, esses dois deixam de ser apontados", "funcionamento: bloco identico" not in r.stdout and "areaAtendimento: bloco identico" not in r.stdout, r.stdout)
 finally:
     shutil.rmtree(tmp, ignore_errors=True)
 

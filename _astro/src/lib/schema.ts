@@ -107,6 +107,9 @@ export function organizacaoSchema(site: Site, tiposPadrao: string[], extras: Rec
     logo: logoUrl,
     image: urlAbsoluta(site, site.ogImagem) ?? logoUrl,
     sameAs: redes.length ? redes : undefined,
+    hasOfferCatalog: site.atendimentoOnline
+      ? { '@type': 'OfferCatalog', name: 'Atendimento on-line disponível' }
+      : undefined,
     hasCredential: credencial
       ? { '@type': 'EducationalOccupationalCredential', name: credencial }
       : undefined,
