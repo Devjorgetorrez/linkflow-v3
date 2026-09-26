@@ -83,6 +83,8 @@ export interface Post {
   fontes: Fonte[];
   palavras: number;
   kwPrimaria?: string;
+  /** Marcador real no frontmatter (geradoPorIA: true): so ele liga o selo IA na lista. */
+  geradoPorIA?: boolean;
 }
 
 export type CampoSecao =

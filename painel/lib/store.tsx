@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -25,45 +26,104 @@ import type {
   Usuario,
 } from "@/mock/types";
 import { lerStatusPost } from "@/lib/status-post";
+import { tituloValido } from "@/lib/posts-regras";
 
 /* ------------------------------------------------------------------ *
  * Dados reais: carregados da API /api/posts e /api/config no boot.   *
  * Se a API falhar, a lista fica vazia — nunca dados de demonstração.  *
  * ------------------------------------------------------------------ */
 
+const txt = (v: unknown): string => (v === null || v === undefined ? "" : String(v));
+
+/** Um post como a API devolve → o Post do painel. Tudo que é texto vira texto (o parser do arquivo lê "2026" como número). */
+function postDaApi(p: Record<string, unknown>): Post {
+  const slug = txt(p.slug ?? p.id);
+  return {
+    id: slug,
+    slug,
+    titulo: txt(p.titulo),
+    resumo: txt(p.resumo ?? p.descricao),
+    corpo: txt(p.corpo),
+    autorId: txt(p.autorId ?? p.autor),
+    categoriaId: txt(p.categoriaId ?? p.categoria),
+    data: txt(p.data ?? p.publicadoEm).slice(0, 10),
+    status: lerStatusPost(p.status),
+    destaque: p.destaque === true,
+    seoTitle: txt(p.seoTitle ?? p.titulo),
+    metaDescription: txt(p.metaDescription ?? p.descricao),
+    canonical: txt(p.canonical),
+    noindex: p.noindex === true,
+    ogImagem: txt(p.ogImagem ?? p.imagemHero),
+    schemaTipo: (txt(p.schemaTipo) || "Article") as Post["schemaTipo"],
+    capa: txt(p.capa),
+    capaAlt: txt(p.capaAlt),
+    kwPrimaria: txt(p.kwPrimaria ?? p.palavraChave),
+    faq: [],
+    fontes: [],
+    palavras: Number(p.palavras ?? 0) || 0,
+    geradoPorIA: p.geradoPorIA === true,
+  };
+}
+
+/** Posts vivos (null = a API falhou; a tela mostra o erro, não uma lista vazia de mentira). */
 async function carregarPostsReais(): Promise<Post[] | null> {
   try {
     const res = await fetch("/api/posts", { cache: "no-store" });
     if (!res.ok) return null;
     const data = await res.json();
     if (!data.ok || !Array.isArray(data.posts)) return null;
-    // Mapear campos da API para o formato do tipo Post
-    return data.posts.map((p: Record<string, unknown>) => ({
-      ...p,
-      id: p.slug as string,
-      resumo: (p.resumo ?? p.descricao ?? "") as string,
-      corpo: (p.corpo ?? "") as string,
-      autorId: (p.autorId ?? p.autor ?? "") as string,
-      categoriaId: (p.categoriaId ?? p.categoria ?? "") as string,
-      data: (p.data ?? p.publicadoEm ?? "") as string,
-      status: lerStatusPost(p.status),
-      destaque: Boolean(p.destaque),
-      seoTitle: (p.seoTitle ?? p.titulo ?? "") as string,
-      metaDescription: (p.metaDescription ?? p.descricao ?? "") as string,
-      canonical: (p.canonical ?? "") as string,
-      noindex: Boolean(p.noindex),
-      ogImagem: (p.ogImagem ?? p.imagemHero ?? "") as string,
-      schemaTipo: (p.schemaTipo ?? "Article") as Post["schemaTipo"],
-      capa: (p.capa ?? "") as string,
-      capaAlt: (p.capaAlt ?? "") as string,
-      kwPrimaria: (p.kwPrimaria ?? "") as string,
-      faq: [],
-      fontes: [],
-      palavras: (p.palavras ?? 0) as number,
-    }));
+    return data.posts.map((p: Record<string, unknown>) => postDaApi(p));
   } catch {
     return null;
   }
+}
+
+/** Posts na lixeira (só administrador/editor; para o autor devolve lista vazia). */
+async function carregarLixeiraReal(): Promise<Post[]> {
+  try {
+    const res = await fetch("/api/posts/lixeira", { cache: "no-store" });
+    if (!res.ok) return [];
+    const data = await res.json();
+    if (!data.ok || !Array.isArray(data.posts)) return [];
+    return data.posts.map((p: Record<string, unknown>) => ({ ...postDaApi(p), status: "lixeira" as const }));
+  } catch {
+    return [];
+  }
+}
+
+/** Fila de salvamento de UM post: o que falta enviar + o envio em andamento. */
+interface FilaPost {
+  patch: Record<string, unknown>;
+  timer?: ReturnType<typeof setTimeout>;
+  emVoo: Promise<boolean> | null;
+}
+
+/** Espera entre a última tecla e o envio ao servidor. */
+const ESPERA_SALVAR_MS = 900;
+
+export type ResultadoPost = { ok: true; slug: string } | { ok: false; erro: string };
+
+/** Post (campos do painel) → corpo do PATCH. Só o que o servidor grava no arquivo; o resto fica só na tela. */
+const CAMPOS_GRAVADOS: Record<string, string> = {
+  titulo: "titulo",
+  slug: "slug",
+  slugAuto: "slugAuto",
+  corpo: "corpo",
+  metaDescription: "metaDescription",
+  status: "status",
+  data: "data",
+  autorId: "autorId",
+  categoriaId: "categoriaId",
+  kwPrimaria: "kwPrimaria",
+  destaque: "destaque",
+};
+
+export interface EstadoSalvamento {
+  estado: "ocioso" | "salvando" | "salvo" | "erro";
+  /** Mensagem do servidor (ou de rede) quando estado === "erro". */
+  erro?: string;
+  /** Quando o último salvamento terminou com sucesso. */
+  quando?: number;
 }
 
 async function carregarLista<T>(url: string, chave: string): Promise<T[] | null> {
@@ -293,9 +353,27 @@ interface Estado {
   configRedes: ConfigRedes;
   setConfigRedes: (patch: Partial<ConfigRedes>) => void;
 
-  atualizarPost: (id: string, patch: Partial<Post>) => void;
-  criarPost: (post: Post) => void;
-  deletarPost: (id: string) => void;
+  /** Posts vivos (a lixeira fica em `postsLixeira`, fora do site). */
+  postsLixeira: Post[];
+  postsCarregados: boolean;
+  /** Mensagem quando a lista de posts não pôde ser lida do servidor. */
+  erroPosts: string;
+  salvamento: EstadoSalvamento;
+  /** Edita na tela na hora e grava no servidor (com espera); o estado aparece em `salvamento`. */
+  atualizarPost: (id: string, patch: Partial<Post> & { slugAuto?: boolean }) => void;
+  /** Grava AGORA o que estiver pendente do post. true = servidor confirmou. */
+  salvarPost: (id: string) => Promise<boolean>;
+  /** Id atual de um post (o arquivo muda de nome quando o slug muda). */
+  resolverIdPost: (id: string) => string;
+  /** Cria um post no servidor (título provisório, rascunho). Devolve o slug ou a mensagem de erro. */
+  criarPost: () => Promise<ResultadoPost>;
+  duplicarPost: (id: string) => Promise<ResultadoPost>;
+  /** Move para a lixeira (some do site). Devolve os ids que realmente foram movidos. */
+  moverParaLixeira: (ids: string[]) => Promise<string[]>;
+  restaurarPost: (chave: string) => Promise<ResultadoPost>;
+  excluirDefinitivo: (chave: string) => Promise<boolean>;
+  esvaziarLixeira: () => Promise<boolean>;
+  recarregarPosts: () => Promise<void>;
   criarAutor: (autor: Autor) => void;
   atualizarAutor: (id: string, patch: Partial<Autor>) => void;
   usuarios: Usuario[];
@@ -512,6 +590,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [aparencia, setAparenciaState] = useState<Aparencia>(APARENCIA_INICIAL);
 
   const [posts, setPosts] = useState<Post[]>([]);
+  const [postsLixeira, setPostsLixeira] = useState<Post[]>([]);
+  const [postsCarregados, setPostsCarregados] = useState(false);
+  const [erroPosts, setErroPosts] = useState("");
+  const [salvamento, setSalvamento] = useState<EstadoSalvamento>({ estado: "ocioso" });
+  const [postsAlterados, setPostsAlterados] = useState<string[]>([]);
+  const renomeados = useRef<Record<string, string>>({});
+  const filas = useRef(new Map<string, FilaPost>());
+  const confirmados = useRef(new Map<string, { status: Post["status"] }>());
   const [dadosReaisCarregados, setDadosReaisCarregados] = useState(false);
   const [autores, setAutores] = useState<Autor[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
@@ -542,10 +628,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (dadosReaisCarregados) return;
 
     // Carregar posts reais
-    carregarPostsReais().then((postsReais) => {
+    carregarPostsReais().then(async (postsReais) => {
       if (postsReais !== null) {
         setPosts(postsReais);
+        postsReais.forEach((p) => confirmados.current.set(p.id, { status: p.status }));
+        setErroPosts("");
+        const lixeira = await carregarLixeiraReal();
+        const legados = new Set(postsReais.filter((p) => p.status === "lixeira").map((p) => p.id));
+        setPostsLixeira(lixeira.filter((p) => !legados.has(p.slug)));
+      } else {
+        setErroPosts("Não consegui ler os posts do servidor. Recarregue a página; se persistir, avise o suporte.");
       }
+      setPostsCarregados(true);
       setDadosReaisCarregados(true);
     });
 
@@ -628,6 +722,278 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [tema],
   );
 
+  /* ---------------------------------------------------------------- *
+   * Posts: salvamento assíncrono. A tela muda na hora; o servidor       *
+   * recebe depois de uma pausa; "Salvo" só aparece quando ele responde   *
+   * ok; erro fica visível (nunca engolido).                              *
+   * ---------------------------------------------------------------- */
+
+  const resolverIdPost = useCallback((id: string) => {
+    let atual = id;
+    for (let i = 0; i < 20 && renomeados.current[atual]; i++) atual = renomeados.current[atual];
+    return atual;
+  }, []);
+
+  const marcarPostAlterado = useCallback((id: string) => {
+    setPostsAlterados((l) => (l.includes(id) ? l : [...l, id]));
+  }, []);
+
+  const enviarPost = useCallback(async (idEntrada: string): Promise<boolean> => {
+    const id = resolverIdPost(idEntrada);
+    const fila = filas.current.get(id);
+    if (!fila) return true;
+    if (fila.timer) {
+      clearTimeout(fila.timer);
+      fila.timer = undefined;
+    }
+    if (fila.emVoo) {
+      await fila.emVoo; // um envio por vez: o próximo parte do estado que o servidor já confirmou
+      return enviarPost(id);
+    }
+    if (Object.keys(fila.patch).length === 0) return true;
+
+    const patch = fila.patch;
+    fila.patch = {};
+    const envio: Record<string, unknown> = { ...patch };
+    let tituloRuim = false;
+    if (envio.titulo !== undefined) {
+      if (tituloValido(envio.titulo)) envio.titulo = String(envio.titulo).trim();
+      else {
+        tituloRuim = true; // 3 a 70 caracteres: não manda, a tela mantém o que foi digitado
+        delete envio.titulo;
+        if (envio.slugAuto === true) delete envio.slug;
+        delete envio.slugAuto;
+      }
+    }
+    if (Object.keys(envio).length === 0) {
+      setSalvamento({ estado: "erro", erro: "O título precisa ter de 3 a 70 caracteres para ser salvo." });
+      return false;
+    }
+
+    setSalvamento({ estado: "salvando" });
+    fila.emVoo = (async () => {
+      try {
+        const res = await fetch(`/api/posts/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(envio),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.ok) {
+          throw Object.assign(new Error(data.erro ?? `O servidor respondeu ${res.status}.`), { status: res.status });
+        }
+        if (typeof envio.status === "string") {
+          confirmados.current.set(id, { status: lerStatusPost(envio.status) });
+        }
+        const novoId = typeof data.slug === "string" && data.slug ? data.slug : id;
+        if (novoId !== id) {
+          // O arquivo mudou de nome (slug novo): a fila, o id e o link do editor passam para o novo nome.
+          filas.current.delete(id);
+          filas.current.set(novoId, fila);
+          renomeados.current[id] = novoId;
+          const conf = confirmados.current.get(id);
+          if (conf) {
+            confirmados.current.delete(id);
+            confirmados.current.set(novoId, conf);
+          }
+          const slugPendente = fila.patch.slug !== undefined;
+          setPosts((l) =>
+            l.map((p) => (p.id === id ? { ...p, id: novoId, slug: slugPendente ? p.slug : novoId } : p)),
+          );
+          setPostsAlterados((l) => l.map((x) => (x === id ? novoId : x)));
+        } else if (envio.slug !== undefined && fila.patch.slug === undefined) {
+          setPosts((l) => l.map((p) => (p.id === id ? { ...p, slug: id } : p)));
+        }
+        return true;
+      } catch (err) {
+        const status = (err as { status?: number }).status ?? 0;
+        const mensagem = err instanceof Error && status ? err.message : "Sem conexão com o servidor. Suas alterações continuam na tela; tente salvar de novo.";
+        if (status >= 400 && status < 500 && status !== 401) {
+          // Recusa por regra (slug ocupado, meta curta para publicar…): volta o que foi recusado
+          // e segue com o resto, para uma recusa não travar o salvamento do texto.
+          const restante = { ...patch };
+          delete restante.slug;
+          delete restante.slugAuto;
+          delete restante.status;
+          fila.patch = { ...restante, ...fila.patch };
+          setPosts((l) =>
+            l.map((p) => {
+              if (p.id !== id) return p;
+              const volta: Partial<Post> = {};
+              if (patch.slug !== undefined && fila.patch.slug === undefined) volta.slug = id;
+              if (patch.status !== undefined) volta.status = confirmados.current.get(id)?.status ?? p.status;
+              return { ...p, ...volta };
+            }),
+          );
+        } else {
+          fila.patch = { ...patch, ...fila.patch };
+        }
+        setSalvamento({ estado: "erro", erro: mensagem });
+        return false;
+      }
+    })();
+    const ok = await fila.emVoo;
+    fila.emVoo = null;
+    if (!ok) return false;
+    const idNovo = resolverIdPost(id);
+    if (Object.keys(fila.patch).length > 0) return enviarPost(idNovo);
+    if (tituloRuim) {
+      setSalvamento({ estado: "erro", erro: "O título precisa ter de 3 a 70 caracteres; o resto foi salvo." });
+      return false;
+    }
+    setSalvamento({ estado: "salvo", quando: Date.now() });
+    return true;
+  }, [resolverIdPost]);
+
+  const atualizarPost = useCallback(
+    (idEntrada: string, patch: Partial<Post> & { slugAuto?: boolean }) => {
+      const id = resolverIdPost(idEntrada);
+      const { slugAuto, ...local } = patch;
+      setPosts((l) => l.map((p) => (p.id === id ? { ...p, ...local } : p)));
+      const paraServidor: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(patch)) {
+        if (CAMPOS_GRAVADOS[k] && v !== undefined) paraServidor[CAMPOS_GRAVADOS[k]] = v;
+      }
+      if (slugAuto !== undefined) paraServidor.slugAuto = slugAuto;
+      if (paraServidor.corpo !== undefined) paraServidor.corpoFormato = "html"; // o editor do painel sempre grava HTML
+      if (Object.keys(paraServidor).length === 0) return; // só campo que ainda não é gravado no arquivo
+      marcarPostAlterado(id);
+      const fila = filas.current.get(id) ?? { patch: {}, emVoo: null };
+      filas.current.set(id, fila);
+      fila.patch = { ...fila.patch, ...paraServidor };
+      if (fila.timer) clearTimeout(fila.timer);
+      fila.timer = setTimeout(() => { void enviarPost(id); }, ESPERA_SALVAR_MS);
+      setSalvamento((s) => (s.estado === "salvando" ? s : { estado: "salvando" }));
+    },
+    [enviarPost, marcarPostAlterado, resolverIdPost],
+  );
+
+  const salvarPost = useCallback((id: string) => enviarPost(id), [enviarPost]);
+
+  const recarregarPosts = useCallback(async () => {
+    const vivos = await carregarPostsReais();
+    if (vivos === null) return;
+    setErroPosts("");
+    setPostsCarregados(true);
+    const ativos = new Set(
+      [...filas.current.entries()].filter(([, f]) => f.emVoo || Object.keys(f.patch).length > 0).map(([k]) => k),
+    );
+    setPosts((antes) => vivos.map((p) => (ativos.has(p.id) ? (antes.find((x) => x.id === p.id) ?? p) : p)));
+    vivos.forEach((p) => {
+      if (!ativos.has(p.id)) confirmados.current.set(p.id, { status: p.status });
+    });
+    const lixeira = await carregarLixeiraReal();
+    const legados = new Set(vivos.filter((p) => p.status === "lixeira").map((p) => p.id));
+    setPostsLixeira(lixeira.filter((p) => !legados.has(p.slug)));
+  }, []);
+
+  const pedirAoServidor = useCallback(async (url: string, init?: RequestInit): Promise<{ ok: boolean; erro: string; dados: Record<string, unknown> }> => {
+    try {
+      const res = await fetch(url, init);
+      const dados = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+      if (!res.ok || dados.ok !== true) {
+        return { ok: false, erro: typeof dados.erro === "string" ? dados.erro : `O servidor respondeu ${res.status}.`, dados };
+      }
+      return { ok: true, erro: "", dados };
+    } catch {
+      return { ok: false, erro: "Sem conexão com o servidor.", dados: {} };
+    }
+  }, []);
+
+  const criarPost = useCallback(async (): Promise<ResultadoPost> => {
+    const r = await pedirAoServidor("/api/posts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    if (!r.ok || typeof r.dados.slug !== "string") return { ok: false, erro: r.erro || "Não foi possível criar o post." };
+    await recarregarPosts();
+    marcarPostAlterado(r.dados.slug);
+    return { ok: true, slug: r.dados.slug };
+  }, [marcarPostAlterado, pedirAoServidor, recarregarPosts]);
+
+  const duplicarPost = useCallback(async (idEntrada: string): Promise<ResultadoPost> => {
+    const id = resolverIdPost(idEntrada);
+    await enviarPost(id); // duplica o que está na tela, não uma versão antiga do arquivo
+    const r = await pedirAoServidor("/api/posts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ duplicarDe: id }),
+    });
+    if (!r.ok || typeof r.dados.slug !== "string") return { ok: false, erro: r.erro || "Não foi possível duplicar o post." };
+    await recarregarPosts();
+    marcarPostAlterado(r.dados.slug);
+    return { ok: true, slug: r.dados.slug };
+  }, [enviarPost, marcarPostAlterado, pedirAoServidor, recarregarPosts, resolverIdPost]);
+
+  const moverParaLixeira = useCallback(async (ids: string[]): Promise<string[]> => {
+    const movidos: string[] = [];
+    for (const idEntrada of ids) {
+      const fila = filas.current.get(resolverIdPost(idEntrada));
+      if (fila) {
+        if (fila.timer) clearTimeout(fila.timer);
+        fila.patch = {}; // o post vai sair: o que faltava enviar não importa
+        if (fila.emVoo) await fila.emVoo; // termina o envio em curso antes de mover (o nome pode mudar)
+      }
+      const id = resolverIdPost(idEntrada);
+      const r = await pedirAoServidor(`/api/posts/${id}`, { method: "DELETE" });
+      if (r.ok) {
+        movidos.push(idEntrada);
+        filas.current.delete(id);
+        marcarPostAlterado(id);
+      } else {
+        setSalvamento({ estado: "erro", erro: r.erro });
+      }
+    }
+    await recarregarPosts();
+    return movidos;
+  }, [marcarPostAlterado, pedirAoServidor, recarregarPosts, resolverIdPost]);
+
+  const restaurarPost = useCallback(async (chave: string): Promise<ResultadoPost> => {
+    const r = await pedirAoServidor("/api/posts/lixeira", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ slug: chave }),
+    });
+    if (!r.ok || typeof r.dados.slug !== "string") return { ok: false, erro: r.erro || "Não foi possível restaurar o post." };
+    await recarregarPosts();
+    marcarPostAlterado(r.dados.slug);
+    return { ok: true, slug: r.dados.slug };
+  }, [marcarPostAlterado, pedirAoServidor, recarregarPosts]);
+
+  const excluirDefinitivo = useCallback(async (chave: string): Promise<boolean> => {
+    const r = await pedirAoServidor(`/api/posts/lixeira?slug=${encodeURIComponent(chave)}`, { method: "DELETE" });
+    if (!r.ok) setSalvamento({ estado: "erro", erro: r.erro });
+    await recarregarPosts();
+    return r.ok;
+  }, [pedirAoServidor, recarregarPosts]);
+
+  const esvaziarLixeira = useCallback(async (): Promise<boolean> => {
+    const r = await pedirAoServidor("/api/posts/lixeira?todos=1", { method: "DELETE" });
+    if (!r.ok) setSalvamento({ estado: "erro", erro: r.erro });
+    await recarregarPosts();
+    return r.ok;
+  }, [pedirAoServidor, recarregarPosts]);
+
+  // Aba fechada ou escondida com alteração ainda não enviada: avisa / envia.
+  useEffect(() => {
+    const pendente = () =>
+      [...filas.current.values()].some((f) => f.emVoo || Object.keys(f.patch).length > 0);
+    const aoSair = (e: BeforeUnloadEvent) => {
+      if (pendente()) e.preventDefault();
+    };
+    const aoEsconder = () => {
+      if (document.visibilityState !== "hidden") return;
+      for (const id of [...filas.current.keys()]) void enviarPost(id);
+    };
+    window.addEventListener("beforeunload", aoSair);
+    document.addEventListener("visibilitychange", aoEsconder);
+    return () => {
+      window.removeEventListener("beforeunload", aoSair);
+      document.removeEventListener("visibilitychange", aoEsconder);
+    };
+  }, [enviarPost]);
+
   const valor: Estado = useMemo(
     () => ({
       usuario: {
@@ -698,33 +1064,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       configRedes,
       setConfigRedes: (patch) => setConfigRedesState((c) => ({ ...c, ...patch })),
 
-      atualizarPost: (id, patch) => {
-        setPosts((lista) => lista.map((p) => (p.id === id ? { ...p, ...patch } : p)));
-        marcarPendente();
-        // Persistir via API
-        const { corpo, ...frontmatter } = patch as Record<string, unknown>;
-        fetch(`/api/posts/${id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ corpo, ...frontmatter }),
-        }).catch(console.error);
-      },
-      criarPost: (post) => {
-        setPosts((lista) => [post, ...lista]);
-        marcarPendente();
-        // Persistir via API
-        fetch("/api/posts", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...post, corpo: post.corpo }),
-        }).catch(console.error);
-      },
-      deletarPost: (id) => {
-        setPosts((lista) => lista.filter((p) => p.id !== id));
-        marcarPendente();
-        // Deletar via API
-        fetch(`/api/posts/${id}`, { method: "DELETE" }).catch(console.error);
-      },
+      postsLixeira,
+      postsCarregados,
+      erroPosts,
+      salvamento,
+      atualizarPost,
+      salvarPost,
+      resolverIdPost,
+      criarPost,
+      duplicarPost,
+      moverParaLixeira,
+      restaurarPost,
+      excluirDefinitivo,
+      esvaziarLixeira,
+      recarregarPosts,
       criarAutor: (autor) => {
         setAutores((lista) => [autor, ...lista]);
         marcarPendente();
@@ -775,36 +1128,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setRedirects((lista) => lista.filter((r) => r.id !== id));
         marcarPendente();
       },
+      // Só zera o contador de pendências. O build de verdade é do botão Publicar
+      // (Topo.tsx → POST /api/build) e este método só é chamado DEPOIS de o
+      // build terminar com sucesso — não dispara build nem inventa deploy.
       publicarAlteracoes: () => {
-        // Disparar build real no VPS
-        fetch("/api/build", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({}),
-        })
-          .then((r) => r.json())
-          .then((data) => {
-            console.log("[build] Iniciado:", data.buildId);
-          })
-          .catch(console.error);
-
-        // Atualizar UI imediatamente (otimista)
-        setDeploys((lista) => [
-          {
-            id: `d${lista.length + 1}-${lista.length}`,
-            commit: Math.random().toString(16).slice(2, 9),
-            mensagem: "Publicação manual pelo painel SiteFlow",
-            autor: "Operador",
-            data: new Date().toLocaleString("pt-BR"),
-            status: "sucesso",
-            duracao: "...",
-            atual: true,
-          },
-          ...lista.map((d) => ({ ...d, atual: false })),
-        ]);
         setPendentes(0);
+        setPostsAlterados([]);
       },
-      pendentes,
+      // Posts: um por post alterado (não uma por tecla). Demais telas seguem contando à parte.
+      pendentes: pendentes + postsAlterados.length,
       reverterDeploy: (id) => {
         setDeploys((lista) => lista.map((d) => ({ ...d, atual: d.id === id })));
       },
@@ -831,6 +1163,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       marcarPendente,
       privacidadeConfig,
       termosConfig,
+      postsLixeira,
+      postsCarregados,
+      erroPosts,
+      salvamento,
+      postsAlterados,
+      atualizarPost,
+      salvarPost,
+      resolverIdPost,
+      criarPost,
+      duplicarPost,
+      moverParaLixeira,
+      restaurarPost,
+      excluirDefinitivo,
+      esvaziarLixeira,
+      recarregarPosts,
     ],
   );
 

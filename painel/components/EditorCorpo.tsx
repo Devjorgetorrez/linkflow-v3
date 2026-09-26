@@ -84,7 +84,8 @@ export const EditorCorpo = forwardRef<
       el.focus();
       const range = document.createRange();
       const sel = window.getSelection();
-      range.selectNodeContents(el);
+      // Dentro do primeiro parágrafo (não antes dele): texto digitado fora de um <p> saía como "texto<p></p>".
+      range.selectNodeContents(el.firstElementChild ?? el);
       range.collapse(true);
       sel?.removeAllRanges();
       sel?.addRange(range);

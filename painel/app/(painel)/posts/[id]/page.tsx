@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { EditorCorpo, type EditorCorpoHandle } from "@/components/EditorCorpo";
@@ -40,6 +41,7 @@ import {
 import { useStore } from "@/lib/store";
 import { useSiteInfo } from "@/lib/useSiteInfo";
 import { cn, contarPalavras, slugify } from "@/lib/utils";
+import { TITULO_MAX, TITULO_PROVISORIO, slugDoTitulo, slugSegueTitulo } from "@/lib/posts-regras";
 import { urlPost } from "@/lib/urls-publicas";
 import type { Post } from "@/mock/types";
 import { analisarSEO, extrairLinks, stripTags, type ResultadoSEO, type TesteKw } from "@/motor/analise-seo";
@@ -156,9 +158,28 @@ function SignalHeader({
 export default function EditorPostPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { posts, autores, categorias, midia, atualizarPost } = useStore();
+  const { posts, autores, categorias, midia, atualizarPost, salvarPost, resolverIdPost, salvamento, postsCarregados, recarregarPosts } = useStore();
+  const { data: sessao } = useSession();
+  const papel = (sessao?.user as { papel?: string } | undefined)?.papel;
+  const ehAutor = papel === "autor";
 
-  const post = posts.find((p) => p.id === id);
+  // Quando o slug muda, o arquivo (e o id do post) muda de nome: acha o post pelo id novo também.
+  const idReal = resolverIdPost(id);
+  const post = posts.find((p) => p.id === id) ?? posts.find((p) => p.id === idReal);
+
+  // Abrir um post direto pela URL logo após o login: refaz a leitura que pode ter falhado sem sessão.
+  useEffect(() => {
+    if (!posts.some((p) => p.id === id)) void recarregarPosts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  // ...e a barra de endereço acompanha. history.replaceState (e não router.replace) para a
+  // página NÃO remontar: remontar tira o cursor do título no meio da digitação.
+  useEffect(() => {
+    if (post && typeof window !== "undefined" && window.location.pathname !== `/posts/${post.id}`) {
+      window.history.replaceState(window.history.state, "", `/posts/${post.id}`);
+    }
+  }, [post?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* Refs para wiring teclado título ↔ corpo */
   const editorRef = useRef<EditorCorpoHandle>(null);
@@ -176,7 +197,7 @@ export default function EditorPostPage() {
   const [kwAtivaIdx, setKwAtivaIdx] = useState(-1);
   const [conteudoPilar, setConteudoPilar] = useState(false);
   const [bibliotecaCapa, setBibliotecaCapa] = useState(false);
-  const [salvo, setSalvo] = useState(false);
+  const [avisoSalvar, setAvisoSalvar] = useState<string | null>(null);
 
   /* Posts relacionados */
   const [relacionados, setRelacionados] = useState<string[]>([]);
@@ -232,13 +253,31 @@ export default function EditorPostPage() {
     [post, autor, categorias, capa, siteInfo],
   );
 
+  /* Posts relacionados (hooks ANTES do retorno antecipado: senão o React quebra
+     quando o post aparece depois do carregamento — o "Application error" ao recarregar) */
+  const outrosPosts = useMemo(() => posts.filter((p) => p.id !== post?.id), [posts, post?.id]);
+  const autoRelacionados = useMemo(() => {
+    const mesmaCat = outrosPosts.filter(
+      (p) => p.categoriaId && p.categoriaId === post?.categoriaId,
+    );
+    return (mesmaCat.length > 0 ? mesmaCat : outrosPosts).slice(0, 4);
+  }, [outrosPosts, post?.categoriaId]);
+
+  if (!post && !postsCarregados) {
+    return (
+      <Painel>
+        <p className="p-6 text-[13px] text-ink-muted">Carregando o post…</p>
+      </Painel>
+    );
+  }
+
   if (!post) {
     return (
       <Painel>
         <Vazio
           icone={<FileQuestion size={18} />}
           titulo="Post não encontrado"
-          descricao="Este identificador não existe na sessão atual."
+          descricao="Este endereço não existe mais (o post pode ter ido para a lixeira ou mudado de endereço)."
           acao={
             <Link href="/posts">
               <Botao tamanho="sm">Voltar para a lista</Botao>
@@ -249,20 +288,31 @@ export default function EditorPostPage() {
     );
   }
 
-  const editar = (patch: Partial<Post>) => {
+  const editar = (patch: Partial<Post> & { slugAuto?: boolean }) => {
     atualizarPost(post.id, patch);
-    setSalvo(false);
+    setAvisoSalvar(null);
   };
 
-  const salvar = () => {
-    setSalvo(true);
-    setTimeout(() => setSalvo(false), 2200);
+  /** Título digitado: o slug acompanha até ser editado à mão; ao mudar, o arquivo é renomeado no servidor. */
+  const editarTitulo = (titulo: string) => {
+    const seguir = slugSegueTitulo(post.slug, post.titulo === TITULO_PROVISORIO ? "" : post.titulo);
+    const slugNovo = slugDoTitulo(titulo);
+    if (seguir && slugNovo) editar({ titulo, slug: slugNovo, slugAuto: true });
+    else editar({ titulo });
   };
 
-  const publicar = () => {
+  /** Botão Salvar: envia agora e só confirma depois da resposta do servidor. */
+  const salvar = async () => {
+    const ok = await salvarPost(post.id);
+    setAvisoSalvar(ok ? "Alterações salvas" : null);
+    if (ok) setTimeout(() => setAvisoSalvar(null), 2500);
+  };
+
+  const publicar = async () => {
     editar({ status: "publicado" });
-    setSalvo(true);
-    setTimeout(() => setSalvo(false), 2200);
+    const ok = await salvarPost(post.id);
+    setAvisoSalvar(ok ? "Marcado como publicado. Use Publicar no topo para colocar no ar." : null);
+    if (ok) setTimeout(() => setAvisoSalvar(null), 4000);
   };
 
   const dominio = siteInfo.dominio;
@@ -320,14 +370,7 @@ export default function EditorPostPage() {
     return null;
   };
 
-  /* Posts relacionados */
-  const outrosPosts = posts.filter((p) => p.id !== post.id);
-  const autoRelacionados = useMemo(() => {
-    const mesmaCat = outrosPosts.filter(
-      (p) => p.categoriaId && p.categoriaId === post.categoriaId,
-    );
-    return (mesmaCat.length > 0 ? mesmaCat : outrosPosts).slice(0, 4);
-  }, [outrosPosts, post.categoriaId]);
+  /* Posts relacionados: `outrosPosts` e `autoRelacionados` são calculados acima do retorno antecipado */
   const resultadosBusca = buscaRel.trim()
     ? outrosPosts
         .filter((p) => p.titulo.toLowerCase().includes(buscaRel.toLowerCase()))
@@ -348,15 +391,34 @@ export default function EditorPostPage() {
               ? "rascunho"
               : post.status === "revisao"
                 ? "revisão"
-                : "agendado"}
+                : post.status === "lixeira"
+                  ? "lixeira"
+                  : "agendado"}
         </Badge>
         <span className="truncate font-mono text-[10.5px] text-ink-muted">{urlPublica}</span>
         <div className="ml-auto flex items-center gap-1.5">
-          {salvo && <span className="text-[11px] text-success">Alterações aplicadas</span>}
-          <Botao variante="secundario">
-            <ExternalLink size={12} /> Ver
-          </Botao>
-          <Botao variante="secundario" onClick={salvar}>
+          {/* Estado real do salvamento: só diz "Salvo" depois que o servidor confirmou */}
+          {salvamento.estado === "salvando" && (
+            <span className="text-[11px] text-ink-muted" role="status">Salvando…</span>
+          )}
+          {(salvamento.estado === "salvo" || avisoSalvar) && salvamento.estado !== "erro" && salvamento.estado !== "salvando" && (
+            <span className="text-[11px] text-success" role="status">
+              {avisoSalvar ?? `Salvo às ${new Date(salvamento.quando ?? Date.now()).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`}
+            </span>
+          )}
+          {salvamento.estado === "erro" && (
+            <span className="max-w-[360px] text-[11px] text-danger" role="alert">
+              Não salvou: {salvamento.erro}
+            </span>
+          )}
+          {post.status === "publicado" && (
+            <a href={urlPublica} target="_blank" rel="noopener noreferrer">
+              <Botao variante="secundario">
+                <ExternalLink size={12} /> Ver
+              </Botao>
+            </a>
+          )}
+          <Botao variante="secundario" onClick={salvar} disabled={salvamento.estado === "salvando"}>
             <Save size={12} /> Salvar
           </Botao>
           {/* Publicar — desabilitado com tooltip quando faltam requisitos */}
@@ -364,8 +426,8 @@ export default function EditorPostPage() {
             <Botao
               variante="primario"
               style={publicarBloqueado ? { pointerEvents: "none" } : undefined}
-              className={publicarBloqueado ? "cursor-not-allowed opacity-50" : ""}
-              onClick={publicar}
+              className={publicarBloqueado || ehAutor ? "cursor-not-allowed opacity-50" : ""}
+              onClick={ehAutor ? undefined : publicar}
             >
               <Send size={12} /> Publicar
             </Botao>
@@ -401,11 +463,9 @@ export default function EditorPostPage() {
             slotTitulo={
               <input
                 ref={titleInputRef}
-                value={post.titulo}
-                onChange={(e) => {
-                  const titulo = e.target.value;
-                  editar({ titulo, slug: post.slug || slugify(titulo) });
-                }}
+                value={post.titulo === TITULO_PROVISORIO ? "" : post.titulo}
+                maxLength={TITULO_MAX}
+                onChange={(e) => editarTitulo(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === "Tab") {
                     e.preventDefault();
@@ -413,7 +473,7 @@ export default function EditorPostPage() {
                   }
                 }}
                 placeholder="Adicionar título"
-                autoFocus={!post.titulo}
+                autoFocus={!post.titulo || post.titulo === TITULO_PROVISORIO}
                 className="w-full bg-transparent px-4 pb-3 pt-3 font-display text-[30px] font-bold leading-tight tracking-tight text-ink outline-none placeholder:text-ink-muted/30"
               />
             }
@@ -511,7 +571,7 @@ export default function EditorPostPage() {
                         rows={3}
                         value={palavrasSecundarias}
                         onChange={(e) => setPalavrasSecundarias(e.target.value)}
-                        placeholder={"abrir empresa mei\ncustos para abrir empresa"}
+                        placeholder={"uma palavra-chave por linha"}
                       />
                     </Campo>
                     <Alternador
@@ -540,7 +600,7 @@ export default function EditorPostPage() {
                         </span>
                         <input
                           value={post.slug}
-                          onChange={(e) => editar({ slug: slugify(e.target.value) })}
+                          onChange={(e) => editar({ slug: slugify(e.target.value), slugAuto: false })}
                           placeholder="slug-do-post"
                           className="min-w-0 flex-1 bg-transparent px-2 py-1.5 font-mono text-[10.5px] text-ink outline-none placeholder:text-ink-muted/50"
                         />
@@ -555,6 +615,7 @@ export default function EditorPostPage() {
                         rows={3}
                         value={post.metaDescription}
                         onChange={(e) => editar({ metaDescription: e.target.value })}
+                        maxLength={LIMITE_META}
                         placeholder="Resumo exibido no resultado de busca."
                         aviso={metaForaDaFaixa}
                       />
@@ -973,6 +1034,7 @@ export default function EditorPostPage() {
               <Campo label="Status">
                 <Selecao
                   value={post.status}
+                  disabled={ehAutor}
                   onChange={(e) => editar({ status: e.target.value as Post["status"] })}
                 >
                   <option value="rascunho">Rascunho</option>
@@ -991,6 +1053,7 @@ export default function EditorPostPage() {
               <Campo label="Autor">
                 <Selecao
                   value={post.autorId}
+                  disabled={ehAutor}
                   onChange={(e) => editar({ autorId: e.target.value })}
                 >
                   {autores.map((a) => (

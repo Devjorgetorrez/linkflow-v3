@@ -20,6 +20,10 @@ export const MATRIZ = {
   "posts/[slug]:GET": TODOS,
   "posts/[slug]:PATCH": TODOS,
   "posts/[slug]:DELETE": ADM_ED,
+  // Lixeira de posts: ver, restaurar e excluir de vez — administrador e editor.
+  "posts/lixeira:GET": ADM_ED,
+  "posts/lixeira:POST": ADM_ED,
+  "posts/lixeira:DELETE": ADM_ED,
   // Categorias e mídia: autor só lê (precisa para escolher no post).
   "categorias:GET": TODOS,
   "categorias:POST": ADM_ED,

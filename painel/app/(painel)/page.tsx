@@ -35,6 +35,7 @@ interface Stats {
   usuarios: number;
   ultimaPublicacao: string;
   ultimoBuild: string;
+  build?: { status: "nunca" | "rodando" | "ok" | "erro"; inicio?: string; fim?: string; resumo?: string; etapa?: string };
   saude?: ItemSaude[]; // itens verificáveis de verdade — ver api/stats
 }
 
@@ -59,7 +60,21 @@ export default function DashboardPage() {
     .slice(0, 7);
 
   const saude = stats?.saude ?? [];
-  const avisos = saude.filter((s) => s.estado === "aviso").length;
+  const build = stats?.build;
+  const buildErro = build?.status === "erro";
+  const avisos = saude.filter((s) => s.estado === "aviso").length + (buildErro ? 1 : 0);
+  const fmtBuild = (iso?: string) =>
+    iso ? new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : "—";
+  const buildValor =
+    !build || build.status === "nunca" ? "Nunca publicado"
+    : build.status === "rodando" ? "Publicando agora…"
+    : build.status === "ok" ? fmtBuild(build.fim)
+    : `Falhou em ${fmtBuild(build.fim)}`;
+  const buildDetalhe =
+    !build || build.status === "nunca" ? "O site ainda não foi publicado pelo painel. Use o botão Publicar."
+    : build.status === "rodando" ? "Um build está em andamento."
+    : build.status === "ok" ? "Site atualizado em produção."
+    : `${build.resumo ?? "O último build falhou."} O site no ar continua na versão anterior.`;
 
   // Descrição do dashboard com dados reais
   const descricaoDash = stats
@@ -168,7 +183,11 @@ export default function DashboardPage() {
               titulo="Saúde do site"
               descricao="Verificação automática a cada build"
               acao={
-                avisos > 0 ? (
+                buildErro ? (
+                  <Badge tom="perigo">
+                    <AlertTriangle size={10} /> build com erro
+                  </Badge>
+                ) : avisos > 0 ? (
                   <Badge tom="aviso">
                     <AlertTriangle size={10} /> {avisos} avisos
                   </Badge>
@@ -184,17 +203,23 @@ export default function DashboardPage() {
           <ul className="divide-y divide-line border-t border-line">
             {/* Último build — dado real */}
             <li className="flex items-start gap-2.5 px-3 py-[7px]">
-              <CheckCircle2 size={12} className="mt-[2px] shrink-0 text-success" />
+              {buildErro ? (
+                <AlertTriangle size={12} className="mt-[2px] shrink-0 text-danger" />
+              ) : build?.status === "ok" ? (
+                <CheckCircle2 size={12} className="mt-[2px] shrink-0 text-success" />
+              ) : (
+                <AlertTriangle size={12} className="mt-[2px] shrink-0 text-accent" />
+              )}
               <div className="min-w-0 flex-1">
                 <div className="flex items-baseline justify-between gap-2">
                   <p className="text-[12px] text-ink">Último build</p>
-                  <p className="shrink-0 text-[11px] text-ink-muted">
-                    {stats?.ultimoBuild
-                      ? new Date(stats.ultimoBuild).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })
-                      : "—"}
+                  <p className={buildErro ? "shrink-0 text-[11px] text-danger" : "shrink-0 text-[11px] text-ink-muted"}>
+                    {carregandoStats ? "…" : buildValor}
                   </p>
                 </div>
-                <p className="mt-[1px] text-[10.5px] text-ink-muted">Site atualizado em produção</p>
+                <p className={buildErro ? "mt-[1px] text-[10.5px] text-danger" : "mt-[1px] text-[10.5px] text-ink-muted"}>
+                  {carregandoStats ? "" : buildDetalhe}
+                </p>
               </div>
             </li>
             {/* Demais itens de saúde — calculados em /api/stats a partir do site real */}

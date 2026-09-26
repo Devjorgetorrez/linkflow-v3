@@ -11,6 +11,7 @@ import fs from "fs";
 import { getContentDir, getConfigPath, getLinkflowDir, listarArquivos, lerArquivo, parseMd, getSiteSlug } from "@/lib/fs";
 import { lerUsuarios } from "@/lib/usuarios";
 import { lerStatusPost } from "@/lib/status-post";
+import { getSiteDir, lerEstado } from "@/lib/build-estado";
 import type { ItemSaude } from "@/mock/types";
 
 export async function GET(req: NextRequest) {
@@ -64,13 +65,12 @@ export async function GET(req: NextRequest) {
       if (cidade) cidadeSite = cidade;
     }
 
-    // ─── Último build ─────────────────────────────────────────────────────────
-    const siteDir = `/var/www/${slug}`;
-    let ultimoBuild = "";
-    if (fs.existsSync(siteDir)) {
-      const stat = fs.statSync(siteDir);
-      ultimoBuild = stat.mtime.toISOString();
-    }
+    // ─── Último build — estado real gravado por /api/build ────────────────────
+    const siteDir = getSiteDir(slug);
+    const build = lerEstado();
+    // Só "nunca publicado" quando nunca houve tentativa; o horário é o do fim
+    // do último build (ok ou erro), não a data da pasta publicada.
+    const ultimoBuild = build.fim ?? "";
 
     // ─── Saúde do site — só o que dá para verificar de verdade ─────────────
     // (antes o dashboard mostrava itens de demonstração: SSL, "28 URLs"...)
@@ -134,6 +134,7 @@ export async function GET(req: NextRequest) {
         usuarios: totalUsuarios,
         ultimaPublicacao,
         ultimoBuild,
+        build: { status: build.status, inicio: build.inicio, fim: build.fim, resumo: build.resumo, etapa: build.etapa },
         saude,
       },
     });

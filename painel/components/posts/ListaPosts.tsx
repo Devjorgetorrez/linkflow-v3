@@ -2,6 +2,8 @@
 
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import {
   AlertCircle,
   AlertTriangle,
@@ -18,7 +20,12 @@ import {
 
 import { cn } from "@/lib/utils";
 import { useDominio } from "@/lib/useDominio";
-import type { Post as PostBase, StatusPost } from "@/mock/types";
+import { useStore } from "@/lib/store";
+import { useSiteInfo } from "@/lib/useSiteInfo";
+import { urlPost } from "@/lib/urls-publicas";
+import { TITULO_MAX, TITULO_PROVISORIO } from "@/lib/posts-regras";
+import { extrairLinks } from "@/motor/analise-seo";
+import type { Autor, Categoria, Post as PostBase, StatusPost } from "@/mock/types";
 
 // Tipo usado pelo ListaPosts: o tipo completo do Jorge + campos extras
 // que o componente usa (oriundos do modelo anterior do mock).
@@ -32,18 +39,15 @@ export interface Post extends PostBase {
   palavraChave?: string;
   palavrasChaveSecundarias?: string[];
   pontuacaoSEO?: number | null;
-  temSchema?: boolean;
   linksInternos?: number;
   titleSEO?: string;
+  /** Só true quando o arquivo tem o marcador real de geração por IA (geradoPorIA). */
   origemAgente?: boolean;
+  /** Nome de exibição da categoria (o id fica em categoriaId). */
+  categoriaNome?: string;
+  /** Item da lixeira (fora do site). */
+  naLixeira?: boolean;
 }
-
-// Mocks de fallback (usados quando a API não está disponível)
-const AUTORES_MOCK: { id: string; nome: string }[] = [
-  { id: "u1", nome: "Operador" },
-];
-const CATEGORIAS_MOCK: string[] = ["Blog", "Serviços", "Notícias"];
-const POSTS_MOCK: Post[] = [];
 
 /* ------------------------------------------------------------------ */
 /* Constantes                                                            */
@@ -55,7 +59,6 @@ const COLUNAS_CONFIG = [
   { id: "data", rotulo: "Data" },
   { id: "palavraChave", rotulo: "Palavra-chave" },
   { id: "seo", rotulo: "SEO" },
-  { id: "schema", rotulo: "Schema" },
   { id: "linksInternos", rotulo: "Links" },
 ] as const;
 
@@ -67,7 +70,6 @@ const COLUNAS_DEFAULT = new Set<ColunaId>([
   "data",
   "palavraChave",
   "seo",
-  "schema",
   "linksInternos",
 ]);
 
@@ -144,16 +146,12 @@ function testesFalhosSEO(post: Post): string[] {
     falhas.push("Meta description curta (<120 chars)");
   if (kw && post.metaDescription && !post.metaDescription.toLowerCase().includes(kw))
     falhas.push("KW ausente na meta description");
-  if (!post.temSchema)
-    falhas.push("Schema não definido"); // temSchema ?? false já tratado aqui
   if ((post.linksInternos ?? 0) < 3)
     falhas.push(`Links internos insuficientes (${post.linksInternos ?? 0}/3)`);
   if ((post.categorias ?? []).length === 0)
     falhas.push("Sem categoria definida");
   if (!post.slug)
     falhas.push("Slug vazio");
-  if ((post.palavrasChaveSecundarias ?? []).length === 0)
-    falhas.push("Sem palavras-chave secundárias");
 
   return falhas;
 }
@@ -213,14 +211,6 @@ function SemPalavraChave() {
   );
 }
 
-function IndicadorSchema({ tem }: { tem: boolean }) {
-  return tem ? (
-    <CheckCircle2 size={15} className="text-success" />
-  ) : (
-    <AlertCircle size={15} className="text-danger" />
-  );
-}
-
 /* ------------------------------------------------------------------ */
 /* Edição rápida                                                         */
 /* ------------------------------------------------------------------ */
@@ -228,46 +218,47 @@ function IndicadorSchema({ tem }: { tem: boolean }) {
 interface EdicaoRapidaProps {
   post: Post;
   colspan: number;
-  onSalvar: (id: string, dados: Partial<Post>) => Promise<void>;
+  autores: Autor[];
+  categorias: Categoria[];
+  somenteLeituraStatusAutor: boolean;
+  onSalvar: (post: Post, dados: Partial<Post> & { slugAuto?: boolean }) => Promise<boolean>;
   onCancelar: () => void;
 }
 
-function EdicaoRapida({ post, colspan, onSalvar, onCancelar }: EdicaoRapidaProps) {
+function EdicaoRapida({ post, colspan, autores, categorias, somenteLeituraStatusAutor, onSalvar, onCancelar }: EdicaoRapidaProps) {
   const dominio = useDominio();
-  const [titulo, setTitulo] = useState(post.titulo);
+  const [titulo, setTitulo] = useState(post.titulo === TITULO_PROVISORIO ? "" : post.titulo);
   const [slug, setSlug] = useState(post.slug);
   const [status, setStatus] = useState<StatusPost>(post.status);
   const [autorId, setAutorId] = useState(post.autorId);
-  const [categorias, setCategorias] = useState<string[]>(post.categorias ?? []);
+  const [categoriaId, setCategoriaId] = useState(post.categoriaId);
   const [palavraChave, setPalavraChave] = useState(post.palavraChave ?? "");
-  const [titleSEO, setTitleSEO] = useState(post.titleSEO ?? "");
   const [metaDescription, setMetaDescription] = useState(post.metaDescription);
-  const [dataPublicacao, setDataPublicacao] = useState(
-    post.data.slice(0, 16),
-  );
+  const [dataPublicacao, setDataPublicacao] = useState(post.data.slice(0, 10));
   const [salvando, setSalvando] = useState(false);
 
-  const toggleCategoria = (cat: string) =>
-    setCategorias((prev) =>
-      prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat],
-    );
-
   const handleSalvar = async () => {
+    // Só o que mudou vai para o servidor.
+    const dados: Partial<Post> & { slugAuto?: boolean } = {};
+    if (titulo.trim() && titulo !== post.titulo) dados.titulo = titulo.trim();
+    if (slug !== post.slug) {
+      dados.slug = slug;
+      dados.slugAuto = false;
+    }
+    if (status !== post.status) dados.status = status;
+    if (autorId !== post.autorId) dados.autorId = autorId;
+    if (categoriaId !== post.categoriaId) dados.categoriaId = categoriaId;
+    if (palavraChave !== (post.palavraChave ?? "")) dados.kwPrimaria = palavraChave;
+    if (metaDescription !== post.metaDescription) dados.metaDescription = metaDescription;
+    if (dataPublicacao && dataPublicacao !== post.data.slice(0, 10)) dados.data = dataPublicacao;
     setSalvando(true);
-    await onSalvar(post.id, {
-      titulo,
-      slug,
-      status,
-      autorId,
-      autor: AUTORES_MOCK.find((a) => a.id === autorId)?.nome ?? post.autor,
-      categorias,
-      palavraChave,
-      titleSEO,
-      metaDescription,
-      data: new Date(dataPublicacao).toISOString(),
-    });
+    const ok = await onSalvar(post, dados);
     setSalvando(false);
+    if (ok) onCancelar();
   };
+
+  const campo = "w-full rounded border border-line bg-surface-2 px-2.5 py-1.5 text-[13px] text-ink focus:border-primary focus:outline-none disabled:opacity-60";
+  const rotulo = "mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-muted";
 
   return (
     <tr>
@@ -279,39 +270,35 @@ function EdicaoRapida({ post, colspan, onSalvar, onCancelar }: EdicaoRapidaProps
           <div className="grid grid-cols-2 gap-x-6 gap-y-3 lg:grid-cols-3">
             {/* Título */}
             <div className="col-span-2 lg:col-span-2">
-              <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-muted">
-                Título
-              </label>
+              <label className={rotulo}>Título</label>
               <input
-                className="w-full rounded border border-line bg-surface-2 px-2.5 py-1.5 text-[13px] text-ink focus:border-primary focus:outline-none"
+                className={campo}
                 value={titulo}
+                maxLength={TITULO_MAX}
+                placeholder="Título do post"
                 onChange={(e) => setTitulo(e.target.value)}
               />
             </div>
 
             {/* Status */}
             <div>
-              <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-muted">
-                Status
-              </label>
+              <label className={rotulo}>Status</label>
               <select
-                className="w-full rounded border border-line bg-surface-2 px-2.5 py-1.5 text-[13px] text-ink focus:border-primary focus:outline-none"
+                className={campo}
                 value={status}
+                disabled={somenteLeituraStatusAutor}
                 onChange={(e) => setStatus(e.target.value as StatusPost)}
               >
                 <option value="publicado">Publicado</option>
                 <option value="rascunho">Rascunho</option>
                 <option value="revisao">Em revisão</option>
                 <option value="agendado">Agendado</option>
-                <option value="lixeira">Lixeira</option>
               </select>
             </div>
 
             {/* Slug */}
             <div className="col-span-2">
-              <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-muted">
-                Slug
-              </label>
+              <label className={rotulo}>Slug</label>
               <div className="flex items-center gap-1">
                 <span className="text-[12px] text-ink-muted">{dominio || "seudominio.com.br"}/</span>
                 <input
@@ -324,15 +311,17 @@ function EdicaoRapida({ post, colspan, onSalvar, onCancelar }: EdicaoRapidaProps
 
             {/* Autor */}
             <div>
-              <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-muted">
-                Autor
-              </label>
+              <label className={rotulo}>Autor</label>
               <select
-                className="w-full rounded border border-line bg-surface-2 px-2.5 py-1.5 text-[13px] text-ink focus:border-primary focus:outline-none"
+                className={campo}
                 value={autorId}
+                disabled={somenteLeituraStatusAutor}
                 onChange={(e) => setAutorId(e.target.value)}
               >
-                {AUTORES_MOCK.map((a) => (
+                {!autores.some((a) => a.id === autorId) && (
+                  <option value={autorId}>{autorId || "(sem autor)"}</option>
+                )}
+                {autores.map((a) => (
                   <option key={a.id} value={a.id}>
                     {a.nome}
                   </option>
@@ -342,12 +331,10 @@ function EdicaoRapida({ post, colspan, onSalvar, onCancelar }: EdicaoRapidaProps
 
             {/* Data */}
             <div>
-              <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-muted">
-                Data
-              </label>
+              <label className={rotulo}>Data</label>
               <input
-                type="datetime-local"
-                className="w-full rounded border border-line bg-surface-2 px-2.5 py-1.5 text-[13px] text-ink focus:border-primary focus:outline-none"
+                type="date"
+                className={campo}
                 value={dataPublicacao}
                 onChange={(e) => setDataPublicacao(e.target.value)}
               />
@@ -355,55 +342,33 @@ function EdicaoRapida({ post, colspan, onSalvar, onCancelar }: EdicaoRapidaProps
 
             {/* Palavra-chave */}
             <div>
-              <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-muted">
-                Palavra-chave
-              </label>
+              <label className={rotulo}>Palavra-chave</label>
               <input
-                className="w-full rounded border border-line bg-surface-2 px-2.5 py-1.5 text-[13px] text-ink focus:border-primary focus:outline-none"
+                className={campo}
                 value={palavraChave}
                 onChange={(e) => setPalavraChave(e.target.value)}
               />
             </div>
 
-            {/* Categorias */}
+            {/* Categoria */}
             <div>
-              <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-muted">
-                Categorias
-              </label>
-              <div className="space-y-1">
-                {CATEGORIAS_MOCK.map((cat) => (
-                  <label key={cat} className="flex items-center gap-1.5 text-[12.5px]">
-                    <input
-                      type="checkbox"
-                      checked={categorias.includes(cat)}
-                      onChange={() => toggleCategoria(cat)}
-                      className="accent-primary"
-                    />
-                    {cat}
-                  </label>
+              <label className={rotulo}>Categoria</label>
+              <select className={campo} value={categoriaId} onChange={(e) => setCategoriaId(e.target.value)}>
+                <option value="">Sem categoria</option>
+                {!!categoriaId && !categorias.some((c) => c.id === categoriaId) && (
+                  <option value={categoriaId}>{categoriaId}</option>
+                )}
+                {categorias.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.nome}
+                  </option>
                 ))}
-              </div>
-            </div>
-
-            {/* Title SEO */}
-            <div className="col-span-2 lg:col-span-2">
-              <label className="mb-1 flex items-center justify-between text-[11px] font-semibold uppercase tracking-wide text-ink-muted">
-                <span>Title SEO</span>
-                <span className={titleSEO.length > 70 ? "text-danger" : ""}>
-                  {titleSEO.length}/70
-                </span>
-              </label>
-              <input
-                className="w-full rounded border border-line bg-surface-2 px-2.5 py-1.5 text-[13px] text-ink focus:border-primary focus:outline-none"
-                value={titleSEO}
-                onChange={(e) => setTitleSEO(e.target.value)}
-                maxLength={100}
-              />
+              </select>
             </div>
 
             {/* Meta description */}
             <div className="col-span-2 lg:col-span-3">
-              <label className="mb-1 flex items-center justify-between text-[11px] font-semibold uppercase tracking-wide text-ink-muted">
+              <label className={cn(rotulo, "flex items-center justify-between")}>
                 <span>Meta description</span>
                 <span
                   className={
@@ -419,7 +384,7 @@ function EdicaoRapida({ post, colspan, onSalvar, onCancelar }: EdicaoRapidaProps
                 className="w-full resize-none rounded border border-line bg-surface-2 px-2.5 py-1.5 text-[13px] text-ink focus:border-primary focus:outline-none"
                 value={metaDescription}
                 onChange={(e) => setMetaDescription(e.target.value)}
-                maxLength={200}
+                maxLength={165}
               />
             </div>
           </div>
@@ -453,9 +418,11 @@ function EdicaoRapida({ post, colspan, onSalvar, onCancelar }: EdicaoRapidaProps
 function Toast({
   mensagem,
   tipo,
+  acao,
 }: {
   mensagem: string;
   tipo: "sucesso" | "erro";
+  acao?: { rotulo: string; onClick: () => void };
 }) {
   return (
     <div
@@ -466,6 +433,11 @@ function Toast({
     >
       {tipo === "sucesso" ? <CheckCircle2 size={15} /> : <AlertCircle size={15} />}
       {mensagem}
+      {acao && (
+        <button onClick={acao.onClick} className="ml-2 rounded bg-white/20 px-2 py-0.5 text-[12px] font-semibold hover:bg-white/30">
+          {acao.rotulo}
+        </button>
+      )}
     </div>
   );
 }
@@ -475,8 +447,56 @@ function Toast({
 /* ------------------------------------------------------------------ */
 
 export function ListaPosts() {
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [carregando, setCarregando] = useState(true);
+  const {
+    posts: postsStore,
+    postsLixeira,
+    postsCarregados,
+    erroPosts,
+    autores,
+    categorias,
+    salvamento,
+    atualizarPost,
+    salvarPost,
+    duplicarPost,
+    moverParaLixeira,
+    restaurarPost,
+    excluirDefinitivo,
+    esvaziarLixeira,
+    recarregarPosts,
+  } = useStore();
+  const router = useRouter();
+  const { data: sessao } = useSession();
+  const papel = (sessao?.user as { papel?: string } | undefined)?.papel;
+  const ehAutor = papel === "autor";
+  const siteInfo = useSiteInfo();
+  const carregando = !postsCarregados;
+
+  // Ao abrir a lista, relê do servidor: pega o que o agente publicou por fora e refaz a
+  // leitura que falhou (o store carrega uma vez, ainda na tela de login, sem sessão).
+  useEffect(() => {
+    void recarregarPosts();
+  }, [recarregarPosts]);
+
+  /* Posts do store (dados reais do servidor) com o que a tabela mostra já resolvido */
+  const posts: Post[] = useMemo(() => {
+    const nomeAutor = (id: string) => autores.find((a) => a.id === id)?.nome ?? id;
+    const nomeCat = (id: string) => categorias.find((c) => c.id === id)?.nome ?? id;
+    const montar = (p: PostBase, naLixeira: boolean): Post => ({
+      ...p,
+      id: naLixeira ? `lixeira:${p.slug}` : p.id,
+      status: naLixeira ? "lixeira" : p.status,
+      naLixeira,
+      autor: nomeAutor(p.autorId),
+      categorias: p.categoriaId ? [nomeCat(p.categoriaId)] : [],
+      categoriaNome: p.categoriaId ? nomeCat(p.categoriaId) : "",
+      palavraChave: p.kwPrimaria ?? "",
+      titleSEO: p.seoTitle,
+      linksInternos: extrairLinks(p.corpo, siteInfo.dominio).internos.length,
+      origemAgente: p.geradoPorIA === true,
+    });
+    const vivos = postsStore.map((p) => montar(p, false));
+    return [...vivos, ...postsLixeira.map((p) => montar(p, true))];
+  }, [postsStore, postsLixeira, autores, categorias, siteInfo.dominio]);
 
   const [abaCorrente, setAbaCorrente] = useState<StatusPost | "todos">("todos");
   const [busca, setBusca] = useState("");
@@ -486,6 +506,7 @@ export function ListaPosts() {
   const [filtroAutor, setFiltroAutor] = useState("");
   const [filtroSEO, setFiltroSEO] = useState("");
   const [acaoEmMassa, setAcaoEmMassa] = useState("");
+  const [aplicando, setAplicando] = useState(false);
 
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
   const [edicaoRapida, setEdicaoRapida] = useState<string | null>(null);
@@ -501,58 +522,14 @@ export function ListaPosts() {
     dir: "desc",
   });
 
-  const [toast, setToast] = useState<{ mensagem: string; tipo: "sucesso" | "erro" } | null>(null);
+  const [toast, setToast] = useState<{
+    mensagem: string;
+    tipo: "sucesso" | "erro";
+    acao?: { rotulo: string; onClick: () => void };
+  } | null>(null);
+  const timerToast = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const refOpcoes = useRef<HTMLDivElement>(null);
-
-  /* Carregamento real via API */
-  useEffect(() => {
-    fetch("/api/posts")
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.ok && Array.isArray(data.posts)) {
-          const postsReais: Post[] = data.posts.map((p: Record<string, unknown>) => ({
-            // Campos do tipo base do Jorge (todos obrigatórios)
-            id: String(p.slug ?? p.id ?? ""),
-            slug: String(p.slug ?? ""),
-            titulo: String(p.titulo ?? p.title ?? "(sem título)"),
-            resumo: String(p.resumo ?? p.descricao ?? ""),
-            corpo: String(p.corpo ?? ""),
-            autorId: String(p.autorId ?? p.autor ?? ""),
-            categoriaId: String(p.categoriaId ?? p.categoria ?? ""),
-            data: String(p.data ?? p.publicadoEm ?? ""),
-            status: (p.status as StatusPost) ?? "rascunho",
-            destaque: Boolean(p.destaque),
-            seoTitle: String(p.seoTitle ?? p.titulo ?? ""),
-            metaDescription: String(p.metaDescription ?? p.descricao ?? ""),
-            canonical: String(p.canonical ?? ""),
-            noindex: Boolean(p.noindex),
-            ogImagem: String(p.ogImagem ?? ""),
-            schemaTipo: (p.schemaTipo as Post["schemaTipo"]) ?? "Article",
-            faq: Array.isArray(p.faq) ? p.faq : [],
-            capa: String(p.capa ?? ""),
-            capaAlt: String(p.capaAlt ?? ""),
-            fontes: Array.isArray(p.fontes) ? p.fontes : [],
-            palavras: Number(p.palavras ?? 0),
-            kwPrimaria: String(p.palavraChave ?? ""),
-            // Campos extras do ListaPosts (opcionais)
-            palavraChave: String(p.palavraChave ?? ""),
-            titleSEO: String(p.seoTitle ?? p.titulo ?? ""),
-            categorias: p.categoriaId ? [String(p.categoriaId)] : [],
-            pontuacaoSEO: null,
-            temSchema: false,
-            linksInternos: 0,
-            palavrasChaveSecundarias: [],
-            origemAgente: true,
-          }));
-          setPosts(postsReais);
-        } else {
-          setPosts(POSTS_MOCK);
-        }
-      })
-      .catch(() => setPosts(POSTS_MOCK))
-      .finally(() => setCarregando(false));
-  }, []);
 
   /* Persistir opções de tela em localStorage */
   useEffect(() => {
@@ -577,15 +554,31 @@ export function ListaPosts() {
     return () => document.removeEventListener("mousedown", handler);
   }, [opcoesTela]);
 
-  const mostrarToast = (mensagem: string, tipo: "sucesso" | "erro" = "sucesso") => {
-    setToast({ mensagem, tipo });
-    setTimeout(() => setToast(null), 3000);
+  const mostrarToast = (
+    mensagem: string,
+    tipo: "sucesso" | "erro" = "sucesso",
+    acao?: { rotulo: string; onClick: () => void },
+  ) => {
+    if (timerToast.current) clearTimeout(timerToast.current);
+    setToast({ mensagem, tipo, acao });
+    timerToast.current = setTimeout(() => setToast(null), acao ? 9000 : 3500);
   };
+
+  /* Erro de gravação do servidor vira aviso na tela (nunca engolido) */
+  const ultimoErro = useRef("");
+  useEffect(() => {
+    if (salvamento.estado === "erro" && salvamento.erro && salvamento.erro !== ultimoErro.current) {
+      ultimoErro.current = salvamento.erro;
+      mostrarToast(salvamento.erro, "erro");
+    }
+    if (salvamento.estado !== "erro") ultimoErro.current = "";
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [salvamento]);
 
   /* Contagens por status — baseadas nos posts reais carregados */
   const contagens = useMemo(() => {
     return {
-      todos: posts.length,
+      todos: posts.filter((p) => p.status !== "lixeira").length, // "Todos" não conta a lixeira (padrão WP)
       publicado: posts.filter((p) => p.status === "publicado").length,
       rascunho: posts.filter((p) => p.status === "rascunho").length,
       revisao: posts.filter((p) => p.status === "revisao").length,
@@ -596,16 +589,18 @@ export function ListaPosts() {
 
   /* Meses únicos para o filtro de data — baseados nos posts reais */
   const mesesUnicos = useMemo(() => {
-    const set = new Set(posts.map((p) => p.data.slice(0, 7)).filter(Boolean));
+    const set = new Set(posts.filter((p) => p.status !== "lixeira").map((p) => p.data.slice(0, 7)).filter(Boolean));
     return [...set].sort().reverse();
   }, [posts]);
 
   /* Posts filtrados + ordenados */
   const postsFiltrados = useMemo(() => {
     let lista = [...posts];
-    if (abaCorrente !== "todos") lista = lista.filter((p) => p.status === abaCorrente);
+    lista = abaCorrente === "todos"
+      ? lista.filter((p) => p.status !== "lixeira")
+      : lista.filter((p) => p.status === abaCorrente);
     if (filtroData) lista = lista.filter((p) => p.data.startsWith(filtroData));
-    if (filtroCategoria) lista = lista.filter((p) => (p.categorias ?? []).includes(filtroCategoria));
+    if (filtroCategoria) lista = lista.filter((p) => p.categoriaId === filtroCategoria);
     if (filtroAutor) lista = lista.filter((p) => p.autorId === filtroAutor);
     if (filtroSEO === "bom") lista = lista.filter((p) => p.palavraChave && testesFalhosSEO(p).length === 0);
     if (filtroSEO === "melhorar") lista = lista.filter((p) => { const n = testesFalhosSEO(p).length; return p.palavraChave && n >= 1 && n <= 2; });
@@ -663,30 +658,96 @@ export function ListaPosts() {
       return next;
     });
 
-  /* Atualizar post (simulado) */
-  const simularSalvar = async (id: string, dados: Partial<Post>) => {
-    await new Promise((res) => setTimeout(res, 700));
-    setPosts((prev) => prev.map((p) => (p.id === id ? { ...p, ...dados } : p)));
-    setEdicaoRapida(null);
-    mostrarToast("Post atualizado com sucesso.");
+  /* Edição rápida: grava de verdade e só fecha quando o servidor confirma */
+  const salvarEdicaoRapida = async (post: Post, dados: Partial<Post> & { slugAuto?: boolean }) => {
+    if (Object.keys(dados).length === 0) return true;
+    atualizarPost(post.id, dados);
+    const ok = await salvarPost(post.id);
+    if (ok) mostrarToast("Post atualizado.");
+    return ok;
   };
 
-  /* Ação em massa (simulada) */
+  /* Restaurar / lixeira: chave = slug dentro da lixeira; id do post vivo = slug do arquivo */
+  const restaurar = async (post: Post) => {
+    const r = await restaurarPost(post.slug);
+    if (r.ok) mostrarToast(`"${post.titulo}" voltou para os posts (rascunho ou o status que tinha).`);
+    else mostrarToast(r.erro, "erro");
+  };
+
+  const paraLixeira = async (alvos: Post[]) => {
+    const ids = alvos.map((p) => p.id);
+    const movidos = await moverParaLixeira(ids);
+    if (movidos.length === 0) {
+      mostrarToast("Não consegui mover para a lixeira.", "erro");
+      return;
+    }
+    setSelecionados(new Set());
+    setEdicaoRapida(null);
+    const titulos = alvos.filter((p) => movidos.includes(p.id));
+    mostrarToast(
+      movidos.length === 1 ? `"${titulos[0].titulo}" foi para a lixeira.` : `${movidos.length} posts foram para a lixeira.`,
+      "sucesso",
+      {
+        rotulo: "Desfazer",
+        onClick: async () => {
+          let voltou = 0;
+          // a lixeira tem o post com o mesmo slug (ou com sufixo se já havia outro igual)
+          for (const t of titulos) {
+            const r = await restaurarPost(t.slug);
+            if (r.ok) voltou++;
+          }
+          mostrarToast(voltou === titulos.length ? "Pronto, voltou tudo." : `Voltaram ${voltou} de ${titulos.length}.`, voltou ? "sucesso" : "erro");
+        },
+      },
+    );
+  };
+
+  const excluirDeVez = async (alvos: Post[]) => {
+    const texto = alvos.length === 1
+      ? `Excluir "${alvos[0].titulo}" para sempre? Não dá para desfazer.`
+      : `Excluir ${alvos.length} posts para sempre? Não dá para desfazer.`;
+    if (!window.confirm(texto)) return;
+    let apagados = 0;
+    for (const p of alvos) if (await excluirDefinitivo(p.slug)) apagados++;
+    setSelecionados(new Set());
+    if (apagados > 0) mostrarToast(apagados === 1 ? "Post excluído." : `${apagados} posts excluídos.`);
+  };
+
+  const esvaziar = async () => {
+    if (!window.confirm("Esvaziar a lixeira? Todos os posts dela serão excluídos para sempre.")) return;
+    if (await esvaziarLixeira()) {
+      setSelecionados(new Set());
+      mostrarToast("Lixeira esvaziada.");
+    }
+  };
+
+  const duplicar = async (post: Post) => {
+    const r = await duplicarPost(post.id);
+    if (r.ok) {
+      mostrarToast("Cópia criada como rascunho.", "sucesso", {
+        rotulo: "Abrir",
+        onClick: () => router.push(`/posts/${r.slug}`),
+      });
+    } else mostrarToast(r.erro, "erro");
+  };
+
+  /* Ação em massa: só o que grava de verdade */
   const aplicarAcao = async () => {
     if (!acaoEmMassa || selecionados.size === 0) return;
-    await new Promise((res) => setTimeout(res, 600));
-    if (acaoEmMassa === "lixeira") {
-      setPosts((prev) =>
-        prev.map((p) =>
-          selecionados.has(p.id) ? { ...p, status: "lixeira" as StatusPost } : p,
-        ),
-      );
-      mostrarToast(`${selecionados.size} post(s) movido(s) para a lixeira.`);
-      setSelecionados(new Set());
-    } else {
-      mostrarToast(`Ação "${acaoEmMassa}" aplicada a ${selecionados.size} post(s).`);
+    const alvos = posts.filter((p) => selecionados.has(p.id));
+    setAplicando(true);
+    try {
+      if (acaoEmMassa === "lixeira") await paraLixeira(alvos);
+      else if (acaoEmMassa === "restaurar") {
+        let n = 0;
+        for (const p of alvos) if ((await restaurarPost(p.slug)).ok) n++;
+        setSelecionados(new Set());
+        mostrarToast(`${n} post(s) restaurado(s).`, n ? "sucesso" : "erro");
+      } else if (acaoEmMassa === "excluir") await excluirDeVez(alvos);
+    } finally {
+      setAplicando(false);
+      setAcaoEmMassa("");
     }
-    setAcaoEmMassa("");
   };
 
   /* Ordenação com toggle */
@@ -748,7 +809,7 @@ export function ListaPosts() {
     { valor: "rascunho", rotulo: "Rascunhos", count: contagens.rascunho },
     { valor: "revisao", rotulo: "Em revisão", count: contagens.revisao },
     { valor: "agendado", rotulo: "Agendados", count: contagens.agendado },
-    { valor: "lixeira", rotulo: "Lixeira", count: contagens.lixeira },
+    ...(ehAutor ? [] : [{ valor: "lixeira" as const, rotulo: "Lixeira", count: contagens.lixeira }]),
   ];
 
   /* ── Paginação ── */
@@ -883,25 +944,40 @@ export function ListaPosts() {
       {/* Barra de filtros */}
       <div className="mb-3 flex flex-wrap items-center gap-2">
         {/* Ações em massa */}
-        <select
-          className="rounded border border-line bg-surface-2 px-2 py-1.5 text-[12.5px] text-ink"
-          value={acaoEmMassa}
-          onChange={(e) => setAcaoEmMassa(e.target.value)}
-        >
-          <option value="">Ações em massa</option>
-          <option value="editar">Editar</option>
-          <option value="lixeira">Mover para lixeira</option>
-          <option value="alterar_autor">Alterar autor</option>
-          <option value="alterar_categoria">Alterar categoria</option>
-          <option value="alterar_status">Alterar status</option>
-        </select>
-        <button
-          onClick={aplicarAcao}
-          disabled={!acaoEmMassa || selecionados.size === 0}
-          className="rounded border border-line px-3 py-1.5 text-[12.5px] text-ink hover:bg-secondary disabled:opacity-40"
-        >
-          Aplicar
-        </button>
+        {!ehAutor && (
+          <>
+            <select
+              className="rounded border border-line bg-surface-2 px-2 py-1.5 text-[12.5px] text-ink"
+              value={acaoEmMassa}
+              onChange={(e) => setAcaoEmMassa(e.target.value)}
+            >
+              <option value="">Ações em massa</option>
+              {abaCorrente === "lixeira" ? (
+                <>
+                  <option value="restaurar">Restaurar</option>
+                  <option value="excluir">Excluir definitivamente</option>
+                </>
+              ) : (
+                <option value="lixeira">Mover para lixeira</option>
+              )}
+            </select>
+            <button
+              onClick={aplicarAcao}
+              disabled={!acaoEmMassa || selecionados.size === 0 || aplicando}
+              className="rounded border border-line px-3 py-1.5 text-[12.5px] text-ink hover:bg-secondary disabled:opacity-40"
+            >
+              {aplicando ? "Aplicando…" : "Aplicar"}
+            </button>
+          </>
+        )}
+        {abaCorrente === "lixeira" && !ehAutor && contagens.lixeira > 0 && (
+          <button
+            onClick={esvaziar}
+            className="rounded border border-danger/40 px-3 py-1.5 text-[12.5px] text-danger hover:bg-danger/10"
+          >
+            Esvaziar lixeira
+          </button>
+        )}
 
         {/* Filtros */}
         <select
@@ -922,8 +998,8 @@ export function ListaPosts() {
           onChange={(e) => { setFiltroCategoria(e.target.value); setPaginaAtual(1); }}
         >
           <option value="">Todas as categorias</option>
-          {CATEGORIAS_MOCK.map((c) => (
-            <option key={c}>{c}</option>
+          {categorias.map((c) => (
+            <option key={c.id} value={c.id}>{c.nome}</option>
           ))}
         </select>
         <select
@@ -932,7 +1008,7 @@ export function ListaPosts() {
           onChange={(e) => { setFiltroAutor(e.target.value); setPaginaAtual(1); }}
         >
           <option value="">Todos os autores</option>
-          {AUTORES_MOCK.map((a) => (
+          {autores.map((a) => (
             <option key={a.id} value={a.id}>
               {a.nome}
             </option>
@@ -989,10 +1065,17 @@ export function ListaPosts() {
             <Loader2 size={28} className="animate-spin" />
             <p className="text-[13px]">Carregando posts…</p>
           </div>
+        ) : erroPosts ? (
+          <div className="flex flex-col items-center justify-center gap-2 py-20">
+            <p className="text-[14px] font-medium text-danger">Não consegui carregar os posts.</p>
+            <p className="text-[12.5px] text-ink-muted">{erroPosts}</p>
+          </div>
         ) : postsPagina.length === 0 ? (
           /* Estado vazio */
           <div className="flex flex-col items-center justify-center gap-2 py-20 text-ink-muted">
-            <p className="text-[14px] font-medium text-ink">Nenhum post encontrado.</p>
+            <p className="text-[14px] font-medium text-ink">
+              {abaCorrente === "lixeira" ? "A lixeira está vazia." : "Nenhum post encontrado."}
+            </p>
             {(busca || filtroData || filtroCategoria || filtroAutor || filtroSEO || abaCorrente !== "todos") && (
               <button
                 className="text-[12.5px] text-primary hover:underline"
@@ -1026,7 +1109,6 @@ export function ListaPosts() {
                 {colunasVisiveis.has("data") && <Th col="data">Data</Th>}
                 {colunasVisiveis.has("palavraChave") && <Th>Palavra-chave</Th>}
                 {colunasVisiveis.has("seo") && <Th col="seo" className="text-center">SEO</Th>}
-                {colunasVisiveis.has("schema") && <Th className="text-center">Schema</Th>}
                 {colunasVisiveis.has("linksInternos") && <Th col="linksInternos" className="text-center">Links</Th>}
               </tr>
             </thead>
@@ -1058,12 +1140,16 @@ export function ListaPosts() {
                       {/* Título */}
                       <td className="min-w-[280px] max-w-[520px] px-3 py-2.5 align-top">
                         <div>
-                          <Link
-                            href={`/posts/${post.id}`}
-                            className="font-medium text-ink hover:text-primary"
-                          >
-                            {post.titulo}
-                          </Link>
+                          {post.naLixeira ? (
+                            <span className="font-medium text-ink-muted">{post.titulo}</span>
+                          ) : (
+                            <Link
+                              href={`/posts/${post.id}`}
+                              className="font-medium text-ink hover:text-primary"
+                            >
+                              {post.titulo === TITULO_PROVISORIO ? "Novo post (sem título)" : post.titulo}
+                            </Link>
+                          )}
                           {post.origemAgente && (
                             <span className="ml-1.5 inline-block rounded bg-accent/15 px-1.5 py-0.5 text-[10px] font-semibold text-accent">
                               IA
@@ -1079,39 +1165,65 @@ export function ListaPosts() {
                           </p>
                           {/* Ações no hover */}
                           <div className="mt-1.5 hidden items-center gap-3 group-hover:flex">
-                            <Link
-                              href={`/posts/${post.id}`}
-                              className="text-[11.5px] text-primary hover:underline"
-                            >
-                              Editar
-                            </Link>
-                            <button
-                              onClick={() =>
-                                setEdicaoRapida(emEdicao ? null : post.id)
-                              }
-                              className="text-[11.5px] text-primary hover:underline"
-                            >
-                              Edição rápida
-                            </button>
-                            <a
-                              href={`/${post.slug}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-[11.5px] text-ink-muted hover:text-ink hover:underline"
-                            >
-                              Ver
-                            </a>
-                            <button className="text-[11.5px] text-ink-muted hover:text-ink hover:underline">
-                              Duplicar
-                            </button>
-                            <button
-                              onClick={() =>
-                                mostrarToast("Post movido para a lixeira.")
-                              }
-                              className="text-[11.5px] text-danger hover:underline"
-                            >
-                              Lixeira
-                            </button>
+                            {post.status === "lixeira" ? (
+                              !ehAutor && (
+                                <>
+                                  <button
+                                    onClick={() => restaurar(post)}
+                                    className="text-[11.5px] text-primary hover:underline"
+                                  >
+                                    Restaurar
+                                  </button>
+                                  <button
+                                    onClick={() => excluirDeVez([post])}
+                                    className="text-[11.5px] text-danger hover:underline"
+                                  >
+                                    Excluir definitivamente
+                                  </button>
+                                </>
+                              )
+                            ) : (
+                              <>
+                                <Link
+                                  href={`/posts/${post.id}`}
+                                  className="text-[11.5px] text-primary hover:underline"
+                                >
+                                  Editar
+                                </Link>
+                                <button
+                                  onClick={() =>
+                                    setEdicaoRapida(emEdicao ? null : post.id)
+                                  }
+                                  className="text-[11.5px] text-primary hover:underline"
+                                >
+                                  Edição rápida
+                                </button>
+                                {post.status === "publicado" && siteInfo.dominio && (
+                                  <a
+                                    href={`https://${siteInfo.dominio}${urlPost(post.slug)}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-[11.5px] text-ink-muted hover:text-ink hover:underline"
+                                  >
+                                    Ver
+                                  </a>
+                                )}
+                                <button
+                                  onClick={() => duplicar(post)}
+                                  className="text-[11.5px] text-ink-muted hover:text-ink hover:underline"
+                                >
+                                  Duplicar
+                                </button>
+                                {!ehAutor && (
+                                  <button
+                                    onClick={() => paraLixeira([post])}
+                                    className="text-[11.5px] text-danger hover:underline"
+                                  >
+                                    Lixeira
+                                  </button>
+                                )}
+                              </>
+                            )}
                           </div>
                         </div>
                       </td>
@@ -1182,13 +1294,6 @@ export function ListaPosts() {
                         </td>
                       )}
 
-                      {/* Schema */}
-                      {colunasVisiveis.has("schema") && (
-                        <td className="px-3 py-2.5 text-center align-top">
-                          <IndicadorSchema tem={post.temSchema ?? false} />
-                        </td>
-                      )}
-
                       {/* Links internos */}
                       {colunasVisiveis.has("linksInternos") && (
                         <td className="px-3 py-2.5 text-center align-top">
@@ -1208,7 +1313,10 @@ export function ListaPosts() {
                       <EdicaoRapida
                         post={post}
                         colspan={totalColunas}
-                        onSalvar={simularSalvar}
+                        autores={autores}
+                        categorias={categorias}
+                        somenteLeituraStatusAutor={ehAutor}
+                        onSalvar={salvarEdicaoRapida}
                         onCancelar={() => setEdicaoRapida(null)}
                       />
                     )}
@@ -1227,7 +1335,7 @@ export function ListaPosts() {
         </div>
       )}
 
-      {toast && <Toast mensagem={toast.mensagem} tipo={toast.tipo} />}
+      {toast && <Toast mensagem={toast.mensagem} tipo={toast.tipo} acao={toast.acao} />}
     </div>
   );
 }

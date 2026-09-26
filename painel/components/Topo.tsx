@@ -1,6 +1,7 @@
 "use client";
 
-import { ExternalLink, FileText, FolderTree, Loader2, Moon, Plus, Rocket, Search, Sun, Users } from "lucide-react";
+import { AlertTriangle, ExternalLink, FileText, FolderTree, Loader2, Moon, Plus, Rocket, Search, Sun, Users } from "lucide-react";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -10,20 +11,38 @@ import { urlPost } from "@/lib/urls-publicas";
 import { cn } from "@/lib/utils";
 import { Botao } from "@/components/ui";
 
-type BuildStatus = "idle" | "rodando" | "sucesso" | "erro";
+// Estado devolvido por /api/build (lib/build-estado.ts)
+interface EstadoBuild {
+  status: "nunca" | "rodando" | "ok" | "erro";
+  etapa?: "validando" | "construindo" | "copiando";
+  inicio?: string;
+  fim?: string;
+  timeoutMs?: number;
+  resumo?: string;
+  final?: string;
+  erros?: { arquivo: string; campo: string; mensagem: string }[];
+}
+
+const hhmm = (iso?: string) =>
+  iso ? new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : "";
 
 export function Topo() {
-  const { tema, alternarTema, posts, paginas, autores, criarPost, pendentes, publicarAlteracoes } = useStore();
+  const { tema, alternarTema, posts, paginas, autores, pendentes, publicarAlteracoes } = useStore();
   const [busca, setBusca] = useState("");
   const [focado, setFocado] = useState(false);
   const router = useRouter();
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // ── Estado do build ────────────────────────────────────────────────────────
-  const [buildStatus, setBuildStatus] = useState<BuildStatus>("idle");
-  const [buildId, setBuildId] = useState<string | null>(null);
-  const [buildErro, setBuildErro] = useState<string | null>(null);
+  // ── Estado do build (a fonte da verdade é o servidor: /api/build) ─────────
+  const { data: session } = useSession();
+  const papel = (session?.user as { papel?: string } | undefined)?.papel;
+  const podePublicar = papel === "administrador" || papel === "editor";
+  const [build, setBuild] = useState<EstadoBuild | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null); // falha sem estado do servidor (rede, 409...)
+  const [detalhes, setDetalhes] = useState(false);
+  const [agora, setAgora] = useState(() => Date.now());
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const eraRodando = useRef(false);
 
   // Domínio real do config para o link "Ver site"
   const [dominio, setDominio] = useState("");
@@ -34,68 +53,72 @@ export function Topo() {
       .catch(console.error);
   }, []);
 
-  // Polling de status do build
-  const pararPolling = useCallback(() => {
-    if (pollingRef.current) {
-      clearInterval(pollingRef.current);
-      pollingRef.current = null;
+  const consultar = useCallback(async () => {
+    try {
+      const res = await fetch("/api/build", { cache: "no-store" });
+      const data = await res.json();
+      if (data.ok && data.estado) setBuild(data.estado as EstadoBuild);
+    } catch {
+      /* tenta de novo no próximo ciclo */
     }
   }, []);
 
-  const iniciarPolling = useCallback((id: string) => {
-    pararPolling();
-    pollingRef.current = setInterval(async () => {
-      try {
-        const res = await fetch(`/api/build?id=${id}`);
-        const data = await res.json();
-        if (!data.ok) return;
+  // Ao carregar: lê o estado real do último build
+  useEffect(() => {
+    if (podePublicar) consultar();
+  }, [podePublicar, consultar]);
 
-        if (data.status === "sucesso") {
-          setBuildStatus("sucesso");
-          pararPolling();
-          setTimeout(() => setBuildStatus("idle"), 4000);
-        } else if (data.status === "erro") {
-          setBuildStatus("erro");
-          setBuildErro(data.log?.slice(-300) ?? "Erro desconhecido");
-          pararPolling();
-          setTimeout(() => { setBuildStatus("idle"); setBuildErro(null); }, 8000);
-        }
-      } catch {
-        // silencioso — tentar de novo no próximo tick
-      }
-    }, 2000); // checar a cada 2s
-  }, [pararPolling]);
+  // Enquanto roda: consulta a cada 2s e atualiza o relógio
+  const rodando = build?.status === "rodando";
+  useEffect(() => {
+    if (!rodando) return;
+    pollingRef.current = setInterval(() => {
+      setAgora(Date.now());
+      consultar();
+    }, 2000);
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    };
+  }, [rodando, consultar]);
 
-  useEffect(() => () => pararPolling(), [pararPolling]);
+  // "Publicado" só depois que o servidor confirmou ok: só então zera as pendências
+  useEffect(() => {
+    if (rodando) eraRodando.current = true;
+    else if (eraRodando.current) {
+      eraRodando.current = false;
+      if (build?.status === "ok") publicarAlteracoes();
+    }
+  }, [rodando, build?.status, publicarAlteracoes]);
 
   // ── Publicar ───────────────────────────────────────────────────────────────
   async function publicar() {
-    if (buildStatus === "rodando") return;
-    setBuildStatus("rodando");
-    setBuildErro(null);
-
+    if (rodando || !podePublicar) return;
+    setAviso(null);
+    setDetalhes(false);
     try {
       const res = await fetch("/api/build", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),
       });
-      const data = await res.json();
-
-      if (!data.ok) {
-        setBuildStatus("erro");
-        setBuildErro(data.erro ?? "Erro ao iniciar build");
-        setTimeout(() => { setBuildStatus("idle"); setBuildErro(null); }, 6000);
+      const data = await res.json().catch(() => ({}));
+      if (data.estado) setBuild(data.estado as EstadoBuild);
+      if (res.status === 202) {
+        setAgora(Date.now());
         return;
       }
-
-      setBuildId(data.buildId);
-      iniciarPolling(data.buildId);
-      publicarAlteracoes(); // atualizar store local
+      if (res.status === 409) {
+        setAviso("Já existe uma publicação em andamento.");
+        return;
+      }
+      if (res.status === 422) {
+        setDetalhes(true); // mostra logo o que precisa ser corrigido
+        return;
+      }
+      setAviso(data.erro ?? `Não foi possível iniciar a publicação (${res.status}).`);
     } catch (err) {
-      setBuildStatus("erro");
-      setBuildErro(String(err));
-      setTimeout(() => { setBuildStatus("idle"); setBuildErro(null); }, 6000);
+      setAviso(`Não foi possível falar com o servidor: ${String(err)}`);
     }
   }
 
@@ -119,53 +142,33 @@ export function Topo() {
     return achados.slice(0, 7);
   }, [busca, posts, paginas, autores]);
 
+  // O post nasce NO SERVIDOR (já válido); a página /posts/novo cria e abre o editor.
   function novoPost() {
-    const id = `p${Date.now()}`;
-    const hoje = new Date().toISOString().slice(0, 10);
-    criarPost({
-      id,
-      titulo: "",
-      slug: "",
-      resumo: "",
-      corpo: "<p></p>",
-      autorId: autores[0]?.id ?? "a1",
-      categoriaId: "",
-      data: hoje,
-      status: "rascunho",
-      destaque: false,
-      seoTitle: "",
-      metaDescription: "",
-      canonical: "",
-      noindex: false,
-      ogImagem: "",
-      schemaTipo: "Article",
-      faq: [],
-      capa: "",
-      capaAlt: "",
-      fontes: [],
-      palavras: 0,
-    });
-    router.push(`/posts/${id}`);
+    router.push("/posts/novo");
   }
 
-  // ── Labels do botão Publicar ───────────────────────────────────────────────
-  const labelPublicar = buildStatus === "rodando"
+  // ── Rótulos do botão Publicar ──────────────────────────────────────────────
+  const emErro = build?.status === "erro";
+  const decorrido = build?.inicio ? Math.max(0, Math.round((agora - new Date(build.inicio).getTime()) / 1000)) : 0;
+  const limiteMin = build?.timeoutMs ? Math.round(build.timeoutMs / 6000) / 10 : 5;
+  const etapaTxt =
+    build?.etapa === "validando" ? "conferindo o conteúdo" : build?.etapa === "copiando" ? "enviando ao site" : "construindo o site";
+  const labelPublicar = rodando
     ? "Publicando…"
-    : buildStatus === "sucesso"
-    ? "Publicado ✓"
-    : buildStatus === "erro"
-    ? "Erro no build"
+    : emErro
+    ? "Erro ao publicar"
     : pendentes > 0
     ? `Publicar (${pendentes})`
     : "Publicar";
-
-  const variantePublicar = buildStatus === "sucesso"
-    ? "primario"
-    : buildStatus === "erro"
-    ? "primario"
-    : pendentes > 0 || buildStatus === "rodando"
-    ? "primario"
-    : "secundario";
+  const infoBuild = !podePublicar
+    ? null
+    : rodando
+    ? `${etapaTxt} · ${decorrido}s (limite ${limiteMin} min)`
+    : build?.status === "ok"
+    ? `Publicado às ${hhmm(build.fim)}`
+    : build?.status === "nunca"
+    ? "Nunca publicado"
+    : null;
 
   return (
     <header className="fixed top-0 right-0 left-[224px] z-20 flex h-[52px] items-center gap-3 border-b border-line bg-surface-2 px-3">
@@ -224,11 +227,22 @@ export function Topo() {
       </div>
 
       <div className="ml-auto flex items-center gap-1.5">
-        {/* Erro de build — tooltip */}
-        {buildStatus === "erro" && buildErro && (
-          <span className="max-w-[200px] truncate text-[10.5px] text-danger" title={buildErro}>
-            {buildErro.slice(0, 60)}…
+        {/* Estado real da publicação */}
+        {infoBuild && (
+          <span className="max-w-[240px] truncate text-[10.5px] text-ink-muted" title={infoBuild} aria-live="polite">
+            {infoBuild}
           </span>
+        )}
+        {(emErro || aviso) && !rodando && (
+          <button
+            type="button"
+            onClick={() => setDetalhes((d) => !d)}
+            className="flex max-w-[260px] items-center gap-1 text-[10.5px] text-danger underline-offset-2 hover:underline"
+            title={aviso ?? build?.resumo}
+          >
+            <AlertTriangle size={11} className="shrink-0" />
+            <span className="truncate">{aviso ?? build?.resumo ?? "A publicação falhou."}</span>
+          </button>
         )}
 
         {/* Ver site */}
@@ -256,20 +270,13 @@ export function Topo() {
 
         {/* Publicar */}
         <Botao
-          variante={variantePublicar}
+          variante={pendentes > 0 || rodando || emErro ? "primario" : "secundario"}
           onClick={publicar}
-          disabled={buildStatus === "rodando"}
-          className={cn(
-            "transition-all",
-            buildStatus === "sucesso" && "bg-success text-white border-success",
-            buildStatus === "erro" && "bg-danger text-white border-danger",
-          )}
+          disabled={rodando || !podePublicar}
+          title={!podePublicar ? "Sem permissão para o seu papel" : undefined}
+          className={cn("transition-all", emErro && "bg-danger text-white border-danger")}
         >
-          {buildStatus === "rodando" ? (
-            <Loader2 size={12} className="animate-spin" />
-          ) : (
-            <Rocket size={12} />
-          )}
+          {rodando ? <Loader2 size={12} className="animate-spin" /> : <Rocket size={12} />}
           {labelPublicar}
         </Botao>
 
@@ -278,6 +285,40 @@ export function Topo() {
           <Plus size={12} /> Novo Post
         </Botao>
       </div>
+
+      {/* Detalhes da falha: resumo, problemas de conteúdo, fim do log e link do log completo */}
+      {detalhes && (emErro || aviso) && !rodando && (
+        <div className="absolute top-[56px] right-3 z-40 max-h-[70vh] w-[520px] max-w-[calc(100vw-260px)] overflow-auto rounded-[var(--radius)] border border-danger/40 bg-surface-2 p-3 shadow-xl">
+          <div className="mb-1.5 flex items-center justify-between gap-2">
+            <p className="text-[12px] font-medium text-danger">A publicação não foi concluída</p>
+            <button type="button" onClick={() => setDetalhes(false)} className="text-[11px] text-ink-muted hover:text-ink">
+              Fechar
+            </button>
+          </div>
+          <p className="mb-2 text-[11.5px] text-ink">{aviso ?? build?.resumo}</p>
+          {build?.erros && build.erros.length > 0 && (
+            <ul className="mb-2 space-y-1.5">
+              {build.erros.map((e, i) => (
+                <li key={`${e.arquivo}-${e.campo}-${i}`} className="text-[11px] text-ink">
+                  <span className="font-mono text-[10.5px] text-ink-muted">{e.arquivo}</span>
+                  {" · "}
+                  <b>{e.campo}</b>: {e.mensagem}
+                </li>
+              ))}
+            </ul>
+          )}
+          {build?.final && !(build.erros && build.erros.length > 0) && (
+            <pre className="mb-2 max-h-[260px] overflow-auto rounded-[var(--radius)] bg-surface p-2 font-mono text-[10.5px] whitespace-pre-wrap text-ink-muted">
+              {build.final}
+            </pre>
+          )}
+          {build && (
+            <a href="/api/build?log=1" target="_blank" rel="noopener noreferrer" className="text-[11px] text-primary underline">
+              Abrir o log completo
+            </a>
+          )}
+        </div>
+      )}
     </header>
   );
 }

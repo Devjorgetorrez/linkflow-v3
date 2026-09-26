@@ -1,33 +1,31 @@
 /**
  * app/api/posts/route.ts
- * GET  /api/posts   → lista todos os posts do cliente
- * POST /api/posts   → cria um novo post
+ * GET  /api/posts   → lista os posts do cliente (a lixeira fica em /api/posts/lixeira)
+ * POST /api/posts   → cria um post novo (já válido para o site) ou duplica um existente
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import path from "path";
-import { getContentDir, listarArquivos, lerArquivo, escreverArquivo, parseMd, stringifyMd, slugify } from "@/lib/fs";
+import { listarArquivos, lerArquivo, stringifyMd, atualizarFrontmatter, parseMd } from "@/lib/fs";
 import { exigirPapel, obterAtor, validarSlug } from "@/lib/auth";
 import { MATRIZ } from "@/lib/permissoes";
 import { ehPostDoUsuario } from "@/lib/usuarios-regras";
-import { painelParaFrontmatter } from "@/lib/frontmatter-post";
-import { lerStatusPost } from "@/lib/status-post";
 import { buscarPorId, lerUsuarios } from "@/lib/usuarios";
-import { idDoAutor, slugDoAutor } from "@/lib/sync-autores";
 import { lerDados } from "@/lib/dados";
-import { idDoCategoria, slugDoCategoria } from "@/lib/sync-categorias";
+import { postParaApi } from "@/lib/posts-api";
+import { autorPadrao, camposDoCorpo, frontmatterInicial, hojeISO, validarCamposPost } from "@/lib/posts-campos";
+import { caminhoPost, dirPosts, gravarNovoAtomico, slugLivre, slugOcupado } from "@/lib/posts-fs";
+import {
+  SLUGS_RESERVADOS, TITULO_MAX, TITULO_PROVISORIO, normalizarCorpo, slugDoTitulo,
+} from "@/lib/posts-regras";
 import type { Categoria } from "@/mock/types";
-
-function postsDirAtivo(): string {
-  return path.join(getContentDir(), "posts");
-}
 
 export async function GET(req: NextRequest) {
   const auth = await exigirPapel(req, MATRIZ["posts:GET"]);
   if (auth) return auth;
 
   try {
-    const dir = postsDirAtivo();
+    const dir = dirPosts();
     const arquivos = listarArquivos(dir, ".md");
     const usuarios = lerUsuarios(); // autor: slug no arquivo, id do usuário no painel
     const categorias = lerDados<Categoria[]>("categorias.json", []); // categoria: slug no arquivo, id no painel
@@ -40,34 +38,11 @@ export async function GET(req: NextRequest) {
       .map((arquivo) => {
         const raw = lerArquivo(path.join(dir, arquivo));
         if (!raw) return null;
-        const { frontmatter, content } = parseMd(raw);
-        const slug = arquivo.replace(/\.md$/, "");
-        return {
-          id: slug,
-          slug,
-          titulo: frontmatter.titulo ?? frontmatter.title ?? "(sem título)",
-          resumo: frontmatter.metaDescription ?? frontmatter.descricao ?? frontmatter.description ?? "",
-          corpo: content,
-          data: frontmatter.publicadoEm ?? frontmatter.date ?? "",
-          status: lerStatusPost(frontmatter.status),
-          destaque: frontmatter.destaque ?? false,
-          palavraChave: frontmatter.palavraChave ?? "",
-          seoTitle: frontmatter.titulo ?? "",
-          metaDescription: frontmatter.metaDescription ?? frontmatter.descricao ?? "",
-          canonical: "",
-          noindex: false,
-          ogImagem: frontmatter.imagemHero ?? "",
-          schemaTipo: "Article",
-          faq: [],
-          fontes: [],
-          palavras: content.split(/\s+/).length,
-          categoriaId: idDoCategoria(String(frontmatter.categoria ?? ""), categorias),
-          autorId: idDoAutor(String(frontmatter.autor ?? ""), usuarios),
-        };
+        return postParaApi(arquivo.replace(/\.md$/, ""), raw, usuarios, categorias);
       })
-      .filter(Boolean);
+      .filter((p): p is NonNullable<typeof p> => p !== null);
 
-    const visiveis = eu ? posts.filter((p) => p && ehPostDoUsuario(p.autorId, eu)) : posts;
+    const visiveis = eu ? posts.filter((p) => ehPostDoUsuario(p.autorId, eu)) : posts;
     return NextResponse.json({ ok: true, posts: visiveis });
   } catch (err) {
     console.error("[api/posts GET]", err);
@@ -80,56 +55,82 @@ export async function POST(req: NextRequest) {
   if (auth) return auth;
 
   try {
-    const body = await req.json();
-    // Autor cria só rascunho e sempre em seu próprio nome (não publica nem assina por outro).
+    const body = (await req.json()) as Record<string, unknown>;
     const ator = await obterAtor(req);
-    if (ator?.via === "sessao" && ator.papel === "autor") {
+    const usuarios = lerUsuarios();
+    const categorias = lerDados<Categoria[]>("categorias.json", []);
+    const ehAutor = ator?.via === "sessao" && ator.papel === "autor";
+
+    // ── Duplicar ────────────────────────────────────────────────────────────
+    if (typeof body.duplicarDe === "string") {
+      const origem = body.duplicarDe;
+      if (!validarSlug(origem)) {
+        return NextResponse.json({ ok: false, erro: "Slug inválido" }, { status: 400 });
+      }
+      const raw = lerArquivo(caminhoPost(origem));
+      if (!raw) return NextResponse.json({ ok: false, erro: "Post não encontrado" }, { status: 404 });
+      const fmOrigem = parseMd(raw).frontmatter;
+      if (ehAutor) {
+        const eu = buscarPorId(ator.id);
+        if (!eu || !ehPostDoUsuario(fmOrigem.autor, eu)) {
+          return NextResponse.json({ ok: false, erro: "Autor só duplica os próprios posts" }, { status: 403 });
+        }
+      }
+      const tituloOrigem = String(fmOrigem.titulo ?? TITULO_PROVISORIO);
+      let titulo = `Cópia de ${tituloOrigem}`;
+      if (titulo.length > TITULO_MAX) titulo = titulo.slice(0, TITULO_MAX).trim();
+      const slug = slugLivre(slugDoTitulo(titulo));
+      const campos: Record<string, unknown> = {
+        titulo,
+        status: "rascunho",
+        publicadoEm: hojeISO(),
+        atualizadoEm: hojeISO(),
+        destaque: false,
+        palavraChave: "", // a cópia não pode canibalizar a palavra-chave do original
+      };
+      const dono = autorPadrao(ator, usuarios);
+      if (ehAutor && dono) campos.autor = dono;
+      const novo = atualizarFrontmatter(raw, campos);
+      if (!gravarNovoAtomico(caminhoPost(slug), novo)) {
+        return NextResponse.json({ ok: false, erro: "Já existe um post com esse endereço." }, { status: 409 });
+      }
+      return NextResponse.json({ ok: true, slug, duplicadoDe: origem });
+    }
+
+    // ── Criar ───────────────────────────────────────────────────────────────
+    // Autor cria só rascunho e sempre em seu próprio nome (não publica nem assina por outro).
+    if (ehAutor) {
       body.status = "rascunho";
       delete body.autor;
       body.autorId = ator.id;
     }
-    const { titulo, corpo, imagemHero } = body;
 
-    if (!titulo) {
-      return NextResponse.json({ ok: false, erro: "Título obrigatório" }, { status: 400 });
+    const campos = camposDoCorpo(body, usuarios, categorias);
+    const fm = frontmatterInicial(campos, ator, usuarios);
+    const invalido = validarCamposPost(fm, String(fm.metaDescription ?? ""));
+    if (invalido) return NextResponse.json({ ok: false, erro: invalido.erro }, { status: invalido.status });
+
+    // Slug: o pedido explícito não pode colidir; o derivado do título ganha sufixo -2, -3…
+    let slug: string;
+    if (typeof body.slug === "string" && body.slug.trim()) {
+      slug = slugDoTitulo(body.slug);
+      if (!slug || !validarSlug(slug) || SLUGS_RESERVADOS.includes(slug)) {
+        return NextResponse.json({ ok: false, erro: "Slug inválido" }, { status: 400 });
+      }
+      if (slugOcupado(slug)) {
+        return NextResponse.json({ ok: false, erro: "Já existe um post com esse endereço (slug)." }, { status: 409 });
+      }
+    } else {
+      slug = slugLivre(slugDoTitulo(String(fm.titulo)) || "post");
     }
 
-    const slug = slugify(body.slug || titulo);
-
-    // Validar slug antes de usar em caminho de arquivo
-    if (!validarSlug(slug)) {
-      return NextResponse.json({ ok: false, erro: "Slug inválido" }, { status: 400 });
+    const corpo = normalizarCorpo(body.corpo, body.corpoFormato === "html");
+    // gravarNovoAtomico nunca sobrescreve: se outro pedido pegou o slug no meio do caminho, recusa.
+    if (!gravarNovoAtomico(caminhoPost(slug), stringifyMd(fm, corpo))) {
+      return NextResponse.json({ ok: false, erro: "Já existe um post com esse endereço (slug)." }, { status: 409 });
     }
 
-    const dir = postsDirAtivo();
-    const filePath = path.join(dir, `${slug}.md`);
-
-    // Nomes de campo do SITE (schema posts do Astro), nunca os do painel —
-    // ver lib/frontmatter-post.ts. `metaDescription` é obrigatório no site.
-    const hoje = new Date().toISOString().split("T")[0];
-    const frontmatter: Record<string, unknown> = {
-      metaDescription: "",
-      publicadoEm: hoje,
-      status: "rascunho",
-      destaque: false,
-      ...painelParaFrontmatter(body),
-      atualizadoEm: hoje,
-    };
-    // O site referencia o autor pelo SLUG (content/autores/<slug>.md); o
-    // painel manda o id do usuário.
-    if (typeof frontmatter.autor === "string") {
-      frontmatter.autor = slugDoAutor(frontmatter.autor, lerUsuarios());
-    }
-    // Mesma coisa pra categoria (content/categorias/<slug>.md vs id do painel).
-    if (typeof frontmatter.categoria === "string") {
-      frontmatter.categoria = slugDoCategoria(frontmatter.categoria, lerDados<Categoria[]>("categorias.json", []));
-    }
-
-    if (imagemHero) frontmatter.imagemHero = imagemHero;
-
-    escreverArquivo(filePath, stringifyMd(frontmatter, corpo ?? ""));
-
-    return NextResponse.json({ ok: true, slug });
+    return NextResponse.json({ ok: true, slug, titulo: fm.titulo, status: fm.status });
   } catch (err) {
     console.error("[api/posts POST]", err);
     return NextResponse.json({ ok: false, erro: String(err) }, { status: 500 });
