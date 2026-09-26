@@ -7,6 +7,7 @@ import Tags        from '../../../components/blocos/Tags.astro'
 import Cta         from '../../../components/blocos/Cta.astro'
 import Footer      from '../../../components/blocos/Footer.astro'
 import { site }    from '../../../config/tema-05.ts'
+import { textoCredencial } from '../../../lib/schema.ts'
 import { getCollection } from 'astro:content'
 import { ehPublicado } from '../../../lib/publicacao.ts'
 import { nomeAutor } from '../../../lib/autores.ts'
@@ -45,7 +46,7 @@ const jsonLd = {
   jsonLd={jsonLd}
   nodeId="blog"
 >
-  <Header variante="padrao" nomeSite={site.nome} telefone={site.nap.telefone}
+  <Header logoSrc={site.logo?.src} logoAlt={site.logo?.alt} variante="padrao" nomeSite={site.nome} telefone={site.nap.telefone}
           whatsapp={site.nap.whatsapp} nav={site.nav}
           ctaTexto="Agendar atendimento" ctaHref="/tema-05/contato" />
 
@@ -68,7 +69,7 @@ const jsonLd = {
     ctaPrimHref="/tema-05/contato"
   />
 
-  <Footer
+  <Footer credencial={textoCredencial(site)} logoSrc={site.logo?.src} logoAlt={site.logo?.alt}
     variante="colunas"
     nomeSite={site.nome}
     slogan={site.slogan}

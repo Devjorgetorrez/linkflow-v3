@@ -12,6 +12,7 @@ import PageHero      from '../../components/blocos/PageHero.astro'
 import ConteudoLegal from '../../components/blocos/ConteudoLegal.astro'
 import Footer        from '../../components/blocos/Footer.astro'
 import { site }      from '../../config/tema-04.ts'
+import { textoCredencial } from '../../lib/schema.ts'
 
 const wa        = `https://wa.me/${site.nap.whatsapp}`
 const canonical = `${site.dominio}/termos-de-uso`
@@ -38,7 +39,7 @@ const jsonLd = {
   jsonLd={jsonLd}
   nodeId="termos-de-uso"
 >
-  <Header variante="padrao" nomeSite={site.nome} telefone={site.nap.telefone}
+  <Header logoSrc={site.logo?.src} logoAlt={site.logo?.alt} variante="padrao" nomeSite={site.nome} telefone={site.nap.telefone}
           whatsapp={site.nap.whatsapp} nav={site.nav}
           ctaTexto="Peça seu orçamento" ctaHref={wa} />
 
@@ -51,7 +52,7 @@ const jsonLd = {
 
   <ConteudoLegal legal={site.legal} nomeSite={site.nome} documento="termos" />
 
-  <Footer
+  <Footer credencial={textoCredencial(site)} logoSrc={site.logo?.src} logoAlt={site.logo?.alt}
     variante="colunas"
     nomeSite={site.nome}
     slogan={site.slogan}

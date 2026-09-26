@@ -16,6 +16,7 @@ import Localizacao      from '../components/blocos/Localizacao.astro'
 import Abordagem        from '../components/blocos/Abordagem.astro'
 import BuscasFrequentes from '../components/blocos/BuscasFrequentes.astro'
 import { site }         from '../config/site.ts'
+import { textoCredencial, organizacaoSchema } from '../lib/schema.ts'
 import { getCollection } from 'astro:content'
 import { ehPublicado } from '../lib/publicacao.ts'
 import { nomeAutor } from '../lib/autores.ts'
@@ -78,26 +79,7 @@ const canonical = site.dominio + '/'
 const jsonLd = {
   '@context': 'https://schema.org',
   '@graph': [
-    {
-      '@type': ['MedicalOrganization', 'LocalBusiness'],
-      '@id':   `${site.dominio}/#organization`,
-      name:    site.nome,
-      url:     site.dominio,
-      telephone: site.nap.telefone,
-      email:   site.nap.email,
-      address: {
-        '@type':           'PostalAddress',
-        streetAddress:     `${site.nap.logradouro}, ${site.nap.complemento}`,
-        addressLocality:   site.nap.cidade,
-        addressRegion:     site.nap.uf,
-        postalCode:        site.nap.cep,
-        addressCountry:    'BR',
-      },
-      openingHoursSpecification: [
-        { '@type': 'OpeningHoursSpecification', dayOfWeek: ['Monday','Tuesday','Wednesday','Thursday','Friday'], opens: '07:00', closes: '20:00' },
-        { '@type': 'OpeningHoursSpecification', dayOfWeek: ['Saturday'], opens: '08:00', closes: '14:00' },
-      ],
-    },
+    organizacaoSchema(site, ['MedicalOrganization', 'LocalBusiness']),
     {
       '@type':           'WebSite',
       '@id':             `${site.dominio}/#website`,
@@ -110,7 +92,7 @@ const jsonLd = {
       '@type':           'WebPage',
       '@id':             `${canonical}#webpage`,
       url:               canonical,
-      name:              `${site.nome} — Clínica Médica em São Paulo`,
+      name:              site.nome,
       isPartOf:          { '@id': `${site.dominio}/#website` },
       about:             { '@id': `${site.dominio}/#organization` },
       inLanguage:        'pt-BR',
@@ -144,6 +126,8 @@ const jsonLd = {
 >
 
   <Header
+    logoSrc={site.logo?.src}
+    logoAlt={site.logo?.alt}
     variante="padrao"
     nomeSite={site.nome}
     telefone={site.nap.telefone}
@@ -249,6 +233,9 @@ const jsonLd = {
   />
 
   <Footer
+    logoSrc={site.logo?.src}
+    logoAlt={site.logo?.alt}
+    credencial={textoCredencial(site)}
     variante="escuro"
     nomeSite={site.nome}
     slogan={site.slogan}

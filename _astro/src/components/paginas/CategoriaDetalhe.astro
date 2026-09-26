@@ -10,6 +10,7 @@ import Header    from '../../components/blocos/Header.astro'
 import PageHero  from '../../components/blocos/PageHero.astro'
 import PostLista from '../../components/blocos/PostLista.astro'
 import { site }  from '../../config/site.ts'
+import { textoCredencial } from '../../lib/schema.ts'
 import { getCollection } from 'astro:content'
 import { ehPublicado } from '../../lib/publicacao.ts'
 import { nomeAutor } from '../../lib/autores.ts'
@@ -39,6 +40,8 @@ const cards = artigos.map(p => ({
 ---
 
 <Header
+  logoSrc={site.logo?.src}
+  logoAlt={site.logo?.alt}
   variante="padrao"
   nomeSite={site.nome}
   telefone={site.nap.telefone}
@@ -67,6 +70,9 @@ const cards = artigos.map(p => ({
 }
 
 <Footer
+  logoSrc={site.logo?.src}
+  logoAlt={site.logo?.alt}
+  credencial={textoCredencial(site)}
   variante="escuro"
   nomeSite={site.nome}
   slogan={site.slogan}

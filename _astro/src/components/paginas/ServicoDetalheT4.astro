@@ -20,6 +20,7 @@ import Localizacao  from '../../components/blocos/Localizacao.astro'
 import Cta          from '../../components/blocos/Cta.astro'
 import Footer       from '../../components/blocos/Footer.astro'
 import { site }     from '../../config/tema-04.ts'
+import { textoCredencial, areaServida } from '../../lib/schema.ts'
 import { getCollection, render } from 'astro:content'
 
 interface Props {
@@ -59,7 +60,7 @@ const jsonLd = {
       name: entry.data.titulo, description: entry.data.metaDescription,
       serviceType: entry.data.categoria,
       provider: { '@id': `${site.dominio}/#organization` },
-      areaServed: site.regioes.map(r => ({ '@type': 'Place', name: r })),
+      areaServed: areaServida(site),
       ...(entry.data.precoDe ? {
         offers: {
           '@type': 'Offer',
@@ -103,7 +104,7 @@ const jsonLd = {
   nodeId="servico"
   noindex={entry.data.noindex ?? false}
 >
-  <Header
+  <Header logoSrc={site.logo?.src} logoAlt={site.logo?.alt}
     variante="padrao"
     nomeSite={site.nome}
     telefone={site.nap.telefone}
@@ -278,7 +279,7 @@ const jsonLd = {
     ctaSecHref="/tema-04/servicos"
   />
 
-  <Footer
+  <Footer credencial={textoCredencial(site)} logoSrc={site.logo?.src} logoAlt={site.logo?.alt}
     variante="colunas"
     nomeSite={site.nome}
     slogan={site.slogan}

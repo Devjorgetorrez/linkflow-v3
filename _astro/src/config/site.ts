@@ -8,6 +8,16 @@ export const site = {
   cnpj:        '45.678.901/0001-23',
   anoFundacao: 2014,
 
+  /* Identidade e dados estruturados (JSON-LD, Open Graph). Todos opcionais:
+     campo ausente = a propriedade é omitida. Valores abaixo são de demonstração. */
+  descricao:   'Clínica médica com consultas especializadas, exames, medicina preventiva e telemedicina.',
+  schemaTipo:  ['MedicalOrganization', 'LocalBusiness'],
+  funcionamento: [
+    { dias: ['seg', 'ter', 'qua', 'qui', 'sex'], abre: '07:00', fecha: '20:00' },
+    { dias: ['sab'],                             abre: '08:00', fecha: '14:00' },
+  ],
+  areaAtendimento: ['São Paulo'],
+
   nap: {
     logradouro: 'Av. Paulista, 1966',
     complemento: 'Sala 1201',

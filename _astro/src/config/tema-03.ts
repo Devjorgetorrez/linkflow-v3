@@ -13,8 +13,18 @@ export const site = {
   slogan:      'Números claros, decisões seguras',
   dominio:     'https://verticecontabilidade.com.br',
   cnpj:        '11.222.333/0001-44',
-  crc:         'CRC-PR 006.482/O',
   anoFundacao: 2003,
+
+  /* Identidade e dados estruturados (JSON-LD, Open Graph). Todos opcionais:
+     campo ausente = a propriedade é omitida. Valores abaixo são de demonstração. */
+  descricao:   'Escritório de contabilidade com contabilidade consultiva, gestão fiscal, departamento pessoal e BPO financeiro.',
+  schemaTipo:  ['AccountingService', 'LocalBusiness'],
+  credencial:  { conselho: 'CRC-PR', registro: '006.482/O' },
+  funcionamento: [
+    { dias: ['seg', 'ter', 'qua', 'qui'], abre: '08:00', fecha: '18:00' },
+    { dias: ['sex'],                      abre: '08:00', fecha: '17:00' },
+  ],
+  areaAtendimento: ['Londrina', 'Paraná'],
 
   nap: {
     logradouro:  'Av. Dom Pedro II, 980',

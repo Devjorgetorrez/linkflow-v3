@@ -15,6 +15,7 @@ import Tags            from '../../components/blocos/Tags.astro'
 import BuscasFrequentes from '../../components/blocos/BuscasFrequentes.astro'
 import Footer          from '../../components/blocos/Footer.astro'
 import { site }        from '../../config/tema-03.ts'
+import { textoCredencial, organizacaoSchema } from '../../lib/schema.ts'
 import { getCollection } from 'astro:content'
 import { ehPublicado } from '../../lib/publicacao.ts'
 import { nomeAutor } from '../../lib/autores.ts'
@@ -61,32 +62,7 @@ const canonical = `${site.dominio}/`
 const jsonLd = {
   '@context': 'https://schema.org',
   '@graph': [
-    {
-      '@type':   ['AccountingService', 'LocalBusiness'],
-      '@id':     `${site.dominio}/#organization`,
-      name:      site.nome,
-      url:       site.dominio,
-      telephone: site.nap.telefone,
-      email:     site.nap.email,
-      slogan:    site.slogan,
-      foundingDate: String(site.anoFundacao),
-      address: {
-        '@type':         'PostalAddress',
-        streetAddress:   `${site.nap.logradouro}, ${site.nap.complemento}`,
-        addressLocality: site.nap.cidade,
-        addressRegion:   site.nap.uf,
-        postalCode:      site.nap.cep,
-        addressCountry:  'BR',
-      },
-      openingHoursSpecification: [
-        { '@type': 'OpeningHoursSpecification', dayOfWeek: ['Monday','Tuesday','Wednesday','Thursday'], opens: '08:00', closes: '18:00' },
-        { '@type': 'OpeningHoursSpecification', dayOfWeek: ['Friday'], opens: '08:00', closes: '17:00' },
-      ],
-      areaServed: [
-        { '@type': 'City', name: 'Londrina' },
-        { '@type': 'State', name: 'Paraná' },
-      ],
-    },
+    organizacaoSchema(site, ['AccountingService', 'LocalBusiness']),
     {
       '@type':    'WebSite',
       '@id':      `${site.dominio}/#website`,
@@ -99,7 +75,7 @@ const jsonLd = {
       '@type':    'WebPage',
       '@id':      `${canonical}#webpage`,
       url:        canonical,
-      name:       `${site.nome} — Escritório de Contabilidade em Londrina`,
+      name:       site.nome,
       isPartOf:   { '@id': `${site.dominio}/#website` },
       about:      { '@id': `${site.dominio}/#organization` },
       inLanguage: 'pt-BR',
@@ -133,6 +109,8 @@ const jsonLd = {
 >
 
   <Header
+    logoSrc={site.logo?.src}
+    logoAlt={site.logo?.alt}
     variante="padrao"
     nomeSite={site.nome}
     telefone={site.nap.telefone}
@@ -242,6 +220,9 @@ const jsonLd = {
   <BuscasFrequentes titulo={`Buscas frequentes — ${site.nome}`} itens={site.buscasFrequentes} />
 
   <Footer
+    logoSrc={site.logo?.src}
+    logoAlt={site.logo?.alt}
+    credencial={textoCredencial(site)}
     variante="colunas"
     nomeSite={site.nome}
     slogan={site.slogan}

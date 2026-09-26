@@ -5,6 +5,8 @@
  * Os demais temas não são afetados.
  */
 import '../styles/global.css'
+import { site } from '../config/tema-06.ts'
+import { urlAbsoluta } from '../lib/schema.ts'
 
 interface Props {
   titulo:          string
@@ -23,6 +25,9 @@ const {
   nodeId  = 'page',
   noindex = false,
 } = Astro.props
+
+const ogImagem = urlAbsoluta(site, site.ogImagem)
+const ogDescricao = metaDescription || site.descricao
 ---
 
 <!doctype html>
@@ -34,6 +39,18 @@ const {
   <meta name="description" content={metaDescription} />
   <link rel="canonical" href={canonical} />
   <link rel="sitemap" href="/sitemap.xml" />
+  {site.favicon && <link rel="icon" href={site.favicon} />}
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content={titulo} />
+  {ogDescricao && <meta property="og:description" content={ogDescricao} />}
+  <meta property="og:url" content={canonical} />
+  {ogImagem && <meta property="og:image" content={ogImagem} />}
+  <meta property="og:locale" content="pt_BR" />
+  <meta property="og:site_name" content={site.nome} />
+  <meta name="twitter:card" content={ogImagem ? 'summary_large_image' : 'summary'} />
+  <meta name="twitter:title" content={titulo} />
+  {ogDescricao && <meta name="twitter:description" content={ogDescricao} />}
+  {ogImagem && <meta name="twitter:image" content={ogImagem} />}
   {noindex && <meta name="robots" content="noindex, follow" />}
 
   {/* Fontes do tema: Rubik (display) + Inter (corpo) */}

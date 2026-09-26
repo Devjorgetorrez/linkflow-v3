@@ -15,6 +15,12 @@ export const site = {
   dominio:     'https://renovarhigienizacao.com.br',
   cnpj:        '22.333.444/0001-55',
   anoFundacao: 2013,
+  descricao:   'Higienização profissional de estofados, colchões e tapetes em Campinas e região.',
+  schemaTipo:  ['HomeAndConstructionBusiness', 'LocalBusiness'],
+  funcionamento: [
+    { dias: ['seg', 'ter', 'qua', 'qui', 'sex'], abre: '08:00', fecha: '18:00' },
+    { dias: ['sab'], abre: '08:00', fecha: '14:00' },
+  ] as { dias: ('seg'|'ter'|'qua'|'qui'|'sex'|'sab'|'dom')[]; abre: string; fecha: string; fechado?: boolean }[],
 
   nap: {
     logradouro:  'Rua das Acácias, 415',

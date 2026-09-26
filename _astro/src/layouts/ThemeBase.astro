@@ -1,5 +1,7 @@
 ---
 import '../styles/global.css'
+import { site } from '../config/site.ts'
+import { urlAbsoluta } from '../lib/schema.ts'
 
 interface Props {
   titulo:          string
@@ -18,6 +20,9 @@ const {
   nodeId = 'page',
   noindex = false,
 } = Astro.props
+
+const ogDescricao = metaDescription || site.descricao
+const ogImagem    = urlAbsoluta(site, site.ogImagem)
 ---
 
 <!doctype html>
@@ -30,6 +35,20 @@ const {
   <link rel="canonical" href={canonical} />
   <link rel="sitemap" href="/sitemap.xml" />
   {noindex && <meta name="robots" content="noindex, follow" />}
+  {site.favicon && <link rel="icon" href={site.favicon} />}
+
+  {/* Open Graph / Twitter */}
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content={site.nome} />
+  <meta property="og:title" content={titulo} />
+  {ogDescricao && <meta property="og:description" content={ogDescricao} />}
+  <meta property="og:url" content={canonical} />
+  {ogImagem && <meta property="og:image" content={ogImagem} />}
+  <meta property="og:locale" content="pt_BR" />
+  <meta name="twitter:card" content={ogImagem ? 'summary_large_image' : 'summary'} />
+  <meta name="twitter:title" content={titulo} />
+  {ogDescricao && <meta name="twitter:description" content={ogDescricao} />}
+  {ogImagem && <meta name="twitter:image" content={ogImagem} />}
 
 
   {/* Fonts: Plus Jakarta Sans (600,700) + Inter (400,500,600,700) */}

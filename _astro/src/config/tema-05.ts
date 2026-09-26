@@ -20,8 +20,15 @@ export const site = {
   slogan:      'Direito previdenciário com técnica e acompanhamento',
   dominio:     'https://amparoadvocacia.adv.br',
   cnpj:        '33.444.555/0001-66',
-  oab:         'OAB/MG 8.472',
+  credencial:  { conselho: 'OAB/MG', registro: '8.472' },
   anoFundacao: 2011,
+  descricao:   'Escritório dedicado exclusivamente a direito previdenciário em Belo Horizonte.',
+  schemaTipo:  ['LegalService', 'ProfessionalService'],
+  especialidade: 'Direito Previdenciário, Benefícios do INSS, Regime Próprio de Previdência',
+  funcionamento: [
+    { dias: ['seg', 'ter', 'qua', 'qui', 'sex'], abre: '09:00', fecha: '18:00' },
+  ] as { dias: ('seg'|'ter'|'qua'|'qui'|'sex'|'sab'|'dom')[]; abre: string; fecha: string; fechado?: boolean }[],
+  areaAtendimento: ['Minas Gerais', 'São Paulo', 'Espírito Santo'],
 
   nap: {
     logradouro:  'Av. Getúlio Vargas, 1420',

@@ -161,7 +161,8 @@ def promover(tema, pages_dir, config_dir, content_dir, content_config_path):
     #    prefixo de tema, import do config certo, e nome de coleção sem
     #    sufixo (getCollection apontava pra 'servicosT3' etc., que deixou
     #    de existir no content.config.ts reescrito no passo 4)
-    limpar_arquivos_promovidos(pages_dir, components_paginas_dir, config_dir / "site.ts", tema, sufixo)
+    layout_arq = astro_dir / "src" / "layouts" / (TEMAS[tema]["layout"] or "")
+    limpar_arquivos_promovidos(pages_dir, components_paginas_dir, config_dir / "site.ts", tema, sufixo, layout_arq)
 
     # Só o que o tema promovido trouxe fica na raiz. Página do tema base que o
     # tema promovido NÃO tem (ex: pages/servicos/ no tema-07, que usa planos/)
@@ -247,7 +248,7 @@ def reescrever_content_config(path, sufixo):
     gravar_lf(path, "\n".join(novo))
 
 
-def limpar_arquivos_promovidos(pages_dir, components_paginas_dir, config_site_path, tema, sufixo):
+def limpar_arquivos_promovidos(pages_dir, components_paginas_dir, config_site_path, tema, sufixo, layout_arq=None):
     """Corrige os 3 problemas que a cópia crua deixa para trás:
     1. Prefixo /tema-XX/ nos hrefs (regra do Jorge: nunca na URL)
     2. Import de config/tema-XX.ts (arquivo original é apagado depois)
@@ -263,6 +264,10 @@ def limpar_arquivos_promovidos(pages_dir, components_paginas_dir, config_site_pa
         alvos += list(components_paginas_dir.glob("*.astro"))
     if config_site_path.is_file():
         alvos.append(config_site_path)
+    # O layout do tema (Tema0XBase.astro) importa o config para favicon/OG: o
+    # import de config/tema-0X.ts também precisa apontar para config/site.ts.
+    if layout_arq is not None and layout_arq.is_file():
+        alvos.append(layout_arq)
 
     for arq in alvos:
         if not arq.is_file():

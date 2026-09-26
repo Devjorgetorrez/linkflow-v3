@@ -6,6 +6,7 @@ import Servicos   from '../../components/blocos/Servicos.astro'
 import Cta        from '../../components/blocos/Cta.astro'
 import Footer     from '../../components/blocos/Footer.astro'
 import { site }   from '../../config/site.ts'
+import { textoCredencial } from '../../lib/schema.ts'
 import { getCollection } from 'astro:content'
 
 const todosServicos = await getCollection('servicos')
@@ -34,6 +35,8 @@ const metaServicos = itens.length > 0
   nodeId="servicos"
 >
   <Header
+    logoSrc={site.logo?.src}
+    logoAlt={site.logo?.alt}
     variante="padrao"
     nomeSite={site.nome}
     telefone={site.nap.telefone}
@@ -64,6 +67,9 @@ const metaServicos = itens.length > 0
   />
 
   <Footer
+    logoSrc={site.logo?.src}
+    logoAlt={site.logo?.alt}
+    credencial={textoCredencial(site)}
     variante="escuro"
     nomeSite={site.nome}
     slogan={site.slogan}

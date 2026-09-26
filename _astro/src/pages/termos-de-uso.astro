@@ -13,6 +13,7 @@ import ConteudoLegal from '../components/blocos/ConteudoLegal.astro'
 import Footer        from '../components/blocos/Footer.astro'
 import { site }      from '../config/site.ts'
 
+import { textoCredencial } from '../lib/schema.ts'
 const canonical = `${site.dominio}/termos-de-uso`
 
 const jsonLd = {
@@ -46,6 +47,8 @@ const jsonLd = {
   nodeId="termos-de-uso"
 >
   <Header
+    logoSrc={site.logo?.src}
+    logoAlt={site.logo?.alt}
     variante="padrao"
     nomeSite={site.nome}
     telefone={site.nap.telefone}
@@ -64,6 +67,9 @@ const jsonLd = {
   <ConteudoLegal legal={site.legal} nomeSite={site.nome} documento="termos" />
 
   <Footer
+    logoSrc={site.logo?.src}
+    logoAlt={site.logo?.alt}
+    credencial={textoCredencial(site)}
     variante="escuro"
     nomeSite={site.nome}
     slogan={site.slogan}

@@ -13,6 +13,7 @@ import Header      from '../../components/blocos/Header.astro'
 import PostLista   from '../../components/blocos/PostLista.astro'
 import Tema03Base  from '../../layouts/Tema03Base.astro'
 import { site }    from '../../config/tema-03.ts'
+import { textoCredencial } from '../../lib/schema.ts'
 import { getCollection, render } from 'astro:content'
 import { ehPublicado } from '../../lib/publicacao.ts'
 import { resolverAutor, nomeAutor } from '../../lib/autores.ts'
@@ -103,6 +104,8 @@ const jsonLd = {
   nodeId="post"
 >
   <Header
+    logoSrc={site.logo?.src}
+    logoAlt={site.logo?.alt}
     variante="padrao"
     nomeSite={site.nome}
     telefone={site.nap.telefone}
@@ -231,6 +234,9 @@ const jsonLd = {
   />
 
   <Footer
+    logoSrc={site.logo?.src}
+    logoAlt={site.logo?.alt}
+    credencial={textoCredencial(site)}
     variante="colunas"
     nomeSite={site.nome}
     slogan={site.slogan}

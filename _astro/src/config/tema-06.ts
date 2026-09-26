@@ -17,6 +17,18 @@ export const site = {
   cnpj:        '44.555.666/0001-77',
   anoFundacao: 2012,
 
+  descricao:   'Detecção de vazamento sem quebrar, desentupimento e reparo hidráulico em Goiânia e região, com laudo técnico e plantão de emergência.',
+  schemaTipo:  ['Plumber', 'LocalBusiness'],
+  funcionamento: [
+    { dias: ['seg', 'ter', 'qua', 'qui', 'sex'], abre: '07:00', fecha: '19:00' },
+    { dias: ['sab'], abre: '08:00', fecha: '13:00' },
+  ],
+  areaAtendimento: [
+    'Goiânia — Setor Bueno', 'Setor Oeste', 'Jardim Goiás', 'Setor Marista', 'Alto da Glória',
+    'Setor Sul', 'Campinas', 'Vila Nova', 'Aparecida de Goiânia', 'Senador Canedo',
+    'Trindade', 'Goianira', 'Anápolis', 'Hidrolândia',
+  ],
+
   nap: {
     logradouro:  'Rua T-27, 890',
     complemento: 'Sala 4',

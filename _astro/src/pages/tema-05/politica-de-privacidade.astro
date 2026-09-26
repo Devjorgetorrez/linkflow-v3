@@ -5,6 +5,7 @@ import PageHero      from '../../components/blocos/PageHero.astro'
 import ConteudoLegal from '../../components/blocos/ConteudoLegal.astro'
 import Footer        from '../../components/blocos/Footer.astro'
 import { site }      from '../../config/tema-05.ts'
+import { textoCredencial } from '../../lib/schema.ts'
 
 const canonical = `${site.dominio}/politica-de-privacidade`
 
@@ -30,7 +31,7 @@ const jsonLd = {
   jsonLd={jsonLd}
   nodeId="politica-de-privacidade"
 >
-  <Header variante="padrao" nomeSite={site.nome} telefone={site.nap.telefone}
+  <Header logoSrc={site.logo?.src} logoAlt={site.logo?.alt} variante="padrao" nomeSite={site.nome} telefone={site.nap.telefone}
           whatsapp={site.nap.whatsapp} nav={site.nav}
           ctaTexto="Agendar atendimento" ctaHref="/tema-05/contato" />
 
@@ -43,7 +44,7 @@ const jsonLd = {
 
   <ConteudoLegal legal={site.legal} nomeSite={site.nome} documento="politica" />
 
-  <Footer
+  <Footer credencial={textoCredencial(site)} logoSrc={site.logo?.src} logoAlt={site.logo?.alt}
     variante="colunas"
     nomeSite={site.nome}
     slogan={site.slogan}

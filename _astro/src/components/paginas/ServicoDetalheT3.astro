@@ -13,6 +13,7 @@ import Localizacao from '../../components/blocos/Localizacao.astro'
 import Servicos    from '../../components/blocos/Servicos.astro'
 import Tema03Base  from '../../layouts/Tema03Base.astro'
 import { site }    from '../../config/tema-03.ts'
+import { textoCredencial, areaServida } from '../../lib/schema.ts'
 import { getCollection, render } from 'astro:content'
 
 interface Props {
@@ -53,7 +54,7 @@ const jsonLd = {
       description:   entry.data.metaDescription,
       serviceType:   entry.data.categoria,
       provider:      { '@id': `${site.dominio}/#organization` },
-      areaServed:    { '@type': 'City', name: site.nap.cidade },
+      areaServed:    areaServida(site).length ? areaServida(site) : undefined,
     },
     {
       '@type':    'WebPage',
@@ -84,6 +85,8 @@ const jsonLd = {
   noindex={entry.data.noindex ?? false}
 >
   <Header
+    logoSrc={site.logo?.src}
+    logoAlt={site.logo?.alt}
     variante="padrao"
     nomeSite={site.nome}
     telefone={site.nap.telefone}
@@ -208,6 +211,9 @@ const jsonLd = {
   />
 
   <Footer
+    logoSrc={site.logo?.src}
+    logoAlt={site.logo?.alt}
+    credencial={textoCredencial(site)}
     variante="colunas"
     nomeSite={site.nome}
     slogan={site.slogan}

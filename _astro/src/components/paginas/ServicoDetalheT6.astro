@@ -20,6 +20,7 @@ import Servicos      from '../../components/blocos/Servicos.astro'
 import Cta           from '../../components/blocos/Cta.astro'
 import Footer        from '../../components/blocos/Footer.astro'
 import { site }      from '../../config/tema-06.ts'
+import { textoCredencial, areaServida } from '../../lib/schema.ts'
 import { getCollection, render } from 'astro:content'
 
 interface Props {
@@ -52,7 +53,7 @@ const jsonLd = {
       name: entry.data.titulo, description: entry.data.metaDescription,
       serviceType: entry.data.categoria,
       provider: { '@id': `${site.dominio}/#organization` },
-      areaServed: site.regioes.map(r => ({ '@type': 'Place', name: r })),
+      areaServed: areaServida(site).length ? areaServida(site) : undefined,
     },
     {
       '@type': 'WebPage', '@id': `${canonical}#webpage`,
@@ -88,6 +89,8 @@ const jsonLd = {
   <Header
     variante="padrao"
     nomeSite={site.nome}
+    logoSrc={site.logo?.src}
+    logoAlt={site.logo?.alt}
     telefone={site.nap.telefone}
     whatsapp={site.nap.whatsapp}
     nav={site.nav}
@@ -329,6 +332,9 @@ const jsonLd = {
   <Footer
     variante="colunas"
     nomeSite={site.nome}
+    logoSrc={site.logo?.src}
+    logoAlt={site.logo?.alt}
+    credencial={textoCredencial(site)}
     slogan={site.slogan}
     telefone={site.nap.telefone}
     email={site.nap.email}

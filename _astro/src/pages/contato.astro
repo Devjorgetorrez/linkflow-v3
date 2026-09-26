@@ -8,6 +8,7 @@ import Faq         from '../components/blocos/Faq.astro'
 import Footer      from '../components/blocos/Footer.astro'
 import { site }    from '../config/site.ts'
 
+import { textoCredencial } from '../lib/schema.ts'
 const canonical = `${site.dominio}/contato`
 ---
 
@@ -18,6 +19,8 @@ const canonical = `${site.dominio}/contato`
   nodeId="contato"
 >
   <Header
+    logoSrc={site.logo?.src}
+    logoAlt={site.logo?.alt}
     variante="padrao"
     nomeSite={site.nome}
     telefone={site.nap.telefone}
@@ -62,6 +65,9 @@ const canonical = `${site.dominio}/contato`
   />
 
   <Footer
+    logoSrc={site.logo?.src}
+    logoAlt={site.logo?.alt}
+    credencial={textoCredencial(site)}
     variante="escuro"
     nomeSite={site.nome}
     slogan={site.slogan}

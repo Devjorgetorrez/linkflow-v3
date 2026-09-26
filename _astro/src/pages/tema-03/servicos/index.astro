@@ -9,6 +9,7 @@ import Faq         from '../../../components/blocos/Faq.astro'
 import Cta         from '../../../components/blocos/Cta.astro'
 import Footer      from '../../../components/blocos/Footer.astro'
 import { site }    from '../../../config/tema-03.ts'
+import { textoCredencial } from '../../../lib/schema.ts'
 import { getCollection } from 'astro:content'
 
 const servicos = (await getCollection('servicosT3'))
@@ -55,6 +56,8 @@ const jsonLd = {
   nodeId="servicos"
 >
   <Header
+    logoSrc={site.logo?.src}
+    logoAlt={site.logo?.alt}
     variante="padrao"
     nomeSite={site.nome}
     telefone={site.nap.telefone}
@@ -103,6 +106,9 @@ const jsonLd = {
   />
 
   <Footer
+    logoSrc={site.logo?.src}
+    logoAlt={site.logo?.alt}
+    credencial={textoCredencial(site)}
     variante="colunas"
     nomeSite={site.nome}
     slogan={site.slogan}

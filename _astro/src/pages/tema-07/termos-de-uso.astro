@@ -13,6 +13,7 @@ import ConteudoLegal from '../../components/blocos/ConteudoLegal.astro'
 import Footer        from '../../components/blocos/Footer.astro'
 import { site }      from '../../config/tema-07.ts'
 
+import { textoCredencial } from '../../lib/schema.ts'
 const canonical = `${site.dominio}/termos-de-uso`
 
 const jsonLd = {
@@ -40,6 +41,8 @@ const jsonLd = {
   <Header
     variante="padrao"
     nomeSite={site.nome}
+    logoSrc={site.logo?.src}
+    logoAlt={site.logo?.alt}
     telefone={site.nap.telefone}
     whatsapp={site.nap.whatsapp}
     nav={site.nav}
@@ -59,6 +62,9 @@ const jsonLd = {
   <Footer
     variante="colunas"
     nomeSite={site.nome}
+    logoSrc={site.logo?.src}
+    logoAlt={site.logo?.alt}
+    credencial={textoCredencial(site)}
     slogan={site.slogan}
     telefone={site.nap.telefone}
     email={site.nap.email}

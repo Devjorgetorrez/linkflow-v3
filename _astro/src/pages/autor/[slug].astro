@@ -10,6 +10,7 @@ import Header       from '../../components/blocos/Header.astro'
 import Footer       from '../../components/blocos/Footer.astro'
 import PerfilAutor  from '../../components/blocos/PerfilAutor.astro'
 import { site }     from '../../config/site.ts'
+import { textoCredencial } from '../../lib/schema.ts'
 import { getCollection } from 'astro:content'
 import { ehPublicado } from '../../lib/publicacao.ts'
 import { separarArtigosDoAutor, hrefAutor } from '../../lib/autores.ts'
@@ -96,6 +97,8 @@ const jsonLd = {
   noindex={total === 0}
 >
   <Header
+    logoSrc={site.logo?.src}
+    logoAlt={site.logo?.alt}
     variante="padrao"
     nomeSite={site.nome}
     telefone={site.nap.telefone}
@@ -123,6 +126,9 @@ const jsonLd = {
   />
 
   <Footer
+    logoSrc={site.logo?.src}
+    logoAlt={site.logo?.alt}
+    credencial={textoCredencial(site)}
     variante="escuro"
     nomeSite={site.nome}
     slogan={site.slogan}

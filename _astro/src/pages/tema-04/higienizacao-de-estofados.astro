@@ -16,6 +16,7 @@ import Cta          from '../../components/blocos/Cta.astro'
 import BuscasFrequentes from '../../components/blocos/BuscasFrequentes.astro'
 import Footer       from '../../components/blocos/Footer.astro'
 import { site }     from '../../config/tema-04.ts'
+import { textoCredencial } from '../../lib/schema.ts'
 import { getCollection } from 'astro:content'
 import { ehPublicado } from '../../lib/publicacao.ts'
 import { nomeAutor } from '../../lib/autores.ts'
@@ -74,7 +75,7 @@ const jsonLd = {
   jsonLd={jsonLd}
   nodeId="pilar"
 >
-  <Header variante="padrao" nomeSite={site.nome} telefone={site.nap.telefone}
+  <Header logoSrc={site.logo?.src} logoAlt={site.logo?.alt} variante="padrao" nomeSite={site.nome} telefone={site.nap.telefone}
           whatsapp={site.nap.whatsapp} nav={site.nav}
           ctaTexto="Peça seu orçamento" ctaHref={wa} />
 
@@ -205,7 +206,7 @@ const jsonLd = {
 
   <BuscasFrequentes titulo="Buscas relacionadas" itens={site.buscasFrequentes} />
 
-  <Footer
+  <Footer credencial={textoCredencial(site)} logoSrc={site.logo?.src} logoAlt={site.logo?.alt}
     variante="colunas"
     nomeSite={site.nome}
     slogan={site.slogan}

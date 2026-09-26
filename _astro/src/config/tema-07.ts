@@ -16,8 +16,20 @@ export const site = {
   slogan:      'A gente compara, você escolhe',
   dominio:     'https://veredacorretora.com.br',
   cnpj:        '55.666.777/0001-88',
-  registro:    'SUSEP 20.123456',
   anoFundacao: 2009,
+
+  descricao:   'Corretora de planos de saúde em Sorocaba e região: comparamos operadoras, conferimos a rede por endereço e mostramos o histórico de reajuste.',
+  schemaTipo:  ['InsuranceAgency', 'LocalBusiness'],
+  credencial:  { conselho: 'SUSEP', registro: '20.123456' },
+  funcionamento: [
+    { dias: ['seg', 'ter', 'qua', 'qui', 'sex'], abre: '08:30', fecha: '18:00' },
+    { dias: ['sab'], abre: '09:00', fecha: '13:00' },
+  ],
+  areaAtendimento: [
+    'Sorocaba', 'Votorantim', 'Itu', 'Salto', 'Porto Feliz', 'Boituva', 'Tatuí',
+    'Piedade', 'Araçoiaba da Serra', 'Iperó', 'Capela do Alto', 'Cerquilho',
+    'Tietê', 'Alumínio', 'Mairinque', 'São Roque', 'Ibiúna', 'Indaiatuba',
+  ],
 
   /* Rota FINAL do pilar de oferta, sem prefixo de tema. É lida depois da
      promoção pelo guardião e pelo painel, por isso não leva /tema-07. Neste

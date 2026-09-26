@@ -2,6 +2,7 @@
 import Footer     from '../../components/blocos/Footer.astro'
 import Header     from '../../components/blocos/Header.astro'
 import { site }   from '../../config/site.ts'
+import { textoCredencial } from '../../lib/schema.ts'
 import { getCollection, render } from 'astro:content'
 import { ehPublicado } from '../../lib/publicacao.ts'
 import { resolverAutor, nomeAutor } from '../../lib/autores.ts'
@@ -48,6 +49,8 @@ const shareText = encodeURIComponent(entry.data.titulo)
 ---
 
 <Header
+  logoSrc={site.logo?.src}
+  logoAlt={site.logo?.alt}
   variante="padrao"
   nomeSite={site.nome}
   telefone={site.nap.telefone}
@@ -249,6 +252,9 @@ const shareText = encodeURIComponent(entry.data.titulo)
   )}
 
   <Footer
+    logoSrc={site.logo?.src}
+    logoAlt={site.logo?.alt}
+    credencial={textoCredencial(site)}
     variante="escuro"
     nomeSite={site.nome}
     slogan={site.slogan}
