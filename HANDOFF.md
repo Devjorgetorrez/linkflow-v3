@@ -9,10 +9,14 @@
 > documento resume.
 >
 > Cole este documento inteiro como primeira mensagem numa conversa nova,
-> junto com o `linkflow-completo.zip` mais recente, o `manifesto-md5.txt` e
-> o `conferir_manifesto.py`. Ele substitui o histórico das sessões
-> anteriores: não existe transferência de conversa, então este documento é
-> o que faz a sessão nova saber o que as anteriores sabiam.
+> apontando a working directory para `c:\Projetos\linkflow-completo` (repo
+> git local, já com todo o histórico de commits). Não precisa de `.zip`,
+> `manifesto-md5.txt` nem `conferir_manifesto.py` — isso era do modelo
+> antigo de duas sessões (chat edita / Code valida), encerrado a partir da
+> rodada R0. Ele substitui o histórico das sessões anteriores: não existe
+> transferência de conversa, então este documento é o que faz a sessão nova
+> saber o que as anteriores sabiam. Rode `git log --oneline` e `git status`
+> logo de cara para confirmar que a pasta bate com o que está descrito aqui.
 
 ## Quem é quem
 
