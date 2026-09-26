@@ -3,7 +3,8 @@
  *
  * O painel roda no VPS e tem acesso direto ao sistema de arquivos.
  * LINKFLOW_DIR: pasta raiz do motor Astro isolado deste cliente
- * (default: /opt/linkflow-teste). Cada cliente já tem sua própria
+ * (obrigatória, sem default: um default apontaria para a pasta de OUTRO
+ * cliente). Cada cliente já tem sua própria
  * cópia do motor com só o tema dele (promoção de tema, vps-setup) —
  * por isso os caminhos abaixo são fixos, sem aninhar por slug:
  * content/servicos/, content/posts/, config/site.ts, sempre os mesmos,
@@ -16,7 +17,13 @@ import path from "path";
 // ─── Configuração ─────────────────────────────────────────────────────────────
 
 export function getLinkflowDir(): string {
-  return process.env.LINKFLOW_DIR ?? "/opt/linkflow-teste";
+  const dir = process.env.LINKFLOW_DIR;
+  if (!dir) {
+    throw new Error(
+      "LINKFLOW_DIR não definido — configure a pasta do site deste cliente no .env do painel.",
+    );
+  }
+  return dir;
 }
 
 export function getSiteSlug(): string {

@@ -31,7 +31,11 @@ function lerEnv() {
 }
 
 const env = lerEnv();
-const LINKFLOW_DIR = env.LINKFLOW_DIR || process.env.LINKFLOW_DIR || "/opt/linkflow-teste";
+const LINKFLOW_DIR = env.LINKFLOW_DIR || process.env.LINKFLOW_DIR;
+if (!LINKFLOW_DIR) {
+  console.error("LINKFLOW_DIR não definido — configure a pasta do site deste cliente (.env.local ou variável de ambiente).");
+  process.exit(1);
+}
 const usuariosPath = path.join(LINKFLOW_DIR, "painel", "usuarios.json");
 
 async function hashSenha(senha) {

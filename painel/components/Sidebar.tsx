@@ -178,9 +178,10 @@ interface FlyoutProps {
   caminho: string;
   onMouseEnter: () => void;
   onMouseLeave: () => void;
+  onNavegar: () => void;
 }
 
-function FlyoutPanel({ item, top, caminho, onMouseEnter, onMouseLeave }: FlyoutProps) {
+function FlyoutPanel({ item, top, caminho, onMouseEnter, onMouseLeave, onNavegar }: FlyoutProps) {
   const maxH = (typeof window !== "undefined" ? window.innerHeight : 800) - top - 8;
 
   return (
@@ -220,6 +221,7 @@ function FlyoutPanel({ item, top, caminho, onMouseEnter, onMouseLeave }: FlyoutP
             <Link
               key={sub.href}
               href={sub.href}
+              onClick={onNavegar}
               className={cn(
                 "relative flex items-center whitespace-nowrap px-5 py-2.5 text-[13px] transition-colors",
                 ativo
@@ -310,6 +312,12 @@ export function Sidebar() {
     },
     [],
   );
+
+  // Fecha o flyout quando a rota muda (senão fica preso aberto após o clique)
+  useEffect(() => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    setFlyout(null);
+  }, [caminho]);
 
   const flyoutItem = flyout
     ? NAV_FLAT.find((item) => item.label === flyout.label) ?? null
@@ -490,6 +498,10 @@ export function Sidebar() {
           caminho={caminho}
           onMouseEnter={cancelarEsconder}
           onMouseLeave={agendarEsconder}
+          onNavegar={() => {
+            cancelarEsconder();
+            setFlyout(null);
+          }}
         />
       )}
 

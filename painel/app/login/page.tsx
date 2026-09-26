@@ -25,9 +25,16 @@ function LoginForm() {
     setEnviando(true);
     setErroLocal(null);
 
+    // Lê do DOM (não só do state): autofill/gerenciadores de senha podem
+    // preencher os campos sem disparar onChange.
+    const dados = new FormData(e.currentTarget as HTMLFormElement);
+    const emailDigitado = String(dados.get("email") ?? email).trim();
+    const senhaDigitada = String(dados.get("senha") ?? senha);
+    setEmail(emailDigitado);
+
     const resultado = await signIn("credentials", {
-      email,
-      senha,
+      email: emailDigitado,
+      senha: senhaDigitada,
       redirect: false,
     });
 
@@ -68,6 +75,7 @@ function LoginForm() {
           <Campo label="E-mail">
             <Entrada
               type="email"
+              name="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="voce@dominio.com.br"
@@ -79,6 +87,7 @@ function LoginForm() {
           <Campo label="Senha">
             <Entrada
               type="password"
+              name="senha"
               value={senha}
               onChange={(e) => setSenha(e.target.value)}
               placeholder="••••••••"

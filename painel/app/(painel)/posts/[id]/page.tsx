@@ -280,27 +280,27 @@ export default function EditorPostPage() {
 
   const faltamPublicar: string[] = [];
   if (!post.capa) faltamPublicar.push("Imagem destacada");
-  if (!post.capaAlt.trim()) faltamPublicar.push("Texto alternativo da imagem");
-  if (!post.metaDescription.trim()) faltamPublicar.push("Meta description");
+  if (!(post.capaAlt ?? "").trim()) faltamPublicar.push("Texto alternativo da imagem");
+  if (!(post.metaDescription ?? "").trim()) faltamPublicar.push("Meta description");
   if (!palavraChave.trim()) faltamPublicar.push("Palavra-chave principal");
   if (links.internos.length < 1) faltamPublicar.push("Sem link interno no artigo");
   if (analiseKw) {
     if (!analiseKw.obrigatorios[0].ok) faltamPublicar.push("KW ausente no título");
-    if (post.metaDescription.trim() && !analiseKw.obrigatorios[1].ok)
+    if ((post.metaDescription ?? "").trim() && !analiseKw.obrigatorios[1].ok)
       faltamPublicar.push("KW ausente na meta description");
     if (!analiseKw.obrigatorios[2].ok) faltamPublicar.push("KW ausente no primeiro H2");
   }
   const publicarBloqueado = faltamPublicar.length > 0;
 
   /* Sinais para cabeçalhos dos cards */
-  const falhasImagem = (!post.capa ? 1 : 0) + (!post.capaAlt.trim() ? 1 : 0);
+  const falhasImagem = (!post.capa ? 1 : 0) + (!(post.capaAlt ?? "").trim() ? 1 : 0);
   const falhasCategorias = !post.categoriaId ? 1 : 0;
   const semKw = !palavraChave.trim();
   const falhasKw = analiseKw
     ? [...analiseKw.obrigatorios, ...analiseKw.recomendados].filter((t) => !t.ok).length
     : 0;
   const falhasSeo =
-    (!post.metaDescription.trim() ? 1 : 0) +
+    (!(post.metaDescription ?? "").trim() ? 1 : 0) +
     (titleForaDaFaixa ? 1 : 0) +
     (metaForaDaFaixa ? 1 : 0);
   const falhasLinks = Math.max(0, MIN_LINKS_INTERNOS - links.internos.length);
@@ -485,7 +485,7 @@ export default function EditorPostPage() {
                           setKwAtivaIdx(-1);
                           editar({ kwPrimaria: e.target.value });
                         }}
-                        placeholder="ex: como abrir uma empresa"
+                        placeholder="ex: a palavra-chave principal do artigo"
                       />
                       {(() => {
                         const kw = palavraChave.trim().toLowerCase();
@@ -953,13 +953,13 @@ export default function EditorPostPage() {
             <div className="mt-2.5">
               <Campo label="Texto alternativo" obrigatorio>
                 <Entrada
-                  value={post.capaAlt}
+                  value={post.capaAlt ?? ""}
                   onChange={(e) => editar({ capaAlt: e.target.value })}
                   placeholder="Descreva a imagem para quem não a vê"
-                  invalido={!!capa && !post.capaAlt.trim()}
+                  invalido={!!capa && !(post.capaAlt ?? "").trim()}
                 />
               </Campo>
-              {!!capa && !post.capaAlt.trim() && (
+              {!!capa && !(post.capaAlt ?? "").trim() && (
                 <p className="mt-1 text-[10.5px] text-danger">
                   Imagem sem alt bloqueia a publicação.
                 </p>
@@ -1360,7 +1360,7 @@ export default function EditorPostPage() {
         aberto={bibliotecaCapa}
         aoFechar={() => setBibliotecaCapa(false)}
         selecionada={post.capa}
-        aoEscolher={(m) => editar({ capa: m.id, capaAlt: m.alt || post.capaAlt })}
+        aoEscolher={(m) => editar({ capa: m.id, capaAlt: m.alt || post.capaAlt || "" })}
       />
     </>
   );
