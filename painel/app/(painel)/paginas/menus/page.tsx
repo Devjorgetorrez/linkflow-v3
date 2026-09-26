@@ -279,10 +279,12 @@ export default function MenusPage() {
       .then((data) => {
         if (!data.ok) return;
         // Mapear nav → menu principal, navFooter → menu rodapé
-        setMenus((prev) => prev.map((m) => {
-          if (m.id === "principal" && data.nav?.length) {
-            return {
-              ...m,
+        // A lista vem do config/site.ts (o store começa vazio, então não dá
+        // para "mapear" sobre ela: o menu precisa ser criado aqui).
+        setMenus(data.nav?.length ? [{
+              id: "principal",
+              nome: "Menu principal",
+              local: "Cabeçalho do site",
               itens: data.nav.map((i: { label: string; href: string; filhos?: { label: string; href: string }[] }, idx: number) => ({
                 id: `nav-${idx}`,
                 label: i.label,
@@ -296,10 +298,7 @@ export default function MenusPage() {
                   url: f.href,
                 })),
               })),
-            };
-          }
-          return m;
-        }));
+            }] : []);
       })
       .catch(console.error);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps

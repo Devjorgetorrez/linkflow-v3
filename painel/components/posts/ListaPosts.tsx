@@ -166,9 +166,9 @@ function FarolSEO({ post }: { post: Post }) {
   const kw = (post.palavraChave ?? "").trim();
   if (!kw) {
     return (
-      <div className="group relative inline-flex justify-center">
+      <div className="group/farol relative inline-flex justify-center">
         <span className="inline-block h-4 w-4 cursor-default rounded-full bg-ink-muted/30" />
-        <div className="pointer-events-none invisible absolute bottom-full right-0 z-50 mb-1.5 whitespace-nowrap rounded-lg border border-line bg-surface-2 px-2.5 py-1.5 text-[11px] text-ink shadow-lg group-hover:visible">
+        <div className="pointer-events-none invisible absolute bottom-full right-0 z-50 mb-1.5 whitespace-nowrap rounded-lg border border-line bg-surface-2 px-2.5 py-1.5 text-[11px] text-ink shadow-lg group-hover/farol:visible">
           Sem palavra-chave definida
         </div>
       </div>
@@ -182,10 +182,10 @@ function FarolSEO({ post }: { post: Post }) {
         ? "bg-accent"
         : "bg-danger";
   return (
-    <div className="group relative inline-flex justify-center">
+    <div className="group/farol relative inline-flex justify-center">
       <span className={cn("inline-block h-4 w-4 cursor-default rounded-full", cor)} />
       {falhas.length > 0 && (
-        <div className="pointer-events-none invisible absolute bottom-full right-0 z-50 mb-1.5 w-56 rounded-lg border border-line bg-surface-2 p-2.5 text-left text-[11px] shadow-lg group-hover:visible">
+        <div className="pointer-events-none invisible absolute bottom-full right-0 z-50 mb-1.5 w-56 rounded-lg border border-line bg-surface-2 p-2.5 text-left text-[11px] shadow-lg group-hover/farol:visible">
           <p className="mb-1 font-semibold text-ink">
             {falhas.length} item{falhas.length > 1 ? "s" : ""} pendente{falhas.length > 1 ? "s" : ""}
           </p>
@@ -204,9 +204,9 @@ function FarolSEO({ post }: { post: Post }) {
 
 function SemPalavraChave() {
   return (
-    <div className="group relative inline-flex">
+    <div className="group/alerta relative inline-flex">
       <AlertTriangle size={13} className="text-amber-400" />
-      <span className="pointer-events-none invisible absolute bottom-full left-1/2 z-50 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-lg border border-line bg-surface-2 px-2.5 py-1.5 text-[11px] text-ink shadow-lg group-hover:visible">
+      <span className="pointer-events-none invisible absolute bottom-full left-1/2 z-50 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-lg border border-line bg-surface-2 px-2.5 py-1.5 text-[11px] text-ink shadow-lg group-hover/alerta:visible">
         Sem palavra-chave definida
       </span>
     </div>
