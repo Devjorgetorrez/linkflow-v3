@@ -414,16 +414,33 @@ export function Thumb({
   gradiente,
   className,
   children,
+  url,
+  alt = "",
 }: {
   gradiente: string;
   className?: string;
   children?: ReactNode;
+  /** Imagem real; se ausente ou se falhar ao carregar, fica o gradiente. */
+  url?: string;
+  alt?: string;
 }) {
+  const [falhou, setFalhou] = useState(false);
+  useEffect(() => setFalhou(false), [url]);
   return (
     <div
       className={cn("relative overflow-hidden rounded-[var(--radius)] border border-line", className)}
       style={{ backgroundImage: `linear-gradient(${gradiente})` }}
     >
+      {url && !falhou && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={url}
+          alt={alt}
+          loading="lazy"
+          onError={() => setFalhou(true)}
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+      )}
       {children}
     </div>
   );

@@ -46,6 +46,11 @@ const atualizada = formatarData(legal.atualizadaEm)
 const termos     = legal.termos ?? {}
 const vigencia   = formatarData(termos.vigenciaDesde)
 
+/* CNPJ só entra no texto quando é válido em formato (14 dígitos, com ou sem
+   máscara). "não possui", vazio ou placeholder → a frase omite o CNPJ. */
+const cnpjValido = String(legal.controlador?.cnpj ?? '').replace(/\D/g, '').length === 14
+const cnpj       = cnpjValido ? String(legal.controlador.cnpj) : ''
+
 const direitos = [
   'Confirmar se tratamos dados seus e acessar esses dados',
   'Corrigir dado incompleto, inexato ou desatualizado',
@@ -111,7 +116,7 @@ const pendencias = (documento === 'politica'
 
       <h2>1. Identificação do controlador dos dados</h2>
       <p>
-        <strong>{legal.controlador.razaoSocial}</strong>, inscrita no CNPJ sob o nº {legal.controlador.cnpj},
+        <strong>{legal.controlador.razaoSocial}</strong>{cnpj && `, inscrita no CNPJ sob o nº ${cnpj}`},
         com sede em {legal.controlador.endereco}, é a controladora dos dados pessoais tratados neste site.
       </p>
       <p class="not-prose text-xs text-ink-muted">
@@ -261,7 +266,7 @@ const pendencias = (documento === 'politica'
       <h2>1. Objeto e aceite</h2>
       <p>
         Estes Termos de Uso regem a navegação no site de {nomeSite}, mantido por
-        <strong> {legal.controlador.razaoSocial}</strong> (CNPJ {legal.controlador.cnpj}). Ao navegar
+        <strong> {legal.controlador.razaoSocial}</strong>{cnpj && ` (CNPJ ${cnpj})`}. Ao navegar
         no site, você declara que leu e concorda com estes termos.
       </p>
       <p>

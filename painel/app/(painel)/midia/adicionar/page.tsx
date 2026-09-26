@@ -2,7 +2,7 @@
 
 import { Upload, CheckCircle2, AlertCircle, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { CabecalhoTela } from "@/components/Tela";
 import { Botao } from "@/components/ui";
 
@@ -12,6 +12,8 @@ interface ArquivoUpload {
   status: "aguardando" | "enviando" | "ok" | "erro";
   url?: string;
   erro?: string;
+  /** Prévia local (blob:) — só para imagens; revogada ao remover/desmontar. */
+  previa?: string;
 }
 
 export default function AdicionarMidiaPage() {
@@ -20,11 +22,21 @@ export default function AdicionarMidiaPage() {
   const [arrastando, setArrastando] = useState(false);
   const [enviando, setEnviando] = useState(false);
 
+  // Espelho da lista para revogar as prévias ao desmontar.
+  const arquivosRef = useRef<ArquivoUpload[]>([]);
+  arquivosRef.current = arquivos;
+  useEffect(() => {
+    return () => {
+      arquivosRef.current.forEach((a) => a.previa && URL.revokeObjectURL(a.previa));
+    };
+  }, []);
+
   const adicionar = useCallback((files: File[]) => {
     const novos: ArquivoUpload[] = files.map((file) => ({
       id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
       file,
       status: "aguardando",
+      previa: file.type.startsWith("image/") ? URL.createObjectURL(file) : undefined,
     }));
     setArquivos((prev) => [...prev, ...novos]);
   }, []);
@@ -40,6 +52,8 @@ export default function AdicionarMidiaPage() {
   }
 
   function remover(id: string) {
+    const alvo = arquivos.find((a) => a.id === id);
+    if (alvo?.previa) URL.revokeObjectURL(alvo.previa);
     setArquivos((prev) => prev.filter((a) => a.id !== id));
   }
 
@@ -139,6 +153,14 @@ export default function AdicionarMidiaPage() {
                   <div className="h-4 w-4 rounded-full border-2 border-line" />
                 )}
               </div>
+              {arq.previa && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={arq.previa}
+                  alt={`Prévia de ${arq.file.name}`}
+                  className="h-12 w-12 shrink-0 rounded border border-line object-cover"
+                />
+              )}
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[12.5px] text-ink">{arq.file.name}</p>
                 <p className="text-[10.5px] text-ink-muted">

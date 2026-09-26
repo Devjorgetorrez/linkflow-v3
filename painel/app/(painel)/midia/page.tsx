@@ -33,7 +33,11 @@ function extrairData(url: string): string {
   return m ? `${m[1]}/${m[2]}` : "—";
 }
 
-const FORMATOS_IMAGEM = ["JPG", "PNG", "WEBP", "GIF", "SVG"];
+const FORMATOS_IMAGEM = ["jpg", "jpeg", "png", "webp", "gif", "svg", "avif"];
+
+function formatoEhImagem(formato: string): boolean {
+  return FORMATOS_IMAGEM.includes(formato.toLowerCase());
+}
 
 /* ---------------------------------------------------------------- grade */
 
@@ -60,7 +64,7 @@ function GradeMidia({
     <div className="p-4">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
         {itens.map((m, idx) => {
-          const ehImagem = FORMATOS_IMAGEM.includes(m.formato);
+          const ehImagem = formatoEhImagem(m.formato);
           const semAlt = m.alt === "";
           const sel = selecionados.has(m.id);
           return (
@@ -75,7 +79,7 @@ function GradeMidia({
               {/* miniatura */}
               <div className="relative overflow-hidden rounded-t-[var(--radius)]">
                 {ehImagem ? (
-                  <Thumb gradiente={m.gradiente} className="aspect-square w-full" />
+                  <Thumb gradiente={m.gradiente} url={m.url} alt={m.alt} className="aspect-square w-full" />
                 ) : (
                   <div className="flex aspect-square w-full items-center justify-center bg-secondary">
                     <FileText size={28} className="text-ink-muted" />
@@ -182,7 +186,12 @@ function ListaMidia({
                   </td>
                 )}
                 <td className="px-3 py-2">
-                  <Thumb gradiente={m.gradiente} className="h-8 w-8 shrink-0" />
+                  <Thumb
+                    gradiente={m.gradiente}
+                    url={formatoEhImagem(m.formato) ? m.url : undefined}
+                    alt={m.alt}
+                    className="h-8 w-8 shrink-0"
+                  />
                 </td>
                 <td className="px-3 py-2">
                   <span className="flex items-center gap-1.5">
@@ -301,14 +310,17 @@ function PainelDetalhe({
         {/* corpo scrollável */}
         <div className="flex-1 overflow-y-auto">
           {/* preview */}
-          <Thumb gradiente={midia.gradiente} className="aspect-video w-full rounded-none" />
+          <Thumb
+            gradiente={midia.gradiente}
+            url={formatoEhImagem(midia.formato) ? midia.url : undefined}
+            alt={midia.alt}
+            className="aspect-video w-full rounded-none"
+          />
 
-          {/* derivados */}
+          {/* formato */}
           <div className="flex items-center gap-1.5 border-b border-line px-3 py-2">
             <Info size={11} className="shrink-0 text-ink-muted" />
-            <span className="text-[11px] text-ink-muted">
-              Original {midia.formato} · WebP e AVIF gerados · 3 larguras
-            </span>
+            <span className="text-[11px] text-ink-muted">Original {midia.formato}</span>
           </div>
 
           {/* campos editáveis */}
@@ -508,7 +520,7 @@ export default function BibliotecaMidiaPage() {
 
   const visiveis = useMemo(() => {
     return midia.filter((m) => {
-      const ehImagem = FORMATOS_IMAGEM.includes(m.formato);
+      const ehImagem = formatoEhImagem(m.formato);
       if (filtroTipo === "imagens" && !ehImagem) return false;
       if (filtroTipo === "documentos" && ehImagem) return false;
       if (filtroSemAlt && m.alt !== "") return false;

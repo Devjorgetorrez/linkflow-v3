@@ -69,6 +69,9 @@ export async function GET(req: NextRequest) {
           continue;
         }
 
+        // Sidecar de metadados (criado pelo PATCH) não é item da biblioteca.
+        if (entry.name.endsWith(".meta.json")) continue;
+
         const ext = entry.name.split(".").pop()?.toLowerCase() ?? "";
         const filePath = path.join(dir, entry.name);
         const stat = fs.statSync(filePath);

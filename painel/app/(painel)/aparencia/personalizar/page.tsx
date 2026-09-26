@@ -16,6 +16,7 @@ import {
 } from "@/lib/store";
 import { AreaTexto, Botao, Campo, Entrada, Thumb } from "@/components/ui";
 import { cn } from "@/lib/utils";
+import { URL_BLOG, urlAutor, urlCategoria } from "@/lib/urls-publicas";
 import { avaliarToken } from "@/motor/contraste";
 import type { Midia } from "@/mock/types";
 
@@ -620,7 +621,7 @@ export default function PersonalizarPage() {
                   label="Logo (modo claro)"
                   valor={aparencia.logo}
                   alt={logoAlt}
-                  itens={midia.filter((m) => ["JPG", "PNG", "SVG", "WEBP"].includes(m.formato))}
+                  itens={midia.filter((m) => ["jpg", "jpeg", "png", "svg", "webp", "avif"].includes((m.formato ?? "").toLowerCase()))}
                   onEscolher={(m) => setAparencia({ logo: m.url })}
                   onRemover={() => setAparencia({ logo: "" })}
                   onAltChange={setLogoAlt}
@@ -629,14 +630,14 @@ export default function PersonalizarPage() {
                   label="Logo (modo escuro)"
                   valor={aparencia.logoEscura}
                   alt={logoEscuraAlt}
-                  itens={midia.filter((m) => ["JPG", "PNG", "SVG", "WEBP"].includes(m.formato))}
+                  itens={midia.filter((m) => ["jpg", "jpeg", "png", "svg", "webp", "avif"].includes((m.formato ?? "").toLowerCase()))}
                   onEscolher={(m) => setAparencia({ logoEscura: m.url })}
                   onRemover={() => setAparencia({ logoEscura: "" })}
                   onAltChange={setLogoEscuraAlt}
                 />
                 <FaviconRow
                   valor={aparencia.favicon}
-                  itens={midia.filter((m) => ["JPG", "PNG", "SVG", "WEBP", "ICO"].includes(m.formato))}
+                  itens={midia.filter((m) => ["jpg", "jpeg", "png", "svg", "webp", "avif", "ico"].includes((m.formato ?? "").toLowerCase()))}
                   onEscolher={(m) => setAparencia({ favicon: m.url })}
                   onRemover={() => setAparencia({ favicon: "" })}
                 />
@@ -651,9 +652,9 @@ export default function PersonalizarPage() {
                   <div className="space-y-1.5">
                     {[
                       { label: "Página inicial", valor: "Início (/)" },
-                      { label: "Prefixo do blog", valor: "/blog" },
-                      { label: "Prefixo de categoria", valor: "/categoria" },
-                      { label: "Prefixo de autor", valor: "/autor" },
+                      { label: "Índice do blog", valor: URL_BLOG },
+                      { label: "Categoria", valor: urlCategoria("<slug>") },
+                      { label: "Autor", valor: urlAutor("<slug>") },
                     ].map((item) => (
                       <div key={item.label} className="flex items-center justify-between rounded border border-line/50 bg-surface px-3 py-1.5">
                         <span className="text-[11px] text-ink-muted">{item.label}</span>

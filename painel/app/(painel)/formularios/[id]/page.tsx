@@ -192,6 +192,7 @@ export default function FormularioEditorPage() {
   );
   const [adicionandoCampo, setAdicionandoCampo] = useState(false);
   const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState("");
 
   useEffect(() => {
     if (!NOVO && formularioExistente) setDados(formularioExistente);
@@ -213,6 +214,15 @@ export default function FormularioEditorPage() {
   }
 
   function salvar() {
+    if (!dados.nome.trim()) {
+      setErro("Dê um nome ao formulário antes de salvar.");
+      return;
+    }
+    if (dados.campos.length === 0) {
+      setErro("Adicione ao menos um campo ao formulário antes de salvar.");
+      return;
+    }
+    setErro("");
     setSalvando(true);
     if (NOVO) {
       const novoId = `fm${Date.now()}`;
@@ -276,6 +286,12 @@ export default function FormularioEditorPage() {
           </Botao>
         </div>
       </div>
+
+      {erro && (
+        <p role="alert" className="border-b border-danger/30 bg-danger/10 px-6 py-2 text-[12px] text-danger">
+          {erro}
+        </p>
+      )}
 
       {/* two-column body */}
       <div className="grid flex-1 grid-cols-[1fr_380px] divide-x divide-line">
