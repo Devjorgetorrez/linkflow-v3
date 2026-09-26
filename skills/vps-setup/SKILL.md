@@ -326,10 +326,12 @@ operador, o script emite sem e-mail de contato.
 ## PASSO 7 — Criar primeiro usuário administrador
 
 **Só depois** do DNS apontar e do SSL estar `ok` (PASSO 6) — nunca junto com o
-pedido de DNS. O e-mail de login é o `email_institucional` registrado no gate de
-publicação (diga ao usuário qual foi usado). A senha inicial é gerada por você:
-forte, sem caracteres ambíguos, exibida **uma única vez** na resposta final e
-nunca gravada em arquivo.
+pedido de DNS. **Pergunte sempre** qual e-mail o usuário quer para o primeiro
+administrador do painel — nunca assuma o `email_institucional`; o primeiro
+acesso fica a critério de quem está montando o negócio. É um pedido só:
+"Qual e-mail você quer usar para entrar no painel?". A senha inicial é gerada por
+você: forte, sem caracteres ambíguos, exibida **uma única vez** na resposta final
+e nunca gravada em arquivo.
 
 Se o PASSO 3 ou 4 já imprimiu a API Key no final (fica registrada ali),
 usar essa mesma chave. Senão, ler do arquivo do cliente:

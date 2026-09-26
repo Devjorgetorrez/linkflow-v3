@@ -26,8 +26,8 @@
   Lucas pediu para abordá-lo só depois de concluir o 3).
 - **Pendência única de validação:** R5, teste de ponta a ponta na VPS de teste, agora incluindo o
   instalador novo e o fluxo em marcos. **Pedir autorização ao Lucas antes de tocar no VPS.**
-- `relatorios/` e `templates-layout-temas/` (os 4 zips) estão **sem commit**, de propósito: falta
-  decidir se entram no git ou no `.gitignore`.
+- `relatorios/` e `templates-layout-temas/` (os 4 zips) estão no `.gitignore`: relatórios são
+  internos e os layouts corretos já vivem em `_astro/`; os zips eram só referência.
 
 ## Relatório de Testes 3 — o que foi feito
 
@@ -470,7 +470,6 @@ Resumo:
    `ssl-cliente.sh`, escolha de porta), a cópia com `tar` (sem `node_modules`), e o fluxo em
    marcos até o painel entregue. **Pedir autorização ao Lucas antes de tocar no VPS.**
 2. **Relatório QA do painel** (`relatorios/Relatorio_QA_Painel_SiteFlow.pdf`) — só depois do 3.
-3. Decidir o destino de `relatorios/` e `templates-layout-temas/` (git ou `.gitignore`).
 4. Limites conhecidos, ainda sem correção:
    - `hashtags`/`buscasFrequentes` dos configs apontam direto para slugs de post e de serviço; se o
      post virar rascunho, o link fica morto (vale para o tema-03 também).
