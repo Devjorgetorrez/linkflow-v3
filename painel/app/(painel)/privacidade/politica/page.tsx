@@ -377,6 +377,7 @@ export default function PoliticaPage() {
   const { privacidadeConfig: cfg, setPrivacidadeConfig: set, aparencia, formularios } = useStore();
   const [salvando, setSalvando] = useState(false);
   const [salvo, setSalvo] = useState(false);
+  const [erroSalvar, setErroSalvar] = useState("");
 
   // Pré-preencher com o que já foi salvo em dados/legal.json (fonte de
   // verdade — ver lib/legal.ts), e o e-mail real do config como reserva.
@@ -439,8 +440,11 @@ export default function PoliticaPage() {
       });
       const data = await r.json();
       if (data.ok) {
+        setErroSalvar("");
         setSalvo(true);
         setTimeout(() => setSalvo(false), 2200);
+      } else {
+        setErroSalvar(Object.values((data.erros ?? {}) as Record<string, string>).join(" ") || data.erro || "Não foi possível salvar.");
       }
     } catch (err) {
       console.error("[privacidade/politica] falha ao salvar:", err);
@@ -465,6 +469,7 @@ export default function PoliticaPage() {
             </p>
           </div>
           <div className="ml-auto flex items-center gap-2 shrink-0">
+            {erroSalvar && <span className="text-xs max-w-xs" style={{ color: "var(--danger, #c0392b)" }}>{erroSalvar}</span>}
             {salvo && <span className="text-xs" style={{ color: "var(--success)" }}>Salvo — publica no próximo build</span>}
             <button
               onClick={salvar}

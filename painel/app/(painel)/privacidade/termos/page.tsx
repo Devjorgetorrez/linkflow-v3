@@ -309,6 +309,7 @@ export default function TermosPage() {
   const [emailReal, setEmailReal] = useState("");
   const [salvando, setSalvando] = useState(false);
   const [salvo, setSalvo] = useState(false);
+  const [erroSalvar, setErroSalvar] = useState("");
 
   // Carregar email de contato real do config + pré-preencher com o que já
   // foi salvo em dados/legal.json (fonte de verdade — ver lib/legal.ts).
@@ -351,8 +352,11 @@ export default function TermosPage() {
       });
       const data = await r.json();
       if (data.ok) {
+        setErroSalvar("");
         setSalvo(true);
         setTimeout(() => setSalvo(false), 2200);
+      } else {
+        setErroSalvar(Object.values((data.erros ?? {}) as Record<string, string>).join(" ") || data.erro || "Não foi possível salvar.");
       }
     } catch (err) {
       console.error("[privacidade/termos] falha ao salvar:", err);
@@ -377,6 +381,7 @@ export default function TermosPage() {
             </p>
           </div>
           <div className="ml-auto flex items-center gap-2 shrink-0">
+            {erroSalvar && <span className="text-xs max-w-xs" style={{ color: "var(--danger, #c0392b)" }}>{erroSalvar}</span>}
             {salvo && <span className="text-xs" style={{ color: "var(--success)" }}>Salvo — publica no próximo build</span>}
             <button
               onClick={salvar}

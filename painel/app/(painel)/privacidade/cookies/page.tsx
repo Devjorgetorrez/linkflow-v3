@@ -183,6 +183,7 @@ export default function CookiesPage() {
   const [config, setConfigState] = useState(initConfig);
   const [aba, setAba] = useState<"banner" | "modal">("banner");
   const [salvando, setSalvando] = useState(false);
+  const [erroSalvar, setErroSalvar] = useState("");
 
   // Pré-preencher descrição do banner com nome do site real, e os textos
   // de finalidade por categoria com o que já foi salvo em dados/legal.json
@@ -502,11 +503,13 @@ export default function CookiesPage() {
                   cookieMarketingFinalidade: config.categorias.marketing,
                   cookieFuncionaisFinalidade: config.categorias.funcionais,
                 };
-                await fetch("/api/config", {
+                const r = await fetch("/api/config", {
                   method: "PATCH",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ legalPainel }),
                 });
+                const data = await r.json();
+                setErroSalvar(data.ok ? "" : Object.values((data.erros ?? {}) as Record<string, string>).join(" ") || data.erro || "Não foi possível salvar.");
               } catch (err) {
                 console.error("[privacidade/cookies] falha ao salvar:", err);
               } finally {
@@ -522,6 +525,7 @@ export default function CookiesPage() {
           >
             {salvando ? "Salvando…" : "Salvar configuração"}
           </button>
+          {erroSalvar && <p className="text-xs" style={{ color: "var(--danger, #c0392b)" }}>{erroSalvar}</p>}
 
         </div>
 
