@@ -7,9 +7,9 @@ import { Campo, Entrada } from "@/components/ui";
 import { urlValida } from "@/lib/site-config";
 import { diffCampos, enviarConfig } from "@/lib/site-config-cliente";
 
-type ChaveRede = "instagram" | "facebook" | "linkedin" | "youtube" | "tiktok" | "twitter" | "pinterest";
+type ChaveRede = "instagram" | "facebook" | "linkedin" | "youtube" | "tiktok" | "threads" | "twitter" | "pinterest";
 type ValoresRedes = Record<ChaveRede, string>;
-const VAZIO: ValoresRedes = { instagram: "", facebook: "", linkedin: "", youtube: "", tiktok: "", twitter: "", pinterest: "" };
+const VAZIO: ValoresRedes = { instagram: "", facebook: "", linkedin: "", youtube: "", tiktok: "", threads: "", twitter: "", pinterest: "" };
 
 /* ------------------------------------------------------------------ */
 /* Rede social config                                                  */
@@ -45,6 +45,12 @@ const REDES: { key: ChaveRede; label: string; placeholder: string; prefixo?: str
     label: "TikTok",
     placeholder: "https://tiktok.com/@usuario",
     prefixo: "tiktok.com/",
+  },
+  {
+    key: "threads",
+    label: "Threads",
+    placeholder: "https://threads.net/@usuario",
+    prefixo: "threads.net/",
   },
   {
     key: "twitter",

@@ -7,6 +7,14 @@
  * "Salvo" quando o servidor recusou.
  */
 
+import {
+  DIAS_SEMANA,
+  juntarNumero,
+  patchDeBody,
+  validarPatch,
+  type Funcionamento,
+} from "./site-config";
+
 export interface RespostaConfig {
   ok: boolean;
   /** Mensagem geral de erro (rede, 500, 400 sem detalhe). */
@@ -73,4 +81,118 @@ export async function enviarConfig(body: Record<string, unknown>): Promise<Respo
   } catch {
     return { ok: false, erro: "Sem conexão com o painel. Nada foi salvo.", erros: {}, aviso: "", alterados: [] };
   }
+}
+
+/* ------------------------------------------------------------------ */
+/* Listas, objetos aninhados, mídia e validação (campos restaurados)   */
+/* ------------------------------------------------------------------ */
+
+/** A API de mídia devolve URL absoluta; o site.ts guarda o CAMINHO (`/midia/logo.png`). */
+export function caminhoDaMidia(url: string): string {
+  const t = url.trim();
+  if (!/^https?:\/\//i.test(t)) return t;
+  try {
+    return new URL(t).pathname;
+  } catch {
+    return t;
+  }
+}
+
+/** { nome, "logo.src": x } → { nome, logo: { src: x } } (formato que o PATCH aceita). */
+export function aninhar(flat: Record<string, string>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(flat)) {
+    const i = k.indexOf(".");
+    if (i === -1) out[k] = v;
+    else {
+      const pai = k.slice(0, i);
+      const obj = (out[pai] ?? {}) as Record<string, string>;
+      obj[k.slice(i + 1)] = v;
+      out[pai] = obj;
+    }
+  }
+  return out;
+}
+
+/** diffCampos + aninhamento: devolve os campos alterados no formato do PATCH e o `limpar`. */
+export function montarPatchPlano(
+  original: Record<string, string>,
+  atual: Record<string, string>,
+): { body: Record<string, unknown>; limpar: string[] } {
+  const { alterados, limpar } = diffCampos(original, atual, "");
+  return { body: aninhar(alterados), limpar };
+}
+
+const limpaLista = (l: string[]) => [...new Set(l.map((x) => x.trim()).filter(Boolean))];
+
+/** Compara duas listas de texto (sem vazios/duplicados); `limpar` só se a lista foi esvaziada. */
+export function diffLista(original: string[], atual: string[]): { mudou: boolean; lista: string[]; esvaziou: boolean } {
+  const o = limpaLista(original);
+  const a = limpaLista(atual);
+  return { mudou: JSON.stringify(o) !== JSON.stringify(a), lista: a, esvaziou: a.length === 0 && o.length > 0 };
+}
+
+/** Forma canônica de um período de funcionamento (a mesma que o servidor grava). */
+export function normalizarFuncionamento(lista: Funcionamento[]): Funcionamento[] {
+  return lista.map((f) => {
+    const dias = DIAS_SEMANA.filter((d) => (f.dias ?? []).includes(d));
+    return f.fechado
+      ? { dias, fechado: true }
+      : { dias, abre: (f.abre ?? "").trim().padStart(5, "0"), fecha: (f.fecha ?? "").trim().padStart(5, "0") };
+  }) as Funcionamento[];
+}
+
+/** Valida o corpo do PATCH com os MESMOS validadores do servidor (chaves de erro iguais). */
+export function validarBody(body: Record<string, unknown>): Record<string, string> {
+  return validarPatch(patchDeBody(body).patch);
+}
+
+export type CampoContato =
+  | "telefone" | "telefone2" | "whatsapp" | "email"
+  | "logradouro" | "complemento" | "bairro" | "cidade" | "uf" | "cep";
+
+export interface EntradaContato {
+  /** NAP como o site guarda (logradouro JÁ com o número: "Av. Dom Pedro II, 980"). */
+  original: Record<CampoContato, string>;
+  /** NAP editado; `logradouro` = rua sem número. */
+  atual: Record<CampoContato, string>;
+  numero: string;
+  funcOriginal: Funcionamento[];
+  func: Funcionamento[];
+  areaOriginal: string[];
+  area: string[];
+  onlineOriginal: boolean;
+  online: boolean;
+}
+
+/**
+ * Monta o PATCH da tela Contato só com o que mudou. O número fica junto do
+ * logradouro no site, então o diff é feito sobre o valor COMPOSTO. `funcionamento`
+ * vai sem `horarios`: o servidor deriva o texto exibido.
+ */
+export function montarPatchContato(e: EntradaContato): { body: Record<string, unknown>; erros: Record<string, string> } {
+  const erros: Record<string, string> = {};
+  const composto = { ...e.atual, logradouro: juntarNumero(e.atual.logradouro, e.numero) };
+  if (!e.atual.logradouro.trim() && e.numero.trim()) erros["nap.logradouro"] = "Informe o logradouro antes do número.";
+
+  const { alterados, limpar } = diffCampos(e.original, composto, "nap.");
+  const body: Record<string, unknown> = { ...alterados };
+
+  const fo = normalizarFuncionamento(e.funcOriginal);
+  const fa = normalizarFuncionamento(e.func);
+  if (JSON.stringify(fo) !== JSON.stringify(fa)) {
+    body.funcionamento = fa;
+    if (fa.length === 0 && fo.length > 0) limpar.push("funcionamento");
+  }
+
+  const area = diffLista(e.areaOriginal, e.area);
+  if (area.mudou) {
+    body.areaAtendimento = area.lista;
+    if (area.esvaziou) limpar.push("areaAtendimento");
+  }
+  if (e.online !== e.onlineOriginal) body.atendimentoOnline = e.online;
+
+  if (limpar.length) body.limpar = limpar;
+  Object.assign(erros, validarBody(body));
+  return { body, erros };
 }

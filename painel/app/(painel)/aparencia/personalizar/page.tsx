@@ -16,6 +16,7 @@ import {
 } from "@/lib/store";
 import Link from "next/link";
 import { Botao, Campo, Entrada } from "@/components/ui";
+import { BotaoSalvarVisual, DescricaoSite, MidiaSite, useIdentidadeVisual } from "@/components/IdentidadeVisual";
 import { cn } from "@/lib/utils";
 import { URL_BLOG, urlAutor, urlCategoria } from "@/lib/urls-publicas";
 import { avaliarToken } from "@/motor/contraste";
@@ -248,6 +249,9 @@ export default function PersonalizarPage() {
   const [nomeSite, setNomeSite] = useState("");
   const [tagline, setTagline] = useState("");
   const [erroSite, setErroSite] = useState(false);
+  // Descrição, logos e favicon: mesmos campos e mesma API de Configurações › Identidade
+  const visual = useIdentidadeVisual();
+  const { hidratar } = visual;
   useEffect(() => {
     fetch("/api/config")
       .then((r) => r.json())
@@ -255,9 +259,10 @@ export default function PersonalizarPage() {
         if (!data.ok || !data.config) { setErroSite(true); return; }
         setNomeSite(String(data.config.nome ?? ""));
         setTagline(String(data.config.slogan ?? ""));
+        hidratar(data.config);
       })
       .catch(() => setErroSite(true));
-  }, []);
+  }, [hidratar]);
   const [fonteDisplay, setFonteDisplay] = useState(aparencia.fonteDisplay);
   const [fonteCorpo, setFonteCorpo] = useState(aparencia.fonteCorpo);
   const [raio, setRaio] = useState(aparencia.raio);
@@ -330,6 +335,13 @@ export default function PersonalizarPage() {
                     Editar em Configurações › Identidade
                   </Link>
                 </p>
+
+                {/* Descrição, logos e favicon: gravam no site (config/site.ts) pelo botão abaixo */}
+                <div className="space-y-4 rounded-[var(--radius)] border border-line bg-surface-2 p-3">
+                  <DescricaoSite v={visual} />
+                  <MidiaSite v={visual} incluirCompartilhamento={false} />
+                  <BotaoSalvarVisual v={visual} />
+                </div>
 
                 {/* Estrutura do site — somente-leitura */}
                 <div className="rounded-[var(--radius)] border border-line bg-surface-2 p-3">
