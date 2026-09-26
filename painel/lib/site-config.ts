@@ -321,6 +321,108 @@ function definirNoObjetoAninhado(
   return definirEmObjeto(s, o.abre, caminho[caminho.length - 1], lit);
 }
 
+// ─── Edição genérica por caminho (usada pelo bloco `legal` e por qualquer sub-objeto) ───
+
+function eqJson(a: unknown, b: unknown): boolean {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+/** Posição do "{" do objeto em `caminho` (a partir de `site`); undefined se algum trecho não for objeto. */
+function abreEm(s: string, caminho: string[]): number | undefined {
+  let o = objetoSite(s);
+  for (const seg of caminho) {
+    const e = achar(o, seg);
+    if (!e || s[e.iniValor] !== "{") return undefined;
+    o = objetoEm(s, e.iniValor);
+  }
+  return o.abre;
+}
+
+/** Garante que `caminho` exista como objetos aninhados, criando `{}` onde faltar. */
+function garantirCaminho(s: string, caminho: string[]): string {
+  for (let i = 1; i <= caminho.length; i++) {
+    const parcial = caminho.slice(0, i);
+    if (abreEm(s, parcial) !== undefined) continue;
+    const abrePai = abreEm(s, parcial.slice(0, -1));
+    if (abrePai === undefined) throw new Error(`site-config: '${parcial.slice(0, -1).join(".")}' não é um objeto no config/site.ts`);
+    s = definirEmObjeto(s, abrePai, parcial[parcial.length - 1], "{}").s;
+  }
+  return s;
+}
+
+/** Valor em `caminho` (objetos aninhados a partir de `site`), parseado; undefined se ausente. */
+export function lerValorNoCaminho(s: string, caminho: string[]): unknown {
+  const pai = caminho.length > 1 ? abreEm(s, caminho.slice(0, -1)) : objetoSite(s).abre;
+  if (pai === undefined) return undefined;
+  const e = achar(objetoEm(s, pai), caminho[caminho.length - 1]);
+  return e ? valorDe(s, e.iniValor, e.fimValor) : undefined;
+}
+
+/** Define o valor em `caminho` (cria objetos e a chave se faltarem). Devolve o texto novo e se mudou. */
+export function definirValorNoCaminho(s: string, caminho: string[], valor: unknown): { s: string; mudou: boolean } {
+  s = garantirCaminho(s, caminho.slice(0, -1));
+  const abre = caminho.length > 1 ? (abreEm(s, caminho.slice(0, -1)) as number) : objetoSite(s).abre;
+  const o = objetoEm(s, abre);
+  const chave = caminho[caminho.length - 1];
+  const e = achar(o, chave);
+  if (e) {
+    if (eqJson(valorDe(s, e.iniValor, e.fimValor), valor)) return { s, mudou: false };
+    return { s: s.slice(0, e.iniValor) + renderValor(valor, indentacaoDe(s, e.iniChave)) + s.slice(e.fimValor), mudou: true };
+  }
+  const ult = o.entradas[o.entradas.length - 1];
+  const ind = ult ? indentacaoDe(s, ult.iniChave) : indentacaoDe(s, abre) + "  ";
+  return { s: definirEmObjeto(s, abre, chave, renderValor(valor, ind)).s, mudou: true };
+}
+
+function arrayEm(s: string, caminho: string[]): { ini: number; elementos: Elemento[]; fecha: number } | undefined {
+  const pai = caminho.length > 1 ? abreEm(s, caminho.slice(0, -1)) : objetoSite(s).abre;
+  if (pai === undefined) return undefined;
+  const e = achar(objetoEm(s, pai), caminho[caminho.length - 1]);
+  if (!e || s[e.iniValor] !== "[") return undefined;
+  const { elementos, fecha } = elementosDoArray(s, e.iniValor);
+  return { ini: e.iniValor, elementos, fecha };
+}
+
+/** Elementos (objetos) da lista em `caminho`, já parseados. */
+export function lerListaNoCaminho(s: string, caminho: string[]): Record<string, unknown>[] {
+  const a = arrayEm(s, caminho);
+  if (!a) return [];
+  return a.elementos.map((el) => (valorDe(s, el.ini, el.fim) ?? {}) as Record<string, unknown>);
+}
+
+/** Atualiza campos (string) do elemento `idx` da lista em `caminho`. */
+export function atualizarElementoNaLista(s: string, caminho: string[], idx: number, campos: Record<string, string>): { s: string; mudou: boolean } {
+  let mudou = false;
+  for (const [k, v] of Object.entries(campos)) {
+    const a = arrayEm(s, caminho);
+    if (!a || !a.elementos[idx] || s[a.elementos[idx].ini] !== "{") throw new Error(`site-config: elemento ${idx} de '${caminho.join(".")}' não encontrado`);
+    const r = definirEmObjeto(s, a.elementos[idx].ini, k, literal(v));
+    s = r.s;
+    if (r.acao !== "igual") mudou = true;
+  }
+  return { s, mudou };
+}
+
+/** Acrescenta um elemento (objeto de strings) ao fim da lista em `caminho`; cria a lista se faltar. */
+export function acrescentarElementoNaLista(s: string, caminho: string[], obj: Record<string, string>): string {
+  const item = renderValor(obj, "");
+  let a = arrayEm(s, caminho);
+  if (!a) {
+    s = definirValorNoCaminho(s, caminho, [obj]).s;
+    return s;
+  }
+  const chave = caminho[caminho.length - 1];
+  const pai = caminho.length > 1 ? (abreEm(s, caminho.slice(0, -1)) as number) : objetoSite(s).abre;
+  const eArr = achar(objetoEm(s, pai), chave) as Entrada;
+  const ind = a.elementos.length ? indentacaoDe(s, a.elementos[a.elementos.length - 1].ini) : indentacaoDe(s, eArr.iniChave) + "  ";
+  if (!a.elementos.length) {
+    return s.slice(0, a.ini + 1) + `\n${ind}${item},\n${indentacaoDe(s, eArr.iniChave)}` + s.slice(a.fecha);
+  }
+  const ult = a.elementos[a.elementos.length - 1];
+  const temVirg = s[ult.fimComVirgula - 1] === ",";
+  return s.slice(0, ult.fimComVirgula) + (temVirg ? "" : ",") + `\n${ind}${item},` + s.slice(ult.fimComVirgula);
+}
+
 // ─── Leitura ──────────────────────────────────────────────────────────────────
 
 export interface Horario { dia: string; hora: string }
