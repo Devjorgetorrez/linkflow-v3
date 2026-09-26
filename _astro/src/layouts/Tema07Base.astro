@@ -1,0 +1,56 @@
+---
+/**
+ * Tema07Base — layout do Tema 07 (Vereda Corretora).
+ * data-tema="tema-07" ativa o escopo de tokens do fim de src/styles/tokens.css.
+ * Os demais temas não são afetados.
+ */
+import '../styles/global.css'
+
+interface Props {
+  titulo:          string
+  metaDescription: string
+  canonical:       string
+  jsonLd?:         object | object[]
+  nodeId?:         string
+  noindex?:        boolean
+}
+
+const {
+  titulo,
+  metaDescription,
+  canonical,
+  jsonLd,
+  nodeId  = 'page',
+  noindex = false,
+} = Astro.props
+---
+
+<!doctype html>
+<html lang="pt-BR" data-tema="tema-07">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{titulo}</title>
+  <meta name="description" content={metaDescription} />
+  <link rel="canonical" href={canonical} />
+  <link rel="sitemap" href="/sitemap.xml" />
+  {noindex && <meta name="robots" content="noindex, follow" />}
+
+  {/* Fontes do tema: Manrope (display) + Inter (corpo) */}
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap"
+    rel="stylesheet"
+  />
+
+  {jsonLd && (
+    <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+  )}
+</head>
+<body class="bg-surface font-sans text-ink antialiased">
+  <main data-node-id={nodeId}>
+    <slot />
+  </main>
+</body>
+</html>

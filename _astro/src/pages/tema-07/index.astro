@@ -1,0 +1,277 @@
+---
+/**
+ * Home do Tema 07 — corretagem e intermediação.
+ *
+ * A lógica é de captura qualificada: o visitante não compra na página, ele
+ * pede uma cotação. Por isso o formulário é o centro, e o resto da página
+ * existe para justificar por que vale entregar o dado — comparação real,
+ * operadoras na carteira, rede credenciada e cobertura por cidade.
+ */
+import Tema07Base   from '../../layouts/Tema07Base.astro'
+import Header       from '../../components/blocos/Header.astro'
+import Hero         from '../../components/blocos/Hero.astro'
+import Prova        from '../../components/blocos/Prova.astro'
+import Servicos     from '../../components/blocos/Servicos.astro'
+import FormContato  from '../../components/blocos/FormContato.astro'
+import AreaAtendida from '../../components/blocos/AreaAtendida.astro'
+import Passos       from '../../components/blocos/Passos.astro'
+import Proposito    from '../../components/blocos/Proposito.astro'
+import Numeros      from '../../components/blocos/Numeros.astro'
+import Depoimentos  from '../../components/blocos/Depoimentos.astro'
+import Faq          from '../../components/blocos/Faq.astro'
+import Localizacao  from '../../components/blocos/Localizacao.astro'
+import PostLista    from '../../components/blocos/PostLista.astro'
+import BuscasFrequentes from '../../components/blocos/BuscasFrequentes.astro'
+import Footer       from '../../components/blocos/Footer.astro'
+import { site }     from '../../config/tema-07.ts'
+import { getCollection } from 'astro:content'
+
+const planos = (await getCollection('servicosT7'))
+  .sort((a, b) => a.data.ordem - b.data.ordem)
+  .map(s => ({
+    titulo: s.data.titulo, descricao: s.data.resumo, icone: s.data.icone ?? '',
+    imagem: s.data.imagem, imagemAlt: s.data.imagemAlt,
+    href: `/tema-07/planos/${s.id}`, categoria: s.data.categoria,
+  }))
+
+const depoimentos = (await getCollection('depoimentosT7'))
+  .sort((a, b) => a.data.ordem - b.data.ordem)
+  .map(d => ({ nome: d.data.nome, cidade: d.data.cidade, servico: d.data.servico, corpo: d.body.trim() }))
+
+const posts = (await getCollection('postsT7'))
+  .sort((a, b) => new Date(b.data.publicadoEm).getTime() - new Date(a.data.publicadoEm).getTime())
+  .map(p => ({
+    titulo: p.data.titulo, publicadoEm: p.data.publicadoEm, categoria: p.data.categoria,
+    imagemCapa: p.data.imagemCapa, imagemCapaAlt: p.data.imagemCapaAlt,
+    autor: p.data.autor, href: `/tema-07/blog/${p.id}`,
+  }))
+
+const anos      = new Date().getFullYear() - site.anoFundacao
+const wa        = `https://wa.me/${site.nap.whatsapp}`
+const canonical = `${site.dominio}/`
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type':   ['InsuranceAgency', 'LocalBusiness'],
+      '@id':     `${site.dominio}/#organization`,
+      name:      site.nomeLongo,
+      url:       site.dominio,
+      telephone: site.nap.telefone,
+      email:     site.nap.email,
+      slogan:    site.slogan,
+      foundingDate: String(site.anoFundacao),
+      address: {
+        '@type': 'PostalAddress',
+        streetAddress:   `${site.nap.logradouro}, ${site.nap.complemento}`,
+        addressLocality: site.nap.cidade,
+        addressRegion:   site.nap.uf,
+        postalCode:      site.nap.cep,
+        addressCountry:  'BR',
+      },
+      openingHoursSpecification: [
+        { '@type': 'OpeningHoursSpecification', dayOfWeek: ['Monday','Tuesday','Wednesday','Thursday','Friday'], opens: '08:30', closes: '18:00' },
+        { '@type': 'OpeningHoursSpecification', dayOfWeek: ['Saturday'], opens: '09:00', closes: '13:00' },
+      ],
+      areaServed: site.cidades.map(c => ({ '@type': 'City', name: c })),
+    },
+    {
+      '@type': 'WebSite', '@id': `${site.dominio}/#website`,
+      url: site.dominio, name: site.nome,
+      publisher: { '@id': `${site.dominio}/#organization` }, inLanguage: 'pt-BR',
+    },
+    {
+      '@type': 'WebPage', '@id': `${canonical}#webpage`,
+      url: canonical, name: `${site.nomeLongo} em ${site.nap.cidade}`,
+      isPartOf: { '@id': `${site.dominio}/#website` },
+      about: { '@id': `${site.dominio}/#organization` }, inLanguage: 'pt-BR',
+    },
+    {
+      '@type': 'FAQPage', '@id': `${canonical}#faq`,
+      mainEntity: site.faq.map(f => ({
+        '@type': 'Question', name: f.pergunta,
+        acceptedAnswer: { '@type': 'Answer', text: f.resposta },
+      })),
+    },
+  ],
+}
+---
+
+<Tema07Base
+  titulo={`Planos de Saúde em ${site.nap.cidade} e região — ${site.nome}`}
+  metaDescription="Corretora de planos de saúde em Sorocaba e região. Comparamos operadoras, conferimos a rede por endereço e mostramos o histórico de reajuste antes de você escolher."
+  canonical={canonical}
+  jsonLd={jsonLd}
+  nodeId="home"
+>
+
+  <Header
+    variante="padrao"
+    nomeSite={site.nome}
+    telefone={site.nap.telefone}
+    whatsapp={site.nap.whatsapp}
+    nav={site.nav}
+    ctaTexto="Solicitar cotação"
+    ctaHref="#cotacao"
+  />
+
+  {/* 1 — promessa da corretagem: comparação, não venda de um produto só */}
+  <Hero
+    variante="destaque"
+    titulo={`Planos de saúde em ${site.nap.cidade} e região`}
+    lead="Comparamos as operadoras elegíveis ao seu perfil e entregamos tudo em uma tabela: preço, rede, carência e histórico de reajuste. A escolha é sua, com os números na frente."
+    ctaPrimTexto="Solicitar cotação"
+    ctaPrimHref="#cotacao"
+    ctaSecTexto="Ver tipos de plano"
+    ctaSecHref="/tema-07/planos"
+    nota="Cotação sem custo. A corretora é remunerada pela operadora — você paga o valor de tabela."
+    imagem="https://images.unsplash.com/photo-1511895426328-dc8714191300?w=560&h=460&fit=crop&auto=format"
+    imagemAlt="Família reunida em ambiente doméstico"
+    provaNumero={`+${anos} anos`}
+    provaTexto={`de corretagem em ${site.nap.cidade}`}
+  />
+
+  {/* 2 — por que usar corretora e não ir direto */}
+  <Prova variante="faixa" sobrepor={true} itens={site.selos} />
+
+  {/* 3 — o formulário é o centro deste modelo */}
+  <div id="cotacao">
+    <FormContato
+      variante="cotacao"
+      eyebrow="Cotação sem compromisso"
+      titulo="Receba um comparativo entre operadoras"
+      descricao="Preencha os dados e devolvemos, em até um dia útil, as opções elegíveis ao seu perfil — com preço, rede, carência e histórico de reajuste lado a lado."
+      textoApoio={[
+        'A corretora é remunerada pela operadora. Você paga o mesmo valor de tabela, com a assessoria da escolha e o suporte depois da contratação incluídos.',
+        'Seus dados são usados apenas para elaborar a cotação. Não repassamos seu contato a terceiros.',
+      ]}
+      whatsapp={site.nap.whatsapp}
+      cidades={site.cidades}
+    />
+  </div>
+
+  {/* 4 — tipos de plano */}
+  <Servicos
+    variante="grade"
+    titulo="Tipos de plano que cotamos"
+    descricao="O caminho certo depende de ter CNPJ, vínculo com entidade de classe ou nenhum dos dois."
+    itens={planos}
+  />
+
+  {/* 5 — operadoras na carteira: a credibilidade emprestada do modelo */}
+  <Prova
+    variante="logos"
+    titulo="Operadoras na nossa carteira"
+    descricao="Trabalhamos com várias operadoras justamente para poder comparar. Representar uma só seria vender, não assessorar."
+    itens={site.operadoras}
+  />
+
+  {/* 6 — como funciona */}
+  <Passos
+    variante="numerado"
+    titulo="Como funciona a cotação"
+    descricao="Quatro etapas, do primeiro contato ao plano ativo. Sem custo em nenhuma delas."
+    itens={site.passos}
+    notaTitulo="Por que a etapa 1 demora mais do que parece"
+    nota="Entender o perfil não é preencher formulário: é saber quais médicos e hospitais você não abre mão. Uma cotação feita sem isso entrega o plano mais barato, não o que serve."
+  />
+
+  {/* 7 — rede credenciada */}
+  <Prova
+    variante="logos"
+    titulo="Hospitais e laboratórios da região"
+    descricao="Conferimos, antes de indicar, se os serviços que você usa estão na rede daquele plano e naquela abrangência."
+    itens={site.credenciados}
+  />
+
+  {/* 8 — cobertura geográfica */}
+  <AreaAtendida
+    eyebrow="Cobertura"
+    titulo={`Atendemos ${site.nap.cidade} e toda a região`}
+    descricao="Presencial em Sorocaba e remoto nas demais cidades. O corretor designado é o mesmo do começo ao fim."
+    regioes={site.cidades}
+    bullets={site.cidadesBullets}
+    imagem="https://images.unsplash.com/photo-1449844908441-8829872d2607?w=420&h=480&fit=crop&auto=format"
+    imagemAlt="Rua residencial arborizada"
+    selo={`${site.nap.cidade} e região`}
+    ctaTexto="Consultar minha cidade"
+    ctaHref={wa}
+  />
+
+  {/* 9 — quem somos */}
+  <Proposito
+    eyebrow="Quem somos"
+    titulo="Dezesseis anos comparando, não empurrando"
+    paragrafos={[
+      `A Vereda abriu em ${site.anoFundacao} representando uma operadora só. Durou dois anos: ficou claro que, com um produto na mão, toda recomendação vira a mesma recomendação.`,
+      'Hoje são nove operadoras na carteira. Isso significa que nem sempre a resposta é a que paga melhor para nós — e é justamente por isso que o cliente volta no ano seguinte.',
+      'O trabalho que menos aparece é o de depois da venda: negativa de autorização, inclusão de dependente, dúvida de reembolso. É onde a corretora prova que serve para alguma coisa.',
+    ]}
+    imagemSrc="https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=760&h=620&fit=crop&auto=format"
+    imagemAlt="Equipe da corretora em reunião de atendimento"
+  />
+
+  <Numeros variante="escuro" titulo="A corretora em números" itens={site.numeros} nota={site.numerosNota} />
+
+  <Depoimentos
+    titulo="Quem já cotou com a gente"
+    descricao="Clientes atendidos em Sorocaba e região."
+    itens={depoimentos}
+    notaMedia={site.avaliacao.nota}
+    totalAvaliacoes={site.avaliacao.total}
+    fonteAvaliacoes={site.avaliacao.fonte}
+  />
+
+  <Faq
+    variante="com-imagem"
+    titulo="Dúvidas antes de cotar"
+    descricao="As perguntas que mais chegam de quem está começando a procurar plano."
+    itens={site.faq}
+    imagem="https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=400&h=520&fit=crop&auto=format"
+    imagemAlt="Atendimento em consultório médico"
+  />
+
+  <Localizacao
+    titulo="Onde estamos"
+    descricao="Escritório no centro de Sorocaba, com atendimento presencial mediante agendamento e remoto para as demais cidades."
+    logradouro={site.nap.logradouro}
+    complemento={site.nap.complemento}
+    bairro={site.nap.bairro}
+    cidade={site.nap.cidade}
+    uf={site.nap.uf}
+    cep={site.nap.cep}
+    telefone={site.nap.telefone}
+    whatsapp={site.nap.whatsapp}
+    email={site.nap.email}
+    horarios={site.horarios}
+    mapaSrc={site.mapaSrc}
+    mapaHref={`https://maps.google.com/?q=${encodeURIComponent(site.nap.enderecoFormatado)}`}
+  />
+
+  <PostLista
+    variante="destaque"
+    titulo="Do blog"
+    descricao="Carência, reajuste e coparticipação explicados antes de você assinar, não depois."
+    posts={posts}
+    verMaisHref="/tema-07/blog"
+  />
+
+  <BuscasFrequentes titulo={`Buscas frequentes — ${site.nome}`} itens={site.buscasFrequentes} />
+
+  <Footer
+    variante="colunas"
+    nomeSite={site.nome}
+    slogan={site.slogan}
+    telefone={site.nap.telefone}
+    email={site.nap.email}
+    endereco={`${site.nap.logradouro}, ${site.nap.complemento}`}
+    cidade={`${site.nap.bairro}, ${site.nap.cidade} — ${site.nap.uf}`}
+    cnpj={site.cnpj}
+    anoFundacao={site.anoFundacao}
+    redes={site.redes}
+    nav={site.nav}
+    colunas={site.navFooterColunas}
+  />
+
+</Tema07Base>

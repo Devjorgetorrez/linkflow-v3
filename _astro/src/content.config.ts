@@ -387,8 +387,432 @@ const autoresT4 = defineCollection({
   }),
 })
 
+/* ─────────────────────────────────────────────────────────────────────────
+   Tema 05 — Amparo (advocacia / profissão regulamentada)
+   O serviço carrega os dois blocos que estruturam a página de benefício:
+   quemPode (perfis que se enquadram) e situacoes (hipóteses que geram direito).
+   ───────────────────────────────────────────────────────────────────────── */
+
+const servicosT5 = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/content/tema-05/servicos' }),
+  schema: z.object({
+    titulo:          z.string().min(3).max(70),
+    metaDescription: z.string().min(80).max(165),
+    resumo:          z.string(),
+    icone:           z.string().optional(),
+    imagem:          z.string().optional(),
+    imagemAlt:       z.string().optional(),
+    ordem:           z.number().default(99),
+    noindex:         z.boolean().default(false).optional(),
+    categoria:       z.string().optional(),
+    destaques:       z.array(z.string()).default([]),
+    quemPode: z.array(z.object({
+      titulo:    z.string(),
+      descricao: z.string(),
+      imagem:    z.string().optional(),
+      imagemAlt: z.string().optional(),
+    })).default([]),
+    situacoes: z.array(z.object({
+      icone:     z.string(),
+      titulo:    z.string(),
+      descricao: z.string(),
+    })).default([]),
+  }),
+})
+
+const equipeT5 = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/content/tema-05/equipe' }),
+  schema: z.object({
+    nome:          z.string().min(3).max(70),
+    cargo:         z.string(),
+    registro:      z.string().optional(),
+    especialidade: z.string().optional(),
+    foto:          z.string().optional(),
+    ordem:         z.number().default(99),
+  }),
+})
+
+const depoimentosT5 = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/content/tema-05/depoimentos' }),
+  schema: z.object({
+    nome:    z.string(),
+    cidade:  z.string(),
+    servico: z.string(),
+    ordem:   z.number().default(99),
+  }),
+})
+
+const postsT5 = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/content/tema-05/posts' }),
+  schema: z.object({
+    titulo:          z.string().min(3).max(70),
+    metaDescription: z.string().max(165).default(''),
+    // Texto ou data do YAML: `publicadoEm: 2026-09-25` sem aspas o parser lê
+    // como Date, e antes isso derrubava o build do site inteiro. Normaliza
+    // sempre para o texto AAAA-MM-DD que o resto do tema espera.
+    publicadoEm:     z.union([z.string(), z.date()])
+                      .transform((v) => (v instanceof Date ? v.toISOString().slice(0, 10) : v)),
+    status:          z.string().optional(),   // publicado | pronto | rascunho | revisao | agendado | lixeira — ver lib/publicacao.ts
+    categoria:       z.string().optional(),
+    imagemCapa:      z.string().optional(),
+    imagemCapaAlt:   z.string().optional(),
+    /* Assinatura completa — item C da composição */
+    autor:           z.string().optional(),
+    autorFoto:       z.string().optional(),
+    autorCargo:      z.string().optional(),
+    autorBio:        z.string().optional(),
+    autorLinkedin:   z.string().optional(),
+    autorEmail:      z.string().optional(),
+  }).superRefine((d, ctx) => {
+    // O mínimo de 80 caracteres da metaDescription só vale para o que vai
+    // ao ar. Rascunho criado pelo painel nasce sem ela e não pode quebrar o
+    // build do site. Mesma lista de status de lib/publicacao.ts, repetida
+    // aqui porque o promover_tema.py recria este arquivo sem imports extras.
+    const foraDoAr = ['rascunho', 'revisao', 'revisão', 'agendado', 'lixeira']
+      .includes(String(d.status ?? '').trim().toLowerCase())
+    if (!foraDoAr && d.metaDescription.length < 80) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['metaDescription'],
+        message: 'metaDescription precisa ter de 80 a 165 caracteres para publicar',
+      })
+    }
+  }),
+})
+
+const categoriasT5 = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/content/tema-05/categorias' }),
+  // Arquivo de categoria do blog — página /<slug> (raiz) e selo no artigo.
+  // O post referencia a categoria pelo slug em `categoria:`.
+  // Gravado pelo painel (categorias.json -> lib/sync-categorias.ts) ou pelo agente.
+  schema: z.object({
+    nome:            z.string().min(2),
+    descricao:       z.string().default(''),
+    seoTitle:        z.string().optional(),
+    metaDescription: z.string().default(''),
+    imagem:          z.string().optional(),
+    ordem:           z.number().default(99),
+    gerenciadoPor:   z.string().optional(),
+  }),
+})
+
+const autoresT5 = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/content/tema-05/autores' }),
+  // Perfil público de autor — página /autor/<slug> e assinatura dos artigos.
+  // O post referencia o autor pelo slug (nome do arquivo) em `autor:`.
+  // Gravado pelo painel (usuarios.json -> lib/sync-autores.ts) ou pelo agente.
+  schema: z.object({
+    nome:           z.string().min(2),
+    cargo:          z.string().default(''),
+    foto:           z.string().optional(),
+    fotoAlt:        z.string().optional(),
+    bioCurta:       z.string().default(''),
+    bioLonga:       z.string().default(''),
+    conselho:       z.string().default(''),
+    registro:       z.string().default(''),
+    especialidades: z.array(z.string()).default([]),
+    formacao:       z.array(z.string()).default([]),
+    naMidia:        z.array(z.string()).default([]),
+    email:          z.string().optional(),
+    redes: z.object({
+      linkedin:  z.string().optional(),
+      instagram: z.string().optional(),
+      facebook:  z.string().optional(),
+      x:         z.string().optional(),
+      youtube:   z.string().optional(),
+      tiktok:    z.string().optional(),
+      site:      z.string().optional(),
+      lattes:    z.string().optional(),
+    }).default({}),
+    ativo:          z.boolean().default(true),
+    gerenciadoPor:  z.string().optional(),
+  }),
+})
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Tema 06 — Hidroponto (serviço técnico de emergência)
+   O serviço carrega os sinais que indicam o problema e a tecnologia usada.
+   ───────────────────────────────────────────────────────────────────────── */
+
+const servicosT6 = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/content/tema-06/servicos' }),
+  schema: z.object({
+    titulo:          z.string().min(3).max(70),
+    metaDescription: z.string().min(80).max(165),
+    resumo:          z.string(),
+    icone:           z.string().optional(),
+    imagem:          z.string().optional(),
+    imagemAlt:       z.string().optional(),
+    ordem:           z.number().default(99),
+    noindex:         z.boolean().default(false).optional(),
+    categoria:       z.string().optional(),
+    prazo:           z.string().optional(),
+    destaques:       z.array(z.string()).default([]),
+    sinais: z.array(z.object({
+      icone:     z.string(),
+      titulo:    z.string(),
+      descricao: z.string(),
+    })).default([]),
+    tecnologias:     z.array(z.string()).default([]),
+    entregas:        z.array(z.string()).default([]),
+  }),
+})
+
+const equipeT6 = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/content/tema-06/equipe' }),
+  schema: z.object({
+    nome:          z.string().min(3).max(70),
+    cargo:         z.string(),
+    registro:      z.string().optional(),
+    especialidade: z.string().optional(),
+    foto:          z.string().optional(),
+    ordem:         z.number().default(99),
+  }),
+})
+
+const depoimentosT6 = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/content/tema-06/depoimentos' }),
+  schema: z.object({
+    nome:    z.string(),
+    cidade:  z.string(),
+    servico: z.string(),
+    ordem:   z.number().default(99),
+  }),
+})
+
+const postsT6 = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/content/tema-06/posts' }),
+  schema: z.object({
+    titulo:          z.string().min(3).max(70),
+    metaDescription: z.string().max(165).default(''),
+    // Texto ou data do YAML: `publicadoEm: 2026-09-25` sem aspas o parser lê
+    // como Date, e antes isso derrubava o build do site inteiro. Normaliza
+    // sempre para o texto AAAA-MM-DD que o resto do tema espera.
+    publicadoEm:     z.union([z.string(), z.date()])
+                      .transform((v) => (v instanceof Date ? v.toISOString().slice(0, 10) : v)),
+    status:          z.string().optional(),   // publicado | pronto | rascunho | revisao | agendado | lixeira — ver lib/publicacao.ts
+    categoria:       z.string().optional(),
+    imagemCapa:      z.string().optional(),
+    imagemCapaAlt:   z.string().optional(),
+    /* Assinatura completa — item C da composição */
+    autor:           z.string().optional(),
+    autorFoto:       z.string().optional(),
+    autorCargo:      z.string().optional(),
+    autorBio:        z.string().optional(),
+    autorLinkedin:   z.string().optional(),
+    autorInstagram:  z.string().optional(),
+    autorEmail:      z.string().optional(),
+  }).superRefine((d, ctx) => {
+    // O mínimo de 80 caracteres da metaDescription só vale para o que vai
+    // ao ar. Rascunho criado pelo painel nasce sem ela e não pode quebrar o
+    // build do site. Mesma lista de status de lib/publicacao.ts, repetida
+    // aqui porque o promover_tema.py recria este arquivo sem imports extras.
+    const foraDoAr = ['rascunho', 'revisao', 'revisão', 'agendado', 'lixeira']
+      .includes(String(d.status ?? '').trim().toLowerCase())
+    if (!foraDoAr && d.metaDescription.length < 80) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['metaDescription'],
+        message: 'metaDescription precisa ter de 80 a 165 caracteres para publicar',
+      })
+    }
+  }),
+})
+
+const categoriasT6 = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/content/tema-06/categorias' }),
+  // Arquivo de categoria do blog — página /<slug> (raiz) e selo no artigo.
+  // O post referencia a categoria pelo slug em `categoria:`.
+  // Gravado pelo painel (categorias.json -> lib/sync-categorias.ts) ou pelo agente.
+  schema: z.object({
+    nome:            z.string().min(2),
+    descricao:       z.string().default(''),
+    seoTitle:        z.string().optional(),
+    metaDescription: z.string().default(''),
+    imagem:          z.string().optional(),
+    ordem:           z.number().default(99),
+    gerenciadoPor:   z.string().optional(),
+  }),
+})
+
+const autoresT6 = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/content/tema-06/autores' }),
+  // Perfil público de autor — página /autor/<slug> e assinatura dos artigos.
+  // O post referencia o autor pelo slug (nome do arquivo) em `autor:`.
+  // Gravado pelo painel (usuarios.json -> lib/sync-autores.ts) ou pelo agente.
+  schema: z.object({
+    nome:           z.string().min(2),
+    cargo:          z.string().default(''),
+    foto:           z.string().optional(),
+    fotoAlt:        z.string().optional(),
+    bioCurta:       z.string().default(''),
+    bioLonga:       z.string().default(''),
+    conselho:       z.string().default(''),
+    registro:       z.string().default(''),
+    especialidades: z.array(z.string()).default([]),
+    formacao:       z.array(z.string()).default([]),
+    naMidia:        z.array(z.string()).default([]),
+    email:          z.string().optional(),
+    redes: z.object({
+      linkedin:  z.string().optional(),
+      instagram: z.string().optional(),
+      facebook:  z.string().optional(),
+      x:         z.string().optional(),
+      youtube:   z.string().optional(),
+      tiktok:    z.string().optional(),
+      site:      z.string().optional(),
+      lattes:    z.string().optional(),
+    }).default({}),
+    ativo:          z.boolean().default(true),
+    gerenciadoPor:  z.string().optional(),
+  }),
+})
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Tema 07 — Vereda Corretora (intermediação)
+   O "serviço" aqui é o tipo de plano (rota /planos; a coleção continua
+   `servicos`). Carrega o que a corretagem precisa informar antes da cotação:
+   perfil elegível, mínimo de vidas e coberturas.
+   ───────────────────────────────────────────────────────────────────────── */
+
+const servicosT7 = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/content/tema-07/servicos' }),
+  schema: z.object({
+    titulo:          z.string().min(3).max(70),
+    metaDescription: z.string().min(80).max(165),
+    resumo:          z.string(),
+    icone:           z.string().optional(),
+    imagem:          z.string().optional(),
+    imagemAlt:       z.string().optional(),
+    ordem:           z.number().default(99),
+    noindex:         z.boolean().default(false).optional(),
+    categoria:       z.string().optional(),
+    paraQuem:        z.string().optional(),
+    vidasMin:        z.string().optional(),
+    destaques:       z.array(z.string()).default([]),
+    coberturas: z.array(z.object({
+      icone:     z.string(),
+      titulo:    z.string(),
+      descricao: z.string(),
+    })).default([]),
+    inclui:          z.array(z.string()).default([]),
+  }),
+})
+
+const equipeT7 = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/content/tema-07/equipe' }),
+  schema: z.object({
+    nome:          z.string().min(3).max(70),
+    cargo:         z.string(),
+    registro:      z.string().optional(),
+    especialidade: z.string().optional(),
+    foto:          z.string().optional(),
+    ordem:         z.number().default(99),
+  }),
+})
+
+const depoimentosT7 = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/content/tema-07/depoimentos' }),
+  schema: z.object({
+    nome:    z.string(),
+    cidade:  z.string(),
+    servico: z.string(),
+    ordem:   z.number().default(99),
+  }),
+})
+
+const postsT7 = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/content/tema-07/posts' }),
+  schema: z.object({
+    titulo:          z.string().min(3).max(70),
+    metaDescription: z.string().max(165).default(''),
+    // Texto ou data do YAML: `publicadoEm: 2026-09-25` sem aspas o parser lê
+    // como Date, e antes isso derrubava o build do site inteiro. Normaliza
+    // sempre para o texto AAAA-MM-DD que o resto do tema espera.
+    publicadoEm:     z.union([z.string(), z.date()])
+                      .transform((v) => (v instanceof Date ? v.toISOString().slice(0, 10) : v)),
+    status:          z.string().optional(),   // publicado | pronto | rascunho | revisao | agendado | lixeira — ver lib/publicacao.ts
+    categoria:       z.string().optional(),
+    imagemCapa:      z.string().optional(),
+    imagemCapaAlt:   z.string().optional(),
+    /* Assinatura completa — item C da composição */
+    autor:           z.string().optional(),
+    autorFoto:       z.string().optional(),
+    autorCargo:      z.string().optional(),
+    autorBio:        z.string().optional(),
+    autorLinkedin:   z.string().optional(),
+    autorEmail:      z.string().optional(),
+  }).superRefine((d, ctx) => {
+    // O mínimo de 80 caracteres da metaDescription só vale para o que vai
+    // ao ar. Rascunho criado pelo painel nasce sem ela e não pode quebrar o
+    // build do site. Mesma lista de status de lib/publicacao.ts, repetida
+    // aqui porque o promover_tema.py recria este arquivo sem imports extras.
+    const foraDoAr = ['rascunho', 'revisao', 'revisão', 'agendado', 'lixeira']
+      .includes(String(d.status ?? '').trim().toLowerCase())
+    if (!foraDoAr && d.metaDescription.length < 80) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['metaDescription'],
+        message: 'metaDescription precisa ter de 80 a 165 caracteres para publicar',
+      })
+    }
+  }),
+})
+
+const categoriasT7 = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/content/tema-07/categorias' }),
+  // Arquivo de categoria do blog — página /<slug> (raiz) e selo no artigo.
+  // O post referencia a categoria pelo slug em `categoria:`.
+  // Gravado pelo painel (categorias.json -> lib/sync-categorias.ts) ou pelo agente.
+  schema: z.object({
+    nome:            z.string().min(2),
+    descricao:       z.string().default(''),
+    seoTitle:        z.string().optional(),
+    metaDescription: z.string().default(''),
+    imagem:          z.string().optional(),
+    ordem:           z.number().default(99),
+    gerenciadoPor:   z.string().optional(),
+  }),
+})
+
+const autoresT7 = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/content/tema-07/autores' }),
+  // Perfil público de autor — página /autor/<slug> e assinatura dos artigos.
+  // O post referencia o autor pelo slug (nome do arquivo) em `autor:`.
+  // Gravado pelo painel (usuarios.json -> lib/sync-autores.ts) ou pelo agente.
+  schema: z.object({
+    nome:           z.string().min(2),
+    cargo:          z.string().default(''),
+    foto:           z.string().optional(),
+    fotoAlt:        z.string().optional(),
+    bioCurta:       z.string().default(''),
+    bioLonga:       z.string().default(''),
+    conselho:       z.string().default(''),
+    registro:       z.string().default(''),
+    especialidades: z.array(z.string()).default([]),
+    formacao:       z.array(z.string()).default([]),
+    naMidia:        z.array(z.string()).default([]),
+    email:          z.string().optional(),
+    redes: z.object({
+      linkedin:  z.string().optional(),
+      instagram: z.string().optional(),
+      facebook:  z.string().optional(),
+      x:         z.string().optional(),
+      youtube:   z.string().optional(),
+      tiktok:    z.string().optional(),
+      site:      z.string().optional(),
+      lattes:    z.string().optional(),
+    }).default({}),
+    ativo:          z.boolean().default(true),
+    gerenciadoPor:  z.string().optional(),
+  }),
+})
+
 export const collections = {
   servicos, equipe, depoimentos, posts, autores, categorias,
   servicosT3, equipeT3, depoimentosT3, postsT3, autoresT3, categoriasT3,
   servicosT4, equipeT4, depoimentosT4, postsT4, autoresT4, categoriasT4,
+  servicosT5, equipeT5, depoimentosT5, postsT5, autoresT5, categoriasT5,
+  servicosT6, equipeT6, depoimentosT6, postsT6, autoresT6, categoriasT6,
+  servicosT7, equipeT7, depoimentosT7, postsT7, autoresT7, categoriasT7,
 }

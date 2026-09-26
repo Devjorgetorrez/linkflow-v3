@@ -1,0 +1,137 @@
+---
+import Tema06Base   from '../../layouts/Tema06Base.astro'
+import Header       from '../../components/blocos/Header.astro'
+import PageHero     from '../../components/blocos/PageHero.astro'
+import FormContato  from '../../components/blocos/FormContato.astro'
+import AreaAtendida from '../../components/blocos/AreaAtendida.astro'
+import Localizacao  from '../../components/blocos/Localizacao.astro'
+import Prova        from '../../components/blocos/Prova.astro'
+import Depoimentos  from '../../components/blocos/Depoimentos.astro'
+import Cta          from '../../components/blocos/Cta.astro'
+import Footer       from '../../components/blocos/Footer.astro'
+import { site }     from '../../config/tema-06.ts'
+import { getCollection } from 'astro:content'
+
+const depoimentos = (await getCollection('depoimentosT6'))
+  .sort((a, b) => a.data.ordem - b.data.ordem)
+  .map(d => ({ nome: d.data.nome, cidade: d.data.cidade, servico: d.data.servico, corpo: d.body.trim() }))
+
+const wa        = `https://wa.me/${site.nap.whatsapp}`
+const canonical = `${site.dominio}/contato`
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    { '@type': 'ContactPage', '@id': `${canonical}#webpage`, url: canonical,
+      name: `Contato — ${site.nome}`, about: { '@id': `${site.dominio}/#organization` }, inLanguage: 'pt-BR' },
+    { '@type': 'BreadcrumbList', '@id': `${canonical}#breadcrumb`,
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home',    item: `${site.dominio}/` },
+        { '@type': 'ListItem', position: 2, name: 'Contato', item: canonical },
+      ] },
+  ],
+}
+---
+
+<Tema06Base
+  titulo={`Contato — Peça um orçamento na ${site.nome}`}
+  metaDescription="Fale com a Hidroponto em Goiânia. Mande a foto do problema pelo WhatsApp e receba orientação, prazo de atendimento e valor da visita técnica."
+  canonical={canonical}
+  jsonLd={jsonLd}
+  nodeId="contato"
+>
+  <Header
+    variante="padrao"
+    nomeSite={site.nome}
+    telefone={site.nap.telefone}
+    whatsapp={site.nap.whatsapp}
+    nav={site.nav}
+    ctaTexto="Quero um orçamento"
+    ctaHref={wa}
+  />
+
+  <PageHero
+    variante="destaque"
+    titulo={`Contato — Peça um orçamento na ${site.nome}`}
+    descricao="O caminho mais rápido é a foto no WhatsApp. Em emergência, o plantão atende até as 22h, inclusive fim de semana."
+  />
+
+  <div id="formulario">
+    <FormContato
+      variante="institucional"
+      eyebrow="Fale com a nossa equipe"
+      descricao="Conte onde é o problema e o que você está vendo. Se puder, mande também uma foto pelo WhatsApp — acelera muito o diagnóstico."
+      chamada="Plantão de emergência até as 22h"
+      titulo="Nossos contatos"
+      telefone={site.nap.telefone}
+      telefone2={site.nap.telefone2}
+      whatsapp={site.nap.whatsapp}
+      email={site.nap.email}
+      logradouro={site.nap.logradouro}
+      complemento={site.nap.complemento}
+      bairro={site.nap.bairro}
+      cidade={site.nap.cidade}
+      uf={site.nap.uf}
+      cep={site.nap.cep}
+      horarios={site.horarios}
+    />
+  </div>
+
+  <Prova variante="faixa" titulo="O que esperar do atendimento" itens={site.selos} />
+
+  <AreaAtendida
+    eyebrow="Cobertura"
+    titulo="Seu bairro está na nossa rota?"
+    descricao="Esta é a lista das regiões atendidas com frequência. Fora dela, consulte: dependendo do dia conseguimos encaixar."
+    regioes={site.regioes}
+    bullets={site.regioesBullets}
+    imagem="https://images.unsplash.com/photo-1449844908441-8829872d2607?w=420&h=480&fit=crop&auto=format"
+    imagemAlt="Rua residencial arborizada"
+    selo="Goiânia e região metropolitana"
+    ctaTexto="Consultar meu bairro"
+    ctaHref={wa}
+  />
+
+  <Localizacao
+    titulo="Nossa base"
+    descricao="O serviço é feito no seu imóvel. A base recebe apenas agendamento e retirada de equipamento."
+    logradouro={site.nap.logradouro} complemento={site.nap.complemento}
+    bairro={site.nap.bairro} cidade={site.nap.cidade} uf={site.nap.uf} cep={site.nap.cep}
+    telefone={site.nap.telefone} whatsapp={site.nap.whatsapp} email={site.nap.email}
+    horarios={site.horarios} mapaSrc={site.mapaSrc}
+    mapaHref={`https://maps.google.com/?q=${encodeURIComponent(site.nap.enderecoFormatado)}`}
+  />
+
+  <Depoimentos
+    titulo="Quem já nos chamou"
+    itens={depoimentos}
+    notaMedia={site.avaliacao.nota}
+    totalAvaliacoes={site.avaliacao.total}
+    fonteAvaliacoes={site.avaliacao.fonte}
+  />
+
+  <Cta
+    variante="padrao"
+    titulo="É emergência?"
+    descricao="Vazamento em andamento não espera pela agenda. Chame no WhatsApp e a equipe de plantão responde."
+    ctaPrimTexto="Chamar agora"
+    ctaPrimHref={wa}
+    ctaSecTexto="Preencher o formulário"
+    ctaSecHref="#formulario"
+  />
+
+  <Footer
+    variante="colunas"
+    nomeSite={site.nome}
+    slogan={site.slogan}
+    telefone={site.nap.telefone}
+    email={site.nap.email}
+    endereco={`${site.nap.logradouro}, ${site.nap.complemento}`}
+    cidade={`${site.nap.bairro}, ${site.nap.cidade} — ${site.nap.uf}`}
+    cnpj={site.cnpj}
+    anoFundacao={site.anoFundacao}
+    redes={site.redes}
+    nav={site.nav}
+    colunas={site.navFooterColunas}
+  />
+</Tema06Base>

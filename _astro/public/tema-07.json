@@ -1,0 +1,183 @@
+{
+  "id": "vereda-institucional",
+  "nome": "Vereda Institucional",
+  "versao": "1.0.0",
+  "descricao": "Tema de referência SiteFlow para intermediação e corretagem. Índigo profundo com laranja de ação, tipografia Manrope + Inter, 10 tipos de página.",
+  "para_nichos": ["corretora-plano-de-saude", "corretora-de-seguros", "consorcio", "cambio", "credito", "intermediacao"],
+  "rota_base": "/tema-07",
+  "escopo_tokens": "html[data-tema=\"tema-07\"]",
+
+  "tokens": {
+    "primary":     "#4338CA",
+    "primary-ink": "#FFFFFF",
+    "secondary":   "#312A8C",
+    "accent":      "#EA580C",
+    "ink":         "#1B1B2B",
+    "ink-muted":   "#5E5E70",
+    "surface":     "#FFFFFF",
+    "surface-2":   "#F3F2FB",
+    "line":        "#E0DEF2",
+    "success":     "#15803D",
+    "danger":      "#DC2626"
+  },
+
+  "tipografia": {
+    "display": "Manrope",
+    "body":    "Inter",
+    "pesos":   { "display": [600, 700, 800], "body": [400, 500, 600, 700] }
+  },
+
+  "radius":    { "card": "12px", "btn": "8px", "pill": "999px" },
+  "densidade": "confortavel",
+
+  "chrome": { "header": "padrao", "footer": "colunas" },
+
+  "logica_do_modelo": {
+    "resumo": "O visitante não compra na página: ele pede uma cotação. O formulário é o centro, e todo o resto existe para justificar por que vale entregar o dado — comparação real entre operadoras, rede credenciada verificada e cobertura por cidade.",
+    "diferenca_para_os_demais": "Nos temas 03 a 06 a página vende o próprio serviço. Aqui a corretora não é a dona do produto: ela vende a comparação. Por isso a credibilidade é emprestada — operadoras na carteira, hospitais credenciados — e o diferencial declarado é não representar uma operadora só.",
+    "marcas_do_nicho": [
+      "Formulário de cotação repetido em todas as páginas comerciais",
+      "Faixas de parceiros: operadoras na carteira e rede credenciada",
+      "Cobertura por cidade, com lista extensa também no rodapé",
+      "Explicação de que a corretora é remunerada pela operadora, não pelo cliente",
+      "Conteúdo que ensina a comparar, inclusive quando a resposta é permanecer no plano atual"
+    ],
+    "cor_da_paleta": "Índigo em vez de azul. O catálogo já tinha quatro temas na família azul-turquesa (03 a 06) e um quinto tornaria a diferenciação visual inútil."
+  },
+
+  "composicoes_obrigatorias": {
+    "descricao": "Regra de composição deste tema: home, pilar e plano carregam sempre o formulário de cotação, prova social e NAP com mapa embedado.",
+    "paginas": ["home", "pilar", "plano"],
+    "blocos":  ["FormContato:cotacao", "Depoimentos", "Localizacao:mapa-embed"]
+  },
+
+  "paginas": {
+    "home": {
+      "rota": "/tema-07",
+      "blocos": [
+        "Header:padrao",
+        "Hero:destaque",
+        "Prova:faixa",
+        "FormContato:cotacao",
+        "Servicos:grade",
+        "Prova:logos",
+        "Passos:numerado",
+        "Prova:logos",
+        "AreaAtendida",
+        "Proposito",
+        "Numeros:escuro",
+        "Depoimentos:com-nota",
+        "Faq:com-imagem",
+        "Localizacao:mapa-embed",
+        "PostLista:destaque",
+        "BuscasFrequentes",
+        "Footer:colunas"
+      ],
+      "observacao": "Prova:logos aparece duas vezes com papéis distintos — operadoras na carteira e rede credenciada. É a credibilidade emprestada que sustenta a corretagem."
+    },
+    "plano": {
+      "rota": "/tema-07/planos/[id]",
+      "blocos": [
+        "Header:padrao",
+        "Hero:destaque",
+        "FormContato:cotacao",
+        "Prova",
+        "Passos:cards",
+        "Prova:logos",
+        "Numeros:escuro",
+        "Depoimentos:com-nota",
+        "Faq:com-imagem",
+        "Localizacao:mapa-embed",
+        "Servicos:lista",
+        "Cta:padrao",
+        "Footer:colunas"
+      ],
+      "observacao": "O formulário vem antes do texto explicativo, não depois: quem chegou por busca de 'plano empresarial' já sabe o que quer e a página não deve fazê-lo rolar para pedir cotação."
+    },
+    "planos-listagem": {
+      "rota": "/tema-07/planos",
+      "blocos": ["Header:padrao", "PageHero:destaque", "Servicos:lista", "Prova:faixa", "FormContato:cotacao", "Passos:cards", "Prova:logos", "AreaAtendida", "Faq:duas-colunas", "Cta:card", "Footer:colunas"]
+    },
+    "pilar": {
+      "rota": "/tema-07/como-escolher-plano-de-saude",
+      "blocos": ["Header:padrao", "Hero:editorial", "Passos:numerado", "Servicos:grade", "Prova:faixa", "FormContato:cotacao", "Prova:logos", "Numeros:escuro", "Depoimentos:com-nota", "Faq:com-imagem", "Localizacao:mapa-embed", "PostLista:grade", "Cta:padrao", "BuscasFrequentes", "Footer:colunas"],
+      "observacao": "Slug escolhido para não colidir com nenhum slug de plano — foi o problema que levou à remoção do pilar do Tema 06."
+    },
+    "sobre": {
+      "rota": "/tema-07/sobre",
+      "blocos": ["Header:padrao", "PageHero:destaque", "Proposito", "Prova:faixa", "Equipe:grade", "Numeros:escuro", "Abordagem", "Prova:logos", "Depoimentos:com-nota", "Cta:card", "Footer:colunas"]
+    },
+    "contato": {
+      "rota": "/tema-07/contato",
+      "blocos": ["Header:padrao", "PageHero:destaque", "FormContato:cotacao", "FormContato:institucional", "Prova:faixa", "AreaAtendida", "Localizacao:mapa-embed", "Depoimentos:com-nota", "Cta:padrao", "Footer:colunas"],
+      "observacao": "Traz os dois formulários de propósito: cotação para quem já decidiu pedir proposta, e contato institucional para quem só quer tirar dúvida antes."
+    },
+    "blog-listagem": {
+      "rota": "/tema-07/blog",
+      "blocos": ["Header:padrao", "PageHero:destaque", "PostLista:grade", "Tags", "Cta:card", "Footer:colunas"]
+    },
+    "artigo": {
+      "rota": "/tema-07/blog/[id]",
+      "blocos": ["Header:padrao", "Autor:byline", "Autor:assinatura", "PostLista:grade", "Cta:padrao", "Footer:colunas"],
+      "observacao": "Fecha com aviso de que regras de carência, reajuste e cobertura variam por operadora e norma vigente da ANS."
+    },
+    "politica-de-privacidade": {
+      "rota": "/tema-07/politica-de-privacidade",
+      "blocos": ["Header:padrao", "PageHero:destaque", "ConteudoLegal:politica", "Footer:colunas"],
+      "ancoras_obrigatorias": ["#cookies", "#direitos"],
+      "campos_cliente_preenchidos_com_exemplo": true,
+      "observacao": "§6.2 — encarregado nomeado, por tratar dado de saúde na declaração exigida pela operadora."
+    },
+    "termos-de-uso": {
+      "rota": "/tema-07/termos-de-uso",
+      "opcional": true,
+      "ligado_por_padrao": false,
+      "noindex": true,
+      "blocos": ["Header:padrao", "PageHero:destaque", "ConteudoLegal:termos", "Footer:colunas"],
+      "observacao": "§6.3 — opcional e desligado por padrão."
+    }
+  },
+
+  "blocos_novos_criados": [],
+
+  "variantes_novas_em_blocos_existentes": [
+    {
+      "bloco": "FormContato",
+      "variante": "cotacao",
+      "default_inalterado": "padrao",
+      "motivo": "O formulário de cotação é o produto da corretagem, não um canal de contato. Campos do nicho: quantidade de vidas, cidade, existência de CNPJ e de plano ativo — é o que define a elegibilidade antes de qualquer preço.",
+      "decisao": "Labels visíveis, ao contrário da variante institucional. Formulário longo apenas com placeholder é onde mais se erra preenchimento, e aqui cada campo errado custa uma cotação inútil."
+    },
+    {
+      "bloco": "Prova",
+      "variante": "logos",
+      "default_inalterado": "padrao",
+      "motivo": "Cumpre o Prova:logos previsto no §3.2 do MD. Em intermediação, a credibilidade é emprestada de quem se representa.",
+      "decisao": "Renderiza o nome do parceiro em placa tipográfica, não imagem de logo. Tema de referência não deve embutir marca de terceiro, e a placa comunica a mesma coisa sem esse risco."
+    }
+  ],
+
+  "blocos_reaproveitados_sem_alteracao": [
+    "Hero:destaque e Faq:com-imagem, criados no Tema 04",
+    "Passos:numerado e Passos:cards, criados no Tema 04",
+    "AreaAtendida, criado no Tema 04",
+    "Numeros:escuro, criado no Tema 05",
+    "Prova:faixa, criado no ajuste do Tema 05",
+    "PageHero:destaque e FormContato:institucional, criados no Tema 03",
+    "Autor:byline e Autor:assinatura, criados no Tema 03",
+    "ConteudoLegal:politica e ConteudoLegal:termos, criados no Tema 03"
+  ],
+
+  "conteudo_ficticio": {
+    "aviso": "Corretora, endereço, telefone, CNPJ e registro SUSEP são de exemplo. As operadoras e os hospitais citados também são inventados — nenhuma marca real de operadora, hospital ou laboratório aparece no tema.",
+    "operadoras_ficticias": ["Vitalis Saúde", "Cordis Med", "Meridiano Saúde", "Aliança Saúde", "Prisma Saúde", "Núcleo Vida", "Serena Odonto", "Âncora Seguros"],
+    "credenciados_ficticios": ["Hospital Santa Vereda", "Instituto Coração Novo", "Hospital Bom Retiro", "Laboratório Analitec"]
+  },
+
+  "secoes_omitidas": [
+    { "secao": "Logos reais de operadoras e hospitais", "motivo": "A referência exibe marcas de terceiros reais. Substituídas por parceiros fictícios em placa tipográfica — é o que um tema de catálogo pode entregar sem embutir marca alheia." },
+    { "secao": "Carrossel de hospitais com setas", "motivo": "Exigiria JavaScript. Os mesmos itens cabem em grade." },
+    { "secao": "Cards de cidade expansíveis", "motivo": "O acordeão por cidade da referência esconde conteúdo que interessa ao rastreador. A lista aberta do AreaAtendida entrega a mesma informação de forma indexável." },
+    { "secao": "Área do corretor e envio de proposta", "motivo": "Área logada exige back-end. Fora do escopo de um tema estático — e, se existisse, ligaria os Termos de Uso, hoje opcionais." }
+  ]
+}

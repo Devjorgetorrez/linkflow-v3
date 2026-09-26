@@ -1,0 +1,102 @@
+---
+/**
+ * Numeros — indicadores de escala e resultado.
+ *
+ * Cumpre o papel de `Prova:numeros` do §3.2 do MD, que ainda não existia no
+ * repositório. Em profissão regulamentada é a prova que substitui a promessa:
+ * o número diz o tamanho da operação sem prometer resultado, o que a maioria
+ * dos conselhos profissionais proíbe.
+ *
+ * variantes:
+ *   escuro — faixa cheia sobre secondary, para separar duas seções claras.
+ *   claro  — cartões sobre surface-2, quando já há faixa escura por perto.
+ *
+ * Sem contador animado: exigiria JavaScript e o número final é o que importa.
+ * `nota` renderiza um rodapé com a data-base ou a fonte do dado — sem isso,
+ * número solto em site de profissão regulamentada vira promessa implícita.
+ *
+ * Empty state: não renderiza se itens.length === 0.
+ */
+
+interface Indicador {
+  valor:   string
+  rotulo:  string
+  detalhe?: string
+}
+
+interface Props {
+  variante?:  'escuro' | 'claro'
+  titulo?:    string
+  descricao?: string
+  itens:      Indicador[]
+  nota?:      string
+}
+
+const {
+  variante = 'escuro',
+  titulo,
+  descricao,
+  itens = [],
+  nota,
+} = Astro.props
+
+if (itens.length === 0) return
+
+const escuro = variante === 'escuro'
+---
+
+<section class:list={['py-[var(--space-section)]', escuro ? 'bg-secondary' : 'bg-surface-2']}>
+  <div class="container-wide">
+
+    {(titulo || descricao) && (
+      <div class="mb-10 text-center">
+        {titulo && (
+          <h2 class:list={[
+            'font-display text-[clamp(1.5rem,3vw,2.125rem)] font-bold',
+            escuro ? 'text-surface' : 'text-secondary',
+          ]}>{titulo}</h2>
+        )}
+        {descricao && (
+          <p class:list={[
+            'mx-auto mt-3 max-w-[620px] text-base',
+            escuro ? 'text-surface/70' : 'text-ink-muted',
+          ]}>{descricao}</p>
+        )}
+      </div>
+    )}
+
+    <dl class="m-0 grid gap-6 p-0 sm:grid-cols-2 lg:grid-cols-4">
+      {itens.map(i => (
+        <div class:list={[
+          'p-6 text-center',
+          escuro
+            ? 'rounded-[var(--radius-card)] bg-surface/5'
+            : 'rounded-[var(--radius-card)] border border-line bg-surface',
+        ]}>
+          <dd class:list={[
+            'm-0 font-display text-[clamp(1.75rem,4vw,2.5rem)] font-bold leading-none tabular-nums',
+            escuro ? 'text-accent' : 'text-primary',
+          ]}>{i.valor}</dd>
+          <dt class:list={[
+            'mt-2.5 text-sm font-semibold leading-snug',
+            escuro ? 'text-surface' : 'text-secondary',
+          ]}>{i.rotulo}</dt>
+          {i.detalhe && (
+            <p class:list={[
+              'mt-1.5 text-xs leading-relaxed',
+              escuro ? 'text-surface/60' : 'text-ink-muted',
+            ]}>{i.detalhe}</p>
+          )}
+        </div>
+      ))}
+    </dl>
+
+    {nota && (
+      <p class:list={[
+        'mt-7 text-center text-xs',
+        escuro ? 'text-surface/50' : 'text-ink-muted',
+      ]}>{nota}</p>
+    )}
+
+  </div>
+</section>

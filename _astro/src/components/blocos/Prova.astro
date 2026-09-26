@@ -1,26 +1,57 @@
 ---
 /**
- * Prova — diferenciais em grade (4 cards com ícone texto + título + descrição)
- * Empty state: não renderiza se itens.length === 0 ou sem titulo.
+ * Prova — promessas verificáveis do negócio.
+ *
+ * variantes:
+ *   padrao — grade de cards sobre `primary`. Comportamento original e default,
+ *            então os temas que já usavam o bloco não mudam.
+ *   faixa  — cartão claro em colunas com divisória, que encosta na seção de
+ *            cima. É a faixa de selos logo abaixo do hero.
+ *   logos  — grade de parceiros e credenciados (o `Prova:logos` do §3.2).
+ *            Renderiza o nome em placa tipográfica, não imagem de logo:
+ *            tema de referência não deve embutir marca de terceiro, e placa
+ *            com o nome comunica a mesma coisa sem esse risco. `descricao`
+ *            vira legenda curta sob a placa.
+ *
+ * Ícone: quando `icone` casa com uma chave do mapa abaixo, sai o traço de
+ * verdade. Qualquer outro valor cai para as duas primeiras letras, que era o
+ * comportamento único antes — é o que mantém Temas 01, 03 e 04 inalterados.
+ *
+ * Empty state: não renderiza se itens.length === 0.
  */
 
+import { tracos, temTraco } from './icones.ts'
+
 interface Item {
-  icone:    string
-  titulo:   string
+  icone:     string
+  titulo:    string
   descricao: string
 }
 
 interface Props {
-  titulo?:   string
+  variante?:  'padrao' | 'faixa' | 'logos'
+  titulo?:    string
   descricao?: string
-  itens:     Item[]
+  itens:      Item[]
+  /* faixa: encosta na seção anterior, para sobrepor o hero */
+  sobrepor?:  boolean
 }
 
-const { titulo, descricao, itens = [] } = Astro.props
+const {
+  variante = 'padrao',
+  titulo,
+  descricao,
+  itens = [],
+  sobrepor = false,
+} = Astro.props
 
 if (itens.length === 0) return
+
+/* Traços de 24px, todos com o mesmo peso, para não misturar estilos. */
+
 ---
 
+{variante === 'padrao' && (
 <section class="bg-primary py-[var(--space-section)]">
   <div class="container-wide">
     {(titulo || descricao) && (
@@ -40,9 +71,14 @@ if (itens.length === 0) return
       {itens.map(item => (
         <li class="rounded-[var(--radius-card)] bg-primary-ink/10 p-6 border border-primary-ink/20">
           <div class="mb-4 flex h-10 w-10 items-center justify-center rounded-[var(--radius-btn)] bg-primary-ink/15">
-            <span class="text-xs font-mono font-bold text-primary-ink select-none" aria-hidden="true">
-              {item.icone.slice(0, 2).toUpperCase()}
-            </span>
+            {temTraco(item.icone)
+              ? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"
+                     class="text-primary-ink" aria-hidden="true" set:html={tracos[item.icone]} />
+              : <span class="text-xs font-mono font-bold text-primary-ink select-none" aria-hidden="true">
+                  {item.icone.slice(0, 2).toUpperCase()}
+                </span>
+            }
           </div>
           <p class="font-semibold text-primary-ink mb-2">{item.titulo}</p>
           <p class="text-sm text-primary-ink/75 leading-relaxed">{item.descricao}</p>
@@ -51,3 +87,80 @@ if (itens.length === 0) return
     </ul>
   </div>
 </section>
+)}
+
+{variante === 'faixa' && (
+<section class:list={['bg-surface', sobrepor ? 'pb-[var(--space-section)]' : 'py-[var(--space-section)]']}>
+  <div class="container-wide">
+
+    {(titulo || descricao) && (
+      <div class:list={['text-center', sobrepor ? 'pt-[var(--space-section)] mb-9' : 'mb-9']}>
+        {titulo && (
+          <h2 class="font-display text-[clamp(1.375rem,2.5vw,1.875rem)] font-bold text-secondary">{titulo}</h2>
+        )}
+        {descricao && (
+          <p class="mx-auto mt-2.5 max-w-[620px] text-base text-ink-muted">{descricao}</p>
+        )}
+      </div>
+    )}
+
+    <ul class:list={[
+      'm-0 grid list-none gap-0 overflow-hidden rounded-[var(--radius-card)] border border-line bg-surface p-0 shadow-[0_6px_28px_rgba(15,35,56,0.08)] sm:grid-cols-2',
+      itens.length >= 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-3',
+      sobrepor && !titulo && !descricao ? '-mt-12 relative z-10' : '',
+    ]}>
+      {itens.map((item, i) => (
+        <li class:list={[
+          'flex items-start gap-4 p-7',
+          i > 0 ? 'border-t border-line sm:border-t-0 sm:border-l' : '',
+          i === 2 && itens.length === 4 ? 'lg:border-l' : '',
+        ]}>
+          <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-btn)] bg-primary/8 text-primary" aria-hidden="true">
+            {temTraco(item.icone)
+              ? <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"
+                     set:html={tracos[item.icone]} />
+              : <span class="font-mono text-xs font-bold select-none">{item.icone.slice(0, 2).toUpperCase()}</span>
+            }
+          </span>
+          <div class="min-w-0">
+            <p class="font-display text-[0.9375rem] font-bold leading-snug text-secondary">{item.titulo}</p>
+            <p class="mt-1.5 text-sm leading-relaxed text-ink-muted">{item.descricao}</p>
+          </div>
+        </li>
+      ))}
+    </ul>
+
+  </div>
+</section>
+)}
+
+{variante === 'logos' && (
+<section class="bg-surface py-[var(--space-section)]">
+  <div class="container-wide">
+
+    {(titulo || descricao) && (
+      <div class="mb-10 text-center">
+        {titulo && (
+          <h2 class="font-display text-[clamp(1.375rem,2.5vw,1.875rem)] font-bold text-secondary">{titulo}</h2>
+        )}
+        {descricao && (
+          <p class="mx-auto mt-2.5 max-w-[640px] text-base text-ink-muted">{descricao}</p>
+        )}
+      </div>
+    )}
+
+    <ul class="m-0 grid list-none gap-4 p-0 sm:grid-cols-2 lg:grid-cols-4">
+      {itens.map(item => (
+        <li class="flex flex-col items-center justify-center rounded-[var(--radius-card)] border border-line bg-surface-2 px-5 py-7 text-center transition-colors hover:border-primary/40">
+          <span class="font-display text-base font-bold leading-tight text-secondary">{item.titulo}</span>
+          {item.descricao && (
+            <span class="mt-1.5 text-xs leading-snug text-ink-muted">{item.descricao}</span>
+          )}
+        </li>
+      ))}
+    </ul>
+
+  </div>
+</section>
+)}

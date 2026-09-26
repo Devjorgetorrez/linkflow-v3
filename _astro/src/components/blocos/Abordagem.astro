@@ -5,6 +5,8 @@
  * Empty state: não renderiza sem titulo.
  */
 
+import { tracos, temTraco } from './icones.ts'
+
 interface Item {
   icone:    string
   titulo:   string
@@ -43,9 +45,14 @@ if (!titulo) return
           {itens.map(item => (
             <li class="rounded-[var(--radius-card)] bg-primary-ink/8 border border-primary-ink/15 p-5">
               <div class="mb-3 flex h-10 w-10 items-center justify-center rounded-[var(--radius-btn)] bg-accent/20">
-                <span class="text-xs font-mono font-bold text-accent select-none" aria-hidden="true">
+                {temTraco(item.icone)
+                  ? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"
+                         aria-hidden="true" set:html={tracos[item.icone]} />
+                  : <span class="text-xs font-mono font-bold text-accent select-none" aria-hidden="true">
                   {item.icone.slice(0, 2).toUpperCase()}
                 </span>
+                }
               </div>
               <p class="font-semibold text-primary-ink text-sm leading-snug">{item.titulo}</p>
               {item.descricao && (

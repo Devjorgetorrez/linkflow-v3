@@ -1,0 +1,253 @@
+---
+/**
+ * Home do Tema 05 — advocacia e profissão regulamentada.
+ *
+ * A lógica é de autoridade, não de conversão rápida: o visitante está
+ * avaliando a quem confiar um processo que dura anos. Por isso a página
+ * mostra especialização, equipe com registro, escala da operação e prova
+ * social — e evita preço, promessa de resultado e verbo de venda, que o
+ * Provimento 205/2021 da OAB veda.
+ */
+import Tema05Base  from '../../layouts/Tema05Base.astro'
+import Header      from '../../components/blocos/Header.astro'
+import Hero        from '../../components/blocos/Hero.astro'
+import Prova       from '../../components/blocos/Prova.astro'
+import Servicos    from '../../components/blocos/Servicos.astro'
+import Proposito   from '../../components/blocos/Proposito.astro'
+import Abordagem   from '../../components/blocos/Abordagem.astro'
+import Numeros     from '../../components/blocos/Numeros.astro'
+import Depoimentos from '../../components/blocos/Depoimentos.astro'
+import Equipe      from '../../components/blocos/Equipe.astro'
+import Localizacao from '../../components/blocos/Localizacao.astro'
+import Cta         from '../../components/blocos/Cta.astro'
+import PostLista   from '../../components/blocos/PostLista.astro'
+import BuscasFrequentes from '../../components/blocos/BuscasFrequentes.astro'
+import Footer      from '../../components/blocos/Footer.astro'
+import { site }    from '../../config/tema-05.ts'
+import { getCollection } from 'astro:content'
+
+const servicos = (await getCollection('servicosT5'))
+  .sort((a, b) => a.data.ordem - b.data.ordem)
+  .map(s => ({
+    titulo: s.data.titulo, descricao: s.data.resumo, icone: s.data.icone ?? '',
+    imagem: s.data.imagem, imagemAlt: s.data.imagemAlt,
+    href: `/tema-05/servicos/${s.id}`, categoria: s.data.categoria,
+  }))
+
+const equipe = (await getCollection('equipeT5'))
+  .sort((a, b) => a.data.ordem - b.data.ordem)
+  .map(m => ({ nome: m.data.nome, cargo: m.data.cargo, crm: m.data.registro,
+               especialidade: m.data.especialidade, foto: m.data.foto }))
+
+const depoimentos = (await getCollection('depoimentosT5'))
+  .sort((a, b) => a.data.ordem - b.data.ordem)
+  .map(d => ({ nome: d.data.nome, cidade: d.data.cidade, servico: d.data.servico, corpo: d.body.trim() }))
+
+const posts = (await getCollection('postsT5'))
+  .sort((a, b) => new Date(b.data.publicadoEm).getTime() - new Date(a.data.publicadoEm).getTime())
+  .map(p => ({
+    titulo: p.data.titulo, publicadoEm: p.data.publicadoEm, categoria: p.data.categoria,
+    imagemCapa: p.data.imagemCapa, imagemCapaAlt: p.data.imagemCapaAlt,
+    autor: p.data.autor, href: `/tema-05/blog/${p.id}`,
+  }))
+
+const anos      = new Date().getFullYear() - site.anoFundacao
+const canonical = `${site.dominio}/`
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type':   ['LegalService', 'ProfessionalService'],
+      '@id':     `${site.dominio}/#organization`,
+      name:      site.nomeLongo,
+      url:       site.dominio,
+      telephone: site.nap.telefone,
+      email:     site.nap.email,
+      slogan:    site.slogan,
+      foundingDate: String(site.anoFundacao),
+      address: {
+        '@type': 'PostalAddress',
+        streetAddress:   `${site.nap.logradouro}, ${site.nap.complemento}`,
+        addressLocality: site.nap.cidade,
+        addressRegion:   site.nap.uf,
+        postalCode:      site.nap.cep,
+        addressCountry:  'BR',
+      },
+      openingHoursSpecification: [
+        { '@type': 'OpeningHoursSpecification', dayOfWeek: ['Monday','Tuesday','Wednesday','Thursday','Friday'], opens: '09:00', closes: '18:00' },
+      ],
+      areaServed: [
+        { '@type': 'State', name: 'Minas Gerais' },
+        { '@type': 'State', name: 'São Paulo' },
+        { '@type': 'State', name: 'Espírito Santo' },
+      ],
+      knowsAbout: ['Direito Previdenciário', 'Benefícios do INSS', 'Regime Próprio de Previdência'],
+    },
+    {
+      '@type': 'WebSite', '@id': `${site.dominio}/#website`,
+      url: site.dominio, name: site.nome,
+      publisher: { '@id': `${site.dominio}/#organization` }, inLanguage: 'pt-BR',
+    },
+    {
+      '@type': 'WebPage', '@id': `${canonical}#webpage`,
+      url: canonical, name: `${site.nomeLongo} em ${site.nap.cidade}`,
+      isPartOf: { '@id': `${site.dominio}/#website` },
+      about: { '@id': `${site.dominio}/#organization` }, inLanguage: 'pt-BR',
+    },
+    {
+      '@type': 'FAQPage', '@id': `${canonical}#faq`,
+      mainEntity: site.faq.map(f => ({
+        '@type': 'Question', name: f.pergunta,
+        acceptedAnswer: { '@type': 'Answer', text: f.resposta },
+      })),
+    },
+  ],
+}
+---
+
+<Tema05Base
+  titulo={`Advogados Previdenciários em ${site.nap.cidade} — ${site.nome}`}
+  metaDescription="Escritório dedicado exclusivamente a direito previdenciário em Belo Horizonte. Benefícios do INSS, BPC/LOAS e aposentadoria de servidor público, com acompanhamento mensal."
+  canonical={canonical}
+  jsonLd={jsonLd}
+  nodeId="home"
+>
+
+  <Header
+    variante="padrao"
+    nomeSite={site.nome}
+    telefone={site.nap.telefone}
+    whatsapp={site.nap.whatsapp}
+    nav={site.nav}
+    ctaTexto="Agendar atendimento"
+    ctaHref="/tema-05/contato"
+  />
+
+  {/* 1 — quem somos e do que tratamos, sem promessa de resultado */}
+  <Hero
+    variante="destaque"
+    titulo="Advogados previdenciários dedicados a benefícios do INSS e a servidores públicos"
+    lead={`Desde ${site.anoFundacao} o escritório atua exclusivamente em direito previdenciário. Analisamos o caso, dizemos o que ele comporta e acompanhamos o processo até o fim — com relatório mensal do que andou.`}
+    ctaPrimTexto="Agendar uma conversa"
+    ctaPrimHref="/tema-05/contato"
+    ctaSecTexto="Ver áreas de atuação"
+    ctaSecHref="/tema-05/servicos"
+    nota="Honorários conforme a tabela da OAB/MG, acertados por contrato antes de qualquer providência."
+    imagem="https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=560&h=460&fit=crop&auto=format"
+    imagemAlt="Equipe de advogados do escritório em reunião"
+    provaNumero={`+${anos} anos`}
+    provaTexto="de atuação exclusiva na área"
+  />
+
+  {/* 2 — as três promessas verificáveis, em faixa clara encostada no hero */}
+  <Prova variante="faixa" sobrepor={true} itens={site.selos} />
+
+  {/* 3 — áreas de atuação */}
+  <Servicos
+    variante="grade"
+    titulo="Áreas de atuação"
+    descricao="Benefícios do INSS e regime próprio de previdência, na via administrativa e na judicial."
+    itens={servicos}
+  />
+
+  {/* 4 — o escritório */}
+  <Proposito
+    eyebrow="O escritório"
+    titulo="Uma área só, há mais de uma década"
+    paragrafos={[
+      `Amparo Advocacia nasceu em ${site.anoFundacao} com uma decisão que nunca foi revista: atuar apenas em direito previdenciário. Não fazemos trabalhista, cível nem família — e recusamos os casos que chegam por essas portas.`,
+      'Especializar custa faturamento no começo e devolve profundidade depois. Regra de transição, tempo especial e critério de renda do BPC mudam com frequência, e acompanhar isso exige leitura semanal de jurisprudência, não consulta esporádica.',
+      'O compromisso que fazemos na primeira conversa é o de dizer quando o caso não tem fundamento. É a resposta que menos gera contrato e a que mais evita anos de expectativa em um processo perdido.',
+    ]}
+    imagemSrc="https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=760&h=620&fit=crop&auto=format"
+    imagemAlt="Biblioteca jurídica do escritório"
+  />
+
+  {/* 5 — diferenciais em faixa escura */}
+  <Abordagem
+    titulo="Como conduzimos um caso"
+    descricao="Seis práticas fixas, que valem para qualquer benefício e para qualquer cliente."
+    itens={site.diferenciais}
+  />
+
+  {/* 6 — escala da operação, nunca resultado prometido */}
+  <Numeros
+    variante="claro"
+    titulo="O escritório em números"
+    itens={site.numeros}
+    nota={site.numerosNota}
+  />
+
+  {/* 7 — prova social */}
+  <Depoimentos
+    titulo="Quem já foi atendido"
+    descricao="Relatos de clientes do escritório, publicados com autorização."
+    itens={depoimentos}
+    notaMedia="4,9"
+    totalAvaliacoes="+140"
+    fonteAvaliacoes="avaliações no Google"
+  />
+
+  {/* 8 — equipe com registro visível */}
+  <Equipe
+    variante="grade"
+    titulo="Quem vai cuidar do seu caso"
+    descricao="Todos inscritos na OAB/MG. O advogado que analisa o caso é o que conversa com você do início ao fim."
+    membros={equipe}
+  />
+
+  <Cta
+    variante="padrao"
+    titulo="Antes de qualquer providência, uma conversa"
+    descricao="Antes de qualquer providência, uma conversa para entender a sua história de contribuição e dizer, com honestidade, o que o caso comporta."
+    ctaPrimTexto="Agendar atendimento"
+    ctaPrimHref="/tema-05/contato"
+    ctaSecTexto="Entender o processo"
+    ctaSecHref="/tema-05/direito-previdenciario"
+  />
+
+  {/* 9 — NAP completo e mapa */}
+  <Localizacao
+    titulo="Onde estamos"
+    descricao="Escritório no bairro Funcionários, em Belo Horizonte. Atendimento presencial com hora marcada e por videoconferência para outras cidades."
+    logradouro={site.nap.logradouro}
+    complemento={site.nap.complemento}
+    bairro={site.nap.bairro}
+    cidade={site.nap.cidade}
+    uf={site.nap.uf}
+    cep={site.nap.cep}
+    telefone={site.nap.telefone}
+    whatsapp={site.nap.whatsapp}
+    email={site.nap.email}
+    horarios={site.horarios}
+    mapaSrc={site.mapaSrc}
+    mapaHref={`https://maps.google.com/?q=${encodeURIComponent(site.nap.enderecoFormatado)}`}
+  />
+
+  <PostLista
+    variante="destaque"
+    titulo="Publicações"
+    descricao="O que explicamos na primeira conversa, escrito para quem ainda não decidiu procurar advogado."
+    posts={posts}
+    verMaisHref="/tema-05/blog"
+  />
+
+  <BuscasFrequentes titulo={`Buscas frequentes — ${site.nome}`} itens={site.buscasFrequentes} />
+
+  <Footer
+    variante="colunas"
+    nomeSite={site.nome}
+    slogan={site.slogan}
+    telefone={site.nap.telefone}
+    email={site.nap.email}
+    endereco={`${site.nap.logradouro}, ${site.nap.complemento}`}
+    cidade={`${site.nap.bairro}, ${site.nap.cidade} — ${site.nap.uf}`}
+    cnpj={site.cnpj}
+    anoFundacao={site.anoFundacao}
+    redes={site.redes}
+    nav={site.nav}
+    colunas={site.navFooterColunas}
+  />
+
+</Tema05Base>

@@ -1,0 +1,134 @@
+---
+import Tema07Base   from '../../layouts/Tema07Base.astro'
+import Header       from '../../components/blocos/Header.astro'
+import PageHero     from '../../components/blocos/PageHero.astro'
+import Proposito    from '../../components/blocos/Proposito.astro'
+import Prova        from '../../components/blocos/Prova.astro'
+import Equipe       from '../../components/blocos/Equipe.astro'
+import Numeros      from '../../components/blocos/Numeros.astro'
+import Abordagem    from '../../components/blocos/Abordagem.astro'
+import Depoimentos  from '../../components/blocos/Depoimentos.astro'
+import Cta          from '../../components/blocos/Cta.astro'
+import Footer       from '../../components/blocos/Footer.astro'
+import { site }     from '../../config/tema-07.ts'
+import { getCollection } from 'astro:content'
+
+const equipe = (await getCollection('equipeT7'))
+  .sort((a, b) => a.data.ordem - b.data.ordem)
+  .map(m => ({ nome: m.data.nome, cargo: m.data.cargo, crm: m.data.registro,
+               especialidade: m.data.especialidade, foto: m.data.foto }))
+
+const depoimentos = (await getCollection('depoimentosT7'))
+  .sort((a, b) => a.data.ordem - b.data.ordem)
+  .map(d => ({ nome: d.data.nome, cidade: d.data.cidade, servico: d.data.servico, corpo: d.body.trim() }))
+
+const anos      = new Date().getFullYear() - site.anoFundacao
+const wa        = `https://wa.me/${site.nap.whatsapp}`
+const canonical = `${site.dominio}/sobre`
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    { '@type': 'AboutPage', '@id': `${canonical}#webpage`, url: canonical,
+      name: `Quem somos — ${site.nome}`, about: { '@id': `${site.dominio}/#organization` }, inLanguage: 'pt-BR' },
+    { '@type': 'BreadcrumbList', '@id': `${canonical}#breadcrumb`,
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home',       item: `${site.dominio}/` },
+        { '@type': 'ListItem', position: 2, name: 'Quem somos', item: canonical },
+      ] },
+  ],
+}
+---
+
+<Tema07Base
+  titulo={`Quem somos — ${site.nomeLongo}`}
+  metaDescription="Conheça a Vereda Corretora: dezesseis anos de corretagem em Sorocaba, nove operadoras na carteira e suporte que continua depois da contratação."
+  canonical={canonical}
+  jsonLd={jsonLd}
+  nodeId="sobre"
+>
+  <Header
+    variante="padrao"
+    nomeSite={site.nome}
+    telefone={site.nap.telefone}
+    whatsapp={site.nap.whatsapp}
+    nav={site.nav}
+    ctaTexto="Solicitar cotação"
+    ctaHref="#cotacao"
+  />
+
+  <PageHero
+    variante="destaque"
+    eyebrow="Quem somos"
+    titulo={`${anos} anos comparando planos`}
+    descricao="Corretora com registro na SUSEP e nove operadoras na carteira. Comparar exige ter mais de um produto na mão — e é por isso que não representamos uma só."
+  />
+
+  <Proposito
+    eyebrow="Como começou"
+    titulo="Começamos representando uma operadora. Durou dois anos."
+    paragrafos={[
+      `A Vereda abriu em ${site.anoFundacao} como representante de uma operadora. Ficou claro rápido que, com um produto na mão, toda recomendação vira a mesma — e o cliente percebe.`,
+      'A virada foi montar carteira com várias operadoras e passar a entregar comparativo em vez de proposta. O faturamento caiu no primeiro ano e a taxa de renovação subiu no segundo.',
+      'Hoje o trabalho que menos aparece é o que mais nos define: negativa de autorização, inclusão de dependente, dúvida de reembolso. É o pós-venda que separa corretor de vendedor.',
+    ]}
+    imagemSrc="https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=760&h=620&fit=crop&auto=format"
+    imagemAlt="Equipe da corretora em reunião de atendimento"
+  />
+
+  <Prova variante="faixa" titulo="O que garantimos em qualquer cotação" itens={site.selos} />
+
+  <Equipe
+    variante="grade"
+    titulo="Quem vai atender você"
+    descricao="Corretores com registro na SUSEP. O profissional que monta a cotação é o mesmo que resolve o problema depois."
+    membros={equipe}
+  />
+
+  <Numeros variante="escuro" titulo="A corretora em números" itens={site.numeros} nota={site.numerosNota} />
+
+  <Abordagem
+    titulo="Como trabalhamos"
+    descricao="Seis compromissos que explicam por que o comparativo tem essa cara."
+    itens={site.diferenciais}
+  />
+
+  <Prova
+    variante="logos"
+    titulo="Operadoras na nossa carteira"
+    itens={site.operadoras}
+  />
+
+  <Depoimentos
+    titulo="O que dizem os clientes"
+    itens={depoimentos}
+    notaMedia={site.avaliacao.nota}
+    totalAvaliacoes={site.avaliacao.total}
+    fonteAvaliacoes={site.avaliacao.fonte}
+  />
+
+  <Cta
+    variante="card"
+    titulo="Quer conversar antes de cotar?"
+    descricao="Um corretor responde no WhatsApp e tira dúvida sem formulário e sem compromisso."
+    ctaPrimTexto="Falar no WhatsApp"
+    ctaPrimHref={wa}
+    ctaSecTexto="Ver tipos de plano"
+    ctaSecHref="/tema-07/planos"
+  />
+
+  <Footer
+    variante="colunas"
+    nomeSite={site.nome}
+    slogan={site.slogan}
+    telefone={site.nap.telefone}
+    email={site.nap.email}
+    endereco={`${site.nap.logradouro}, ${site.nap.complemento}`}
+    cidade={`${site.nap.bairro}, ${site.nap.cidade} — ${site.nap.uf}`}
+    cnpj={site.cnpj}
+    anoFundacao={site.anoFundacao}
+    redes={site.redes}
+    nav={site.nav}
+    colunas={site.navFooterColunas}
+  />
+</Tema07Base>

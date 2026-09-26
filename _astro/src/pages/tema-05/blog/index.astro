@@ -1,0 +1,80 @@
+---
+import Tema05Base  from '../../../layouts/Tema05Base.astro'
+import Header      from '../../../components/blocos/Header.astro'
+import PageHero    from '../../../components/blocos/PageHero.astro'
+import PostLista   from '../../../components/blocos/PostLista.astro'
+import Tags        from '../../../components/blocos/Tags.astro'
+import Cta         from '../../../components/blocos/Cta.astro'
+import Footer      from '../../../components/blocos/Footer.astro'
+import { site }    from '../../../config/tema-05.ts'
+import { getCollection } from 'astro:content'
+
+const posts = (await getCollection('postsT5'))
+  .sort((a, b) => new Date(b.data.publicadoEm).getTime() - new Date(a.data.publicadoEm).getTime())
+  .map(p => ({
+    titulo: p.data.titulo, publicadoEm: p.data.publicadoEm, categoria: p.data.categoria,
+    imagemCapa: p.data.imagemCapa, imagemCapaAlt: p.data.imagemCapaAlt,
+    autor: p.data.autor, href: `/tema-05/blog/${p.id}`,
+  }))
+
+const canonical = `${site.dominio}/blog`
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    { '@type': 'Blog', '@id': `${canonical}#blog`, url: canonical, name: `Publicações — ${site.nome}`,
+      publisher: { '@id': `${site.dominio}/#organization` }, inLanguage: 'pt-BR' },
+    { '@type': 'BreadcrumbList', '@id': `${canonical}#breadcrumb`,
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home',        item: `${site.dominio}/` },
+        { '@type': 'ListItem', position: 2, name: 'Publicações', item: canonical },
+      ] },
+  ],
+}
+---
+
+<Tema05Base
+  titulo={`Publicações — ${site.nome}`}
+  metaDescription="Textos sobre benefícios do INSS, tempo especial, revisão e regime próprio, escritos pelos advogados do escritório em linguagem sem termo técnico."
+  canonical={canonical}
+  jsonLd={jsonLd}
+  nodeId="blog"
+>
+  <Header variante="padrao" nomeSite={site.nome} telefone={site.nap.telefone}
+          whatsapp={site.nap.whatsapp} nav={site.nav}
+          ctaTexto="Agendar atendimento" ctaHref="/tema-05/contato" />
+
+  <PageHero
+    variante="destaque"
+    eyebrow="Publicações"
+    titulo="Previdenciário explicado sem termo técnico"
+    descricao="Conteúdo informativo, escrito pelos advogados do escritório. Não substitui análise do caso concreto nem constitui parecer jurídico."
+  />
+
+  <PostLista variante="grade" posts={posts} />
+
+  <Tags titulo="Assuntos" itens={site.tags} />
+
+  <Cta
+    variante="card"
+    titulo="Sua dúvida não está aqui?"
+    descricao="Escreva para o escritório. Se a pergunta for útil para mais gente, vira publicação — sem identificar ninguém."
+    ctaPrimTexto="Enviar pergunta"
+    ctaPrimHref="/tema-05/contato"
+  />
+
+  <Footer
+    variante="colunas"
+    nomeSite={site.nome}
+    slogan={site.slogan}
+    telefone={site.nap.telefone}
+    email={site.nap.email}
+    endereco={`${site.nap.logradouro}, ${site.nap.complemento}`}
+    cidade={`${site.nap.bairro}, ${site.nap.cidade} — ${site.nap.uf}`}
+    cnpj={site.cnpj}
+    anoFundacao={site.anoFundacao}
+    redes={site.redes}
+    nav={site.nav}
+    colunas={site.navFooterColunas}
+  />
+</Tema05Base>

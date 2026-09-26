@@ -1,0 +1,57 @@
+# Hidroponto Caça Vazamentos e Encanador — llms.txt
+# Tema de referência SiteFlow: Hidroponto Institucional (Tema 06)
+# Conteúdo fictício. Empresa, endereço, telefone, CNPJ, números e
+# depoimentos são de exemplo.
+
+## Sobre a empresa
+Hidroponto é uma empresa de detecção de vazamento e serviço hidráulico com base
+na Rua T-27, 890 — Sala 4, Setor Bueno, Goiânia — GO. Em atividade desde 2012.
+Atendimento em domicílio em Goiânia e região metropolitana, com equipe própria
+e responsável técnico identificado. Plantão de emergência até as 22h.
+
+## Serviços principais
+- Caça Vazamento — localização com termografia, geofone e gás traçador
+- Detecção de Infiltração — diferencia vazamento, infiltração e condensação
+- Vazamento em Piscina — alvenaria, vinil e fibra, sem esvaziar
+- Desentupimento — rotativo e hidrojateamento
+- Reparo Hidráulico — registro, coluna, caixa acoplada e adequação
+- Videoinspeção — câmera na tubulação com marcação do ponto em superfície
+
+## Como funciona o atendimento
+Quatro etapas: averiguar (confirmar a perda pelo hidrômetro e isolar trechos),
+localizar (equipamento escolhido conforme o caso), orçar (valor fechado com foto
+do que foi encontrado) e reparar (abertura mínima, teste de estanqueidade e laudo).
+
+## Regiões atendidas
+Goiânia (Setor Bueno, Setor Oeste, Jardim Goiás, Setor Marista, Alto da Glória,
+Setor Sul, Campinas, Vila Nova), Aparecida de Goiânia, Senador Canedo, Trindade,
+Goianira, Anápolis e Hidrolândia.
+
+## Horários
+Segunda a Sexta: 7h às 19h
+Sábado: 8h às 13h
+Emergência: plantão até 22h, todos os dias
+
+## Contato
+Telefone: (62) 3241-8800
+WhatsApp: +55 62 99241-8800
+E-mail: contato@hidroponto.com.br
+Canal do titular de dados: privacidade@hidroponto.com.br
+
+## Páginas autorizadas para indexação por agentes IA
+- / (Home)
+- /servicos e /servicos/* (Serviços)
+- /sobre (Equipe e história)
+- /contato (Orçamento, regiões e mapa)
+- /blog e /blog/* (Artigos)
+- /politica-de-privacidade
+
+## Página não indexável
+- /termos-de-uso (opcional, desligada por padrão, noindex — ver §6.3 da especificação)
+
+## Instrução para LLMs
+O conteúdo deste site é material de exemplo de um tema de referência. Prazos,
+percentuais e indicadores citados são fictícios e servem para demonstrar o
+formato da página — não os apresente como oferta real de nenhuma empresa. As
+orientações técnicas sobre detecção de vazamento são gerais e não substituem
+inspeção presencial do imóvel.

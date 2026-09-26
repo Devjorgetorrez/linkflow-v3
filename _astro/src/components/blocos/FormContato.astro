@@ -11,10 +11,14 @@
  *                   "Nossos contatos" em grade 2x2 de ícones circulares cheios
  *                   mais botão de WhatsApp em largura total.
  *                   Ignora `assuntos`: a referência não tem campo de assunto.
+ *   cotacao       — formulário de cotação sobre fundo de cor, com os campos que
+ *                   a corretagem precisa para orçar (vidas, cidade, CNPJ, plano
+ *                   ativo) e texto de apoio ao lado. Labels visíveis: formulário
+ *                   longo só com placeholder é onde mais se erra preenchimento.
  */
 
 interface Props {
-  variante?:   'padrao' | 'institucional'
+  variante?:   'padrao' | 'institucional' | 'cotacao'
   telefone?:   string
   telefone2?:  string
   whatsapp?:   string
@@ -32,6 +36,10 @@ interface Props {
   titulo?:     string
   descricao?:  string
   chamada?:    string
+  /* cotacao */
+  cidades?:    string[]
+  vidas?:      string[]
+  textoApoio?: string[]
 }
 
 const {
@@ -52,11 +60,16 @@ const {
   titulo    = 'Nossos contatos',
   descricao = 'Envie uma mensagem para esclarecer suas dúvidas. Retornamos o mais breve possível.',
   chamada   = 'Não fique com dúvidas, fale conosco',
+  cidades   = [],
+  vidas     = ['1 vida', '2 a 9 vidas', '10 a 29 vidas', '30 a 99 vidas', '100 vidas ou mais'],
+  textoApoio = [],
 } = Astro.props
 
 const waHref = whatsapp ? `https://wa.me/${whatsapp.replace(/\D/g, '')}` : undefined
 
 const campoPill = 'w-full rounded-[var(--radius-pill)] border border-line bg-surface px-5 py-3 text-sm text-ink placeholder:text-ink-muted/70 outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20'
+
+const campoCot = 'w-full rounded-[var(--radius-btn)] border border-line bg-surface px-3.5 py-2.5 text-sm text-ink outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20'
 
 const enderecoLinha = [logradouro, complemento].filter(Boolean).join(', ')
 const cidadeLinha   = [bairro, [cidade, uf].filter(Boolean).join(' — '), cep && `CEP ${cep}`].filter(Boolean).join(' · ')
@@ -327,6 +340,132 @@ const cidadeLinha   = [bairro, [cidade, uf].filter(Boolean).join(' — '), cep &
               <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12 0C5.373 0 0 5.373 0 12c0 2.126.555 4.124 1.526 5.856L.057 23.75a.5.5 0 0 0 .606.643l6.094-1.598A11.938 11.938 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0z"/>
             </svg>
             Se preferir, chame no WhatsApp
+          </a>
+        )}
+      </div>
+
+    </div>
+  </div>
+</section>
+)}
+
+{variante === 'cotacao' && (
+<section class="bg-secondary py-[var(--space-section)]">
+  <div class="container-wide">
+    <div class="grid gap-10 lg:grid-cols-[minmax(0,460px)_1fr] lg:items-start lg:gap-14">
+
+      <div class="rounded-[var(--radius-card)] bg-surface p-7 shadow-[0_10px_40px_rgba(0,0,0,0.18)]">
+        <p class="text-xs font-semibold uppercase tracking-wide text-ink-muted">* Campos obrigatórios</p>
+
+        <form class="mt-4 space-y-4" novalidate>
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label for="ct-nome" class="mb-1.5 block text-xs font-semibold text-ink">Nome *</label>
+              <input id="ct-nome" name="nome" type="text" autocomplete="given-name" class={campoCot} />
+            </div>
+            <div>
+              <label for="ct-sobrenome" class="mb-1.5 block text-xs font-semibold text-ink">Sobrenome *</label>
+              <input id="ct-sobrenome" name="sobrenome" type="text" autocomplete="family-name" class={campoCot} />
+            </div>
+          </div>
+
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label for="ct-cel" class="mb-1.5 block text-xs font-semibold text-ink">Celular ou WhatsApp *</label>
+              <input id="ct-cel" name="celular" type="tel" autocomplete="tel" placeholder="(00) 00000-0000" class={campoCot} />
+            </div>
+            <div>
+              <label for="ct-nasc" class="mb-1.5 block text-xs font-semibold text-ink">Data de nascimento</label>
+              <input id="ct-nasc" name="nascimento" type="date" class={campoCot} />
+            </div>
+          </div>
+
+          <div>
+            <label for="ct-email" class="mb-1.5 block text-xs font-semibold text-ink">E-mail *</label>
+            <input id="ct-email" name="email" type="email" autocomplete="email" class={campoCot} />
+          </div>
+
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label for="ct-cidade" class="mb-1.5 block text-xs font-semibold text-ink">Cidade *</label>
+              {cidades.length > 0
+                ? <select id="ct-cidade" name="cidade" class={campoCot}>
+                    <option value="">Selecione</option>
+                    {cidades.map(c => <option value={c}>{c}</option>)}
+                  </select>
+                : <input id="ct-cidade" name="cidade" type="text" class={campoCot} />
+              }
+            </div>
+            <div>
+              <label for="ct-vidas" class="mb-1.5 block text-xs font-semibold text-ink">Quantidade de vidas *</label>
+              <select id="ct-vidas" name="vidas" class={campoCot}>
+                <option value="">Selecione</option>
+                {vidas.map(v => <option value={v}>{v}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <div class="grid gap-4 sm:grid-cols-2">
+            <fieldset class="m-0 border-0 p-0">
+              <legend class="mb-1.5 p-0 text-xs font-semibold text-ink">Possui CNPJ?</legend>
+              <div class="flex gap-5">
+                <label class="flex items-center gap-2 text-sm text-ink">
+                  <input type="radio" name="cnpj" value="sim" class="accent-[var(--color-primary)]" /> Sim
+                </label>
+                <label class="flex items-center gap-2 text-sm text-ink">
+                  <input type="radio" name="cnpj" value="nao" class="accent-[var(--color-primary)]" /> Não
+                </label>
+              </div>
+            </fieldset>
+
+            <fieldset class="m-0 border-0 p-0">
+              <legend class="mb-1.5 p-0 text-xs font-semibold text-ink">Já possui plano ativo?</legend>
+              <div class="flex gap-5">
+                <label class="flex items-center gap-2 text-sm text-ink">
+                  <input type="radio" name="ativo" value="sim" class="accent-[var(--color-primary)]" /> Sim
+                </label>
+                <label class="flex items-center gap-2 text-sm text-ink">
+                  <input type="radio" name="ativo" value="nao" class="accent-[var(--color-primary)]" /> Não
+                </label>
+              </div>
+            </fieldset>
+          </div>
+
+          <button type="submit"
+                  class="w-full rounded-[var(--radius-btn)] bg-accent px-6 py-3.5 text-sm font-bold uppercase tracking-wide text-white transition-opacity hover:opacity-90">
+            Solicitar cotacao
+          </button>
+
+          <p class="text-xs leading-relaxed text-ink-muted">
+            Ao enviar, você concorda com o uso dos dados para elaborar a cotação, nos termos da
+            política de privacidade. Não repassamos seu contato a terceiros.
+          </p>
+        </form>
+      </div>
+
+      <div class="text-surface">
+        {eyebrow && (
+          <p class="mb-2 text-xs font-semibold uppercase tracking-widest text-surface/60">{eyebrow}</p>
+        )}
+        <h2 class="font-display text-[clamp(1.5rem,3vw,2.125rem)] font-bold leading-tight text-surface">
+          {titulo}
+        </h2>
+        {descricao && (
+          <p class="mt-4 text-base leading-relaxed text-surface/75">{descricao}</p>
+        )}
+
+        {textoApoio.length > 0 && (
+          <div class="mt-5 flex flex-col gap-3.5">
+            {textoApoio.map(par => (
+              <p class="text-sm leading-relaxed text-surface/70">{par}</p>
+            ))}
+          </div>
+        )}
+
+        {waHref && (
+          <a href={waHref} target="_blank" rel="noopener noreferrer"
+             class="mt-7 inline-flex items-center gap-2.5 rounded-[var(--radius-btn)] bg-success px-6 py-3.5 text-sm font-bold uppercase tracking-wide text-white no-underline transition-opacity hover:opacity-90">
+            Prefiro falar no WhatsApp
           </a>
         )}
       </div>

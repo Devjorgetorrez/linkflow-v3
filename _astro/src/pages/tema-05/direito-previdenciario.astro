@@ -1,0 +1,197 @@
+---
+/** Página pilar do Tema 05 — hub de "direito previdenciário". */
+import Tema05Base   from '../../layouts/Tema05Base.astro'
+import Header       from '../../components/blocos/Header.astro'
+import Hero         from '../../components/blocos/Hero.astro'
+import Passos       from '../../components/blocos/Passos.astro'
+import Servicos     from '../../components/blocos/Servicos.astro'
+import Prova        from '../../components/blocos/Prova.astro'
+import Numeros      from '../../components/blocos/Numeros.astro'
+import Depoimentos  from '../../components/blocos/Depoimentos.astro'
+import Faq          from '../../components/blocos/Faq.astro'
+import Localizacao  from '../../components/blocos/Localizacao.astro'
+import PostLista    from '../../components/blocos/PostLista.astro'
+import Cta          from '../../components/blocos/Cta.astro'
+import BuscasFrequentes from '../../components/blocos/BuscasFrequentes.astro'
+import Footer       from '../../components/blocos/Footer.astro'
+import { site }     from '../../config/tema-05.ts'
+import { getCollection } from 'astro:content'
+
+const servicos = (await getCollection('servicosT5'))
+  .sort((a, b) => a.data.ordem - b.data.ordem)
+  .map(s => ({
+    titulo: s.data.titulo, descricao: s.data.resumo, icone: s.data.icone ?? '',
+    imagem: s.data.imagem, imagemAlt: s.data.imagemAlt,
+    href: `/tema-05/servicos/${s.id}`, categoria: s.data.categoria,
+  }))
+
+const depoimentos = (await getCollection('depoimentosT5'))
+  .sort((a, b) => a.data.ordem - b.data.ordem)
+  .map(d => ({ nome: d.data.nome, cidade: d.data.cidade, servico: d.data.servico, corpo: d.body.trim() }))
+
+const posts = (await getCollection('postsT5'))
+  .sort((a, b) => new Date(b.data.publicadoEm).getTime() - new Date(a.data.publicadoEm).getTime())
+  .map(p => ({
+    titulo: p.data.titulo, publicadoEm: p.data.publicadoEm, categoria: p.data.categoria,
+    imagemCapa: p.data.imagemCapa, imagemCapaAlt: p.data.imagemCapaAlt,
+    autor: p.data.autor, href: `/tema-05/blog/${p.id}`,
+  }))
+
+const canonical = `${site.dominio}/direito-previdenciario`
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    { '@type': 'WebPage', '@id': `${canonical}#webpage`, url: canonical,
+      name: `Direito Previdenciário — ${site.nome}`,
+      description: 'O que é direito previdenciário, como funciona a via administrativa e a judicial, e o que fazer quando o INSS nega.',
+      about: { '@id': `${site.dominio}/#organization` }, inLanguage: 'pt-BR' },
+    { '@type': 'BreadcrumbList', '@id': `${canonical}#breadcrumb`,
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home', item: `${site.dominio}/` },
+        { '@type': 'ListItem', position: 2, name: 'Direito Previdenciário', item: canonical },
+      ] },
+    { '@type': 'FAQPage', '@id': `${canonical}#faq`,
+      mainEntity: site.faq.map(f => ({
+        '@type': 'Question', name: f.pergunta,
+        acceptedAnswer: { '@type': 'Answer', text: f.resposta },
+      })) },
+  ],
+}
+---
+
+<Tema05Base
+  titulo="Direito Previdenciário: como funciona o processo no INSS"
+  metaDescription="Guia sobre direito previdenciário: diferença entre via administrativa e judicial, prazos de recurso, o papel da perícia e o que fazer quando o INSS indefere."
+  canonical={canonical}
+  jsonLd={jsonLd}
+  nodeId="pilar"
+>
+  <Header variante="padrao" nomeSite={site.nome} telefone={site.nap.telefone}
+          whatsapp={site.nap.whatsapp} nav={site.nav}
+          ctaTexto="Agendar atendimento" ctaHref="/tema-05/contato" />
+
+  <Hero
+    variante="editorial"
+    eyebrow="Guia completo"
+    titulo="Direito previdenciário: como o processo funciona de verdade"
+    lead="Da primeira conversa ao recurso, sem termo técnico solto. Este guia reúne o que explicamos a cada cliente antes de qualquer providência."
+    ctaPrimTexto="Agendar atendimento"
+    ctaPrimHref="/tema-05/contato"
+    ctaSecTexto="Ver áreas de atuação"
+    ctaSecHref="/tema-05/servicos"
+  />
+
+  <section class="py-[var(--space-section)]">
+    <div class="container-prose article-body">
+      <h2>Duas vias, não uma</h2>
+      <p>
+        Todo benefício começa na <strong>via administrativa</strong>: o requerimento feito ao próprio
+        INSS. Só depois de uma negativa é que a <strong>via judicial</strong> entra em cena. Não é
+        possível pular a primeira — o Judiciário costuma exigir a negativa administrativa para
+        reconhecer o interesse de agir.
+      </p>
+      <p>
+        Isso muda a estratégia: o requerimento administrativo não é formalidade. É a peça que define
+        o que será discutido depois, e requerimento mal instruído produz uma negativa difícil de
+        reverter.
+      </p>
+
+      <h2>Por que tantos pedidos são negados</h2>
+      <ul>
+        <li><strong>Documentação incompleta.</strong> A causa mais comum e a mais evitável.</li>
+        <li><strong>CNIS com lacuna.</strong> Vínculo antigo que não migrou, remuneração faltando, código errado de contribuição.</li>
+        <li><strong>Perícia desfavorável.</strong> O perito avalia incapacidade para a atividade, não a existência da doença.</li>
+        <li><strong>Perda da qualidade de segurado.</strong> Quem parou de contribuir tem cobertura por prazo limitado.</li>
+        <li><strong>Critério de renda.</strong> Específico do BPC, e o que mais comporta discussão judicial.</li>
+      </ul>
+
+      <h2>Os prazos que decidem o caso</h2>
+      <p>
+        Do indeferimento correm <strong>30 dias</strong> para recurso administrativo. Perdido esse
+        prazo, a via judicial continua aberta, mas as parcelas atrasadas só retroagem
+        <strong>cinco anos</strong>. Esperar custa dinheiro, e é a decisão mais cara que um segurado
+        toma sem perceber.
+      </p>
+
+      <h2>O que um advogado pode e não pode prometer</h2>
+      <p>
+        Pode analisar o caso, apontar os pontos frágeis, instruir o pedido corretamente e informar o
+        que a jurisprudência tem decidido em situações parecidas. <strong>Não pode garantir
+        resultado</strong> — promessa de êxito é vedada pelo Código de Ética da OAB, e quem promete
+        está dizendo algo que não pode cumprir.
+      </p>
+    </div>
+  </section>
+
+  <Passos
+    variante="numerado"
+    titulo="As seis etapas de um caso"
+    descricao="Da conversa inicial ao recurso, com o que acontece em cada uma."
+    itens={site.passos}
+    notaTitulo="Sobre prazos"
+    nota="Não damos previsão fechada de duração porque ela depende da fila do INSS e, no judicial, da vara. O que garantimos é o relatório mensal do andamento."
+  />
+
+  <Servicos variante="grade" titulo="Benefícios que atendemos" itens={servicos} />
+
+  <Prova variante="faixa" titulo="O que vale para qualquer caso" itens={site.selos} />
+
+  <Numeros variante="claro" titulo="O escritório em números" itens={site.numeros} nota={site.numerosNota} />
+
+  <Depoimentos
+    titulo="Relatos de quem já foi atendido"
+    itens={depoimentos}
+    notaMedia="4,9"
+    totalAvaliacoes="+140"
+    fonteAvaliacoes="avaliações no Google"
+  />
+
+  <div id="duvidas">
+    <Faq
+      variante="com-imagem"
+      titulo="Dúvidas frequentes"
+      itens={site.faq}
+      imagem="https://images.unsplash.com/photo-1521791136064-7986c2920216?w=400&h=520&fit=crop&auto=format"
+      imagemAlt="Advogado em atendimento a cliente"
+    />
+  </div>
+
+  <Localizacao
+    titulo="Onde estamos"
+    logradouro={site.nap.logradouro} complemento={site.nap.complemento}
+    bairro={site.nap.bairro} cidade={site.nap.cidade} uf={site.nap.uf} cep={site.nap.cep}
+    telefone={site.nap.telefone} whatsapp={site.nap.whatsapp} email={site.nap.email}
+    horarios={site.horarios} mapaSrc={site.mapaSrc}
+    mapaHref={`https://maps.google.com/?q=${encodeURIComponent(site.nap.enderecoFormatado)}`}
+  />
+
+  <PostLista variante="grade" titulo="Continue lendo" posts={posts} verMaisHref="/tema-05/blog" />
+
+  <Cta
+    variante="padrao"
+    titulo="Quer entender o seu caso antes de decidir?"
+    descricao="A conversa inicial serve para isso: ouvir a sua história de contribuição e dizer o que ela comporta."
+    ctaPrimTexto="Agendar atendimento"
+    ctaPrimHref="/tema-05/contato"
+    ctaSecTexto="Ver áreas de atuação"
+    ctaSecHref="/tema-05/servicos"
+  />
+
+  <BuscasFrequentes titulo="Buscas relacionadas" itens={site.buscasFrequentes} />
+
+  <Footer
+    variante="colunas"
+    nomeSite={site.nome}
+    slogan={site.slogan}
+    telefone={site.nap.telefone}
+    email={site.nap.email}
+    endereco={`${site.nap.logradouro}, ${site.nap.complemento}`}
+    cidade={`${site.nap.bairro}, ${site.nap.cidade} — ${site.nap.uf}`}
+    cnpj={site.cnpj}
+    anoFundacao={site.anoFundacao}
+    redes={site.redes}
+    nav={site.nav}
+    colunas={site.navFooterColunas}
+  />
+</Tema05Base>

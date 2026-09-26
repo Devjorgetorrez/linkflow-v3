@@ -1,0 +1,249 @@
+---
+/** Página pilar do Tema 07 — guia de escolha, sem colidir com slug de plano. */
+import Tema07Base   from '../../layouts/Tema07Base.astro'
+import Header       from '../../components/blocos/Header.astro'
+import Hero         from '../../components/blocos/Hero.astro'
+import Passos       from '../../components/blocos/Passos.astro'
+import Servicos     from '../../components/blocos/Servicos.astro'
+import Prova        from '../../components/blocos/Prova.astro'
+import FormContato  from '../../components/blocos/FormContato.astro'
+import Numeros      from '../../components/blocos/Numeros.astro'
+import Depoimentos  from '../../components/blocos/Depoimentos.astro'
+import Faq          from '../../components/blocos/Faq.astro'
+import Localizacao  from '../../components/blocos/Localizacao.astro'
+import PostLista    from '../../components/blocos/PostLista.astro'
+import Cta          from '../../components/blocos/Cta.astro'
+import BuscasFrequentes from '../../components/blocos/BuscasFrequentes.astro'
+import Footer       from '../../components/blocos/Footer.astro'
+import { site }     from '../../config/tema-07.ts'
+import { getCollection } from 'astro:content'
+
+const planos = (await getCollection('servicosT7'))
+  .sort((a, b) => a.data.ordem - b.data.ordem)
+  .map(s => ({
+    titulo: s.data.titulo, descricao: s.data.resumo, icone: s.data.icone ?? '',
+    imagem: s.data.imagem, imagemAlt: s.data.imagemAlt,
+    href: `/tema-07/planos/${s.id}`, categoria: s.data.categoria,
+  }))
+
+const depoimentos = (await getCollection('depoimentosT7'))
+  .sort((a, b) => a.data.ordem - b.data.ordem)
+  .map(d => ({ nome: d.data.nome, cidade: d.data.cidade, servico: d.data.servico, corpo: d.body.trim() }))
+
+const posts = (await getCollection('postsT7'))
+  .sort((a, b) => new Date(b.data.publicadoEm).getTime() - new Date(a.data.publicadoEm).getTime())
+  .map(p => ({
+    titulo: p.data.titulo, publicadoEm: p.data.publicadoEm, categoria: p.data.categoria,
+    imagemCapa: p.data.imagemCapa, imagemCapaAlt: p.data.imagemCapaAlt,
+    autor: p.data.autor, href: `/tema-07/blog/${p.id}`,
+  }))
+
+const wa        = `https://wa.me/${site.nap.whatsapp}`
+const canonical = `${site.dominio}/como-escolher-plano-de-saude`
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    { '@type': 'WebPage', '@id': `${canonical}#webpage`, url: canonical,
+      name: `Como escolher um plano de saúde — ${site.nome}`,
+      description: 'Os cinco critérios que decidem a escolha de um plano de saúde e a ordem certa de olhar para eles.',
+      about: { '@id': `${site.dominio}/#organization` }, inLanguage: 'pt-BR' },
+    { '@type': 'BreadcrumbList', '@id': `${canonical}#breadcrumb`,
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home', item: `${site.dominio}/` },
+        { '@type': 'ListItem', position: 2, name: 'Como escolher', item: canonical },
+      ] },
+    { '@type': 'FAQPage', '@id': `${canonical}#faq`,
+      mainEntity: site.faq.map(f => ({
+        '@type': 'Question', name: f.pergunta,
+        acceptedAnswer: { '@type': 'Answer', text: f.resposta },
+      })) },
+  ],
+}
+---
+
+<Tema07Base
+  titulo="Como escolher um plano de saúde: guia por critério"
+  metaDescription="Os cinco critérios que decidem a escolha de um plano de saúde — rede, abrangência, carência, coparticipação e reajuste — e a ordem certa de olhar para eles."
+  canonical={canonical}
+  jsonLd={jsonLd}
+  nodeId="pilar"
+>
+  <Header
+    variante="padrao"
+    nomeSite={site.nome}
+    telefone={site.nap.telefone}
+    whatsapp={site.nap.whatsapp}
+    nav={site.nav}
+    ctaTexto="Solicitar cotação"
+    ctaHref="#cotacao"
+  />
+
+  <Hero
+    variante="editorial"
+    eyebrow="Guia completo"
+    titulo="Como escolher um plano de saúde sem se arrepender no segundo ano"
+    lead="Preço é o critério que todo mundo olha primeiro e o que menos define a satisfação. Este guia põe os cinco critérios na ordem que costuma funcionar."
+    ctaPrimTexto="Solicitar cotação"
+    ctaPrimHref="#cotacao"
+    ctaSecTexto="Ver tipos de plano"
+    ctaSecHref="/tema-07/planos"
+  />
+
+  <section class="py-[var(--space-section)]">
+    <div class="container-prose article-body">
+      <h2>1. A rede, antes de qualquer preço</h2>
+      <p>
+        Faça a lista dos dois ou três hospitais onde você gostaria de ser atendido numa emergência e
+        do laboratório que você usa. Verifique se estão na rede daquele plano, <strong>naquela
+        abrangência e na sua cidade</strong>.
+      </p>
+      <p>
+        Plano barato com rede que você não usa é caro. Essa checagem elimina metade das opções antes
+        de qualquer comparação de valor, e é a que mais evita arrependimento.
+      </p>
+
+      <h2>2. A abrangência que você realmente precisa</h2>
+      <p>
+        Municipal, estadual ou nacional. A diferença de preço entre elas é grande, e muita gente paga
+        por cobertura nacional que nunca vai usar.
+      </p>
+      <p>
+        A pergunta certa não é "e se eu viajar?", é "com que frequência eu viajo e o que aconteceria
+        se precisasse de atendimento fora". Para a maioria, urgência e emergência já são cobertas em
+        qualquer lugar do país por regra da ANS.
+      </p>
+
+      <h2>3. Carência e o que você pode aproveitar</h2>
+      <p>
+        Se você já tem plano ativo há pelo menos dois anos e está em dia, a portabilidade permite
+        trocar de operadora sem cumprir carência de novo. É o direito mais subestimado do setor.
+      </p>
+      <p>
+        Em contrato empresarial com mais vidas, boa parte da carência costuma ser reduzida ou
+        dispensada — o que faz o empresarial ganhar do individual mesmo quando o preço é parecido.
+      </p>
+
+      <h2>4. Coparticipação: uma conta, não uma opinião</h2>
+      <p>
+        Pegue os últimos doze meses, conte quantas consultas e exames você fez, multiplique pelo valor
+        de coparticipação e compare com a diferença anual de mensalidade. Se a economia for maior que
+        o gasto por uso, compensa.
+      </p>
+      <p>
+        Quem usa pouco tende a ganhar; quem faz acompanhamento contínuo ou tem criança pequena tende a
+        perder. A conta leva dez minutos e evita o erro mais comum da contratação.
+      </p>
+
+      <h2>5. O reajuste, que decide o terceiro ano</h2>
+      <p>
+        Em plano individual há teto da ANS. Em coletivo — empresarial ou por adesão — não há: o
+        percentual é negociado com a operadora.
+      </p>
+      <p>
+        Peça o histórico de reajuste dos últimos três a cinco anos de cada operadora cotada. Uma
+        mensalidade 8% menor com reajuste 5 pontos acima fica mais cara já no segundo ano. É o dado
+        que menos aparece nas propostas e o que mais muda a decisão.
+      </p>
+
+      <h2>A ordem importa</h2>
+      <p>
+        Rede, abrangência, carência, coparticipação, reajuste. Preço entra depois, como critério de
+        desempate entre as opções que passaram nos cinco. Feito ao contrário, você escolhe o mais
+        barato e descobre o resto quando precisa usar.
+      </p>
+    </div>
+  </section>
+
+  <Passos
+    variante="numerado"
+    titulo="Como conduzimos isso na prática"
+    descricao="É essa a ordem que seguimos ao montar um comparativo."
+    itens={site.passos}
+    notaTitulo="O que não fazemos"
+    nota="Não enviamos uma proposta só. Comparativo com uma opção não é comparativo — é venda com outro nome."
+  />
+
+  <Servicos variante="grade" titulo="Tipos de plano" itens={planos} />
+
+  <Prova variante="faixa" titulo="O que a corretora entrega" itens={site.selos} />
+
+  <div id="cotacao">
+    <FormContato
+      variante="cotacao"
+      eyebrow="Cotação sem compromisso"
+      titulo="Receba um comparativo entre operadoras"
+      descricao="Preencha os dados e devolvemos, em até um dia útil, as opções elegíveis ao seu perfil — com preço, rede, carência e histórico de reajuste lado a lado."
+      textoApoio={[
+        'A corretora é remunerada pela operadora. Você paga o mesmo valor de tabela, com a assessoria da escolha e o suporte depois da contratação incluídos.',
+        'Seus dados são usados apenas para elaborar a cotação. Não repassamos seu contato a terceiros.',
+      ]}
+      whatsapp={site.nap.whatsapp}
+      cidades={site.cidades}
+    />
+  </div>
+
+  <Prova
+    variante="logos"
+    titulo="Operadoras na nossa carteira"
+    itens={site.operadoras}
+  />
+
+  <Numeros variante="escuro" titulo="A corretora em números" itens={site.numeros} nota={site.numerosNota} />
+
+  <Depoimentos
+    titulo="Quem já passou por essa escolha"
+    itens={depoimentos}
+    notaMedia={site.avaliacao.nota}
+    totalAvaliacoes={site.avaliacao.total}
+    fonteAvaliacoes={site.avaliacao.fonte}
+  />
+
+  <div id="duvidas">
+    <Faq
+      variante="com-imagem"
+      titulo="Dúvidas frequentes"
+      itens={site.faq}
+      imagem="https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=400&h=520&fit=crop&auto=format"
+      imagemAlt="Atendimento em consultório médico"
+    />
+  </div>
+
+  <Localizacao
+    titulo="Onde estamos"
+    logradouro={site.nap.logradouro} complemento={site.nap.complemento}
+    bairro={site.nap.bairro} cidade={site.nap.cidade} uf={site.nap.uf} cep={site.nap.cep}
+    telefone={site.nap.telefone} whatsapp={site.nap.whatsapp} email={site.nap.email}
+    horarios={site.horarios} mapaSrc={site.mapaSrc}
+    mapaHref={`https://maps.google.com/?q=${encodeURIComponent(site.nap.enderecoFormatado)}`}
+  />
+
+  <PostLista variante="grade" titulo="Continue lendo" posts={posts} verMaisHref="/tema-07/blog" />
+
+  <Cta
+    variante="padrao"
+    titulo="Quer aplicar esses critérios ao seu caso?"
+    descricao="Preencha a cotação. Devolvemos o comparativo com os cinco critérios já organizados por opção."
+    ctaPrimTexto="Solicitar cotação"
+    ctaPrimHref="#cotacao"
+    ctaSecTexto="Falar no WhatsApp"
+    ctaSecHref={wa}
+  />
+
+  <BuscasFrequentes titulo="Buscas relacionadas" itens={site.buscasFrequentes} />
+
+  <Footer
+    variante="colunas"
+    nomeSite={site.nome}
+    slogan={site.slogan}
+    telefone={site.nap.telefone}
+    email={site.nap.email}
+    endereco={`${site.nap.logradouro}, ${site.nap.complemento}`}
+    cidade={`${site.nap.bairro}, ${site.nap.cidade} — ${site.nap.uf}`}
+    cnpj={site.cnpj}
+    anoFundacao={site.anoFundacao}
+    redes={site.redes}
+    nav={site.nav}
+    colunas={site.navFooterColunas}
+  />
+</Tema07Base>

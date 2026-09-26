@@ -1,0 +1,76 @@
+---
+/**
+ * Termos de Uso — EXEMPLO OPCIONAL (§6.3 do MD).
+ * Opcional e desligado por padrão. Existe como modelo e sai com noindex.
+ */
+import Tema05Base    from '../../layouts/Tema05Base.astro'
+import Header        from '../../components/blocos/Header.astro'
+import PageHero      from '../../components/blocos/PageHero.astro'
+import ConteudoLegal from '../../components/blocos/ConteudoLegal.astro'
+import Footer        from '../../components/blocos/Footer.astro'
+import { site }      from '../../config/tema-05.ts'
+
+const canonical = `${site.dominio}/termos-de-uso`
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    { '@type': 'WebPage', '@id': `${canonical}#webpage`, url: canonical,
+      name: `Termos de Uso — ${site.nome}`, inLanguage: 'pt-BR',
+      isPartOf: { '@id': `${site.dominio}/#website` } },
+    { '@type': 'BreadcrumbList', '@id': `${canonical}#breadcrumb`,
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home', item: `${site.dominio}/` },
+        { '@type': 'ListItem', position: 2, name: 'Termos de Uso', item: canonical },
+      ] },
+  ],
+}
+---
+
+<Tema05Base
+  titulo={`Termos de Uso — ${site.nome}`}
+  metaDescription="Termos de uso do site do escritório Amparo Advocacia: finalidade informativa do conteúdo, relação com o contrato de honorários e tratamento de dados pessoais."
+  canonical={canonical}
+  jsonLd={jsonLd}
+  nodeId="termos-de-uso"
+  noindex={true}
+>
+  <Header variante="padrao" nomeSite={site.nome} telefone={site.nap.telefone}
+          whatsapp={site.nap.whatsapp} nav={site.nav}
+          ctaTexto="Agendar atendimento" ctaHref="/tema-05/contato" />
+
+  <PageHero
+    variante="destaque"
+    eyebrow="Legal"
+    titulo="Termos de Uso"
+    descricao="Regras de navegação neste site e relação entre o conteúdo publicado e o contrato de prestação de serviços advocatícios."
+  />
+
+  <div class="container-prose pt-10">
+    <div class="rounded-[var(--radius-card)] border-l-4 border-accent bg-accent/8 p-5">
+      <p class="text-sm font-bold text-secondary">Página opcional — desligada por padrão</p>
+      <p class="mt-2 text-sm leading-relaxed text-ink-muted">
+        Termos de uso não são exigência da LGPD. Pelo §6.3 da especificação, esta página só deve ser
+        ligada quando o site tiver área restrita, venda on-line ou envio de conteúdo por visitante.
+        Existe neste tema apenas como modelo, e sai com <code>noindex</code>.
+      </p>
+    </div>
+  </div>
+
+  <ConteudoLegal legal={site.legal} nomeSite={site.nome} documento="termos" />
+
+  <Footer
+    variante="colunas"
+    nomeSite={site.nome}
+    slogan={site.slogan}
+    telefone={site.nap.telefone}
+    email={site.nap.email}
+    endereco={`${site.nap.logradouro}, ${site.nap.complemento}`}
+    cidade={`${site.nap.bairro}, ${site.nap.cidade} — ${site.nap.uf}`}
+    cnpj={site.cnpj}
+    anoFundacao={site.anoFundacao}
+    redes={site.redes}
+    nav={site.nav}
+    colunas={site.navFooterColunas}
+  />
+</Tema05Base>

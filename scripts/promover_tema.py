@@ -1,21 +1,21 @@
 #!/usr/bin/env python3
 """
 promover_tema.py — Promove o tema escolhido (base por nicho) para a raiz
-do site Astro, apagando os outros dois. Roda UMA VEZ, na criação do
+do site Astro, apagando os outros. Roda UMA VEZ, na criação do
 cliente (vps-setup / novo-cliente.sh), antes de fase2-site-astro criar
 qualquer conteúdo — nunca depois, e nunca duas vezes no mesmo cliente.
 
 Garante a regra do Jorge: a escolha de tema NUNCA aparece na URL do site
-final. "/tema-04/servicos/x" vira "/x" na raiz, e as pastas tema-03/
-tema-04 somem por completo da cópia daquele cliente.
+final. "/tema-04/x" vira "/x" na raiz, e as pastas dos outros temas somem
+por completo da cópia daquele cliente.
 
 Uso:
   python3 promover_tema.py --tema tema-03 --astro-dir /opt/linkflow/clientes/<slug>/_astro
-  python3 promover_tema.py --tema base    --astro-dir ...   (nada pra promover, só limpa os outros 2)
+  python3 promover_tema.py --tema base    --astro-dir ...   (nada pra promover, só limpa os outros)
 
 Sempre roda numa cópia ISOLADA por cliente (a que vps-setup/novo-cliente.sh
 já cria) — nunca no motor compartilhado que serve de referência para os
-3 temas lado a lado.
+temas lado a lado.
 """
 import argparse
 import re
@@ -23,8 +23,18 @@ import shutil
 import sys
 from pathlib import Path
 
-TEMAS_VALIDOS = ["base", "tema-03", "tema-04"]
-SUFIXOS = {"base": "", "tema-03": "T3", "tema-04": "T4"}
+# Registro ÚNICO dos temas (bases por nicho). Tema novo entra só aqui — o
+# resto do script deriva desta tabela. `layout` é o arquivo em src/layouts/.
+TEMAS = {
+    "base":    {"sufixo": "",   "layout": None},
+    "tema-03": {"sufixo": "T3", "layout": "Tema03Base.astro"},
+    "tema-04": {"sufixo": "T4", "layout": "Tema04Base.astro"},
+    "tema-05": {"sufixo": "T5", "layout": "Tema05Base.astro"},
+    "tema-06": {"sufixo": "T6", "layout": "Tema06Base.astro"},
+    "tema-07": {"sufixo": "T7", "layout": "Tema07Base.astro"},
+}
+TEMAS_VALIDOS = list(TEMAS)
+SUFIXOS = {nome: t["sufixo"] for nome, t in TEMAS.items()}
 COLECOES = ["servicos", "equipe", "depoimentos", "posts", "autores", "categorias"]
 
 
@@ -68,7 +78,7 @@ def main():
     public_dir = astro_dir / "public"
 
     if args.tema != "base":
-        allowlist_final = promover(args.tema, pages_dir, config_dir, content_dir, content_config_path, NOMES_BASE_LEGITIMOS)
+        allowlist_final = promover(args.tema, pages_dir, config_dir, content_dir, content_config_path)
     else:
         # Tema base ja esta na raiz — so precisa garantir que o
         # content.config.ts fique so com as colecoes canonicas (COLECOES) (sem T3/T4)
@@ -79,10 +89,10 @@ def main():
     limpar_nao_escolhidos(args.tema, pages_dir, config_dir, content_dir, layouts_dir)
     remover_residuos_desconhecidos(pages_dir, content_dir, config_dir, allowlist_final)
 
-    print(f"[promover_tema] OK — tema '{args.tema}' promovido para a raiz, os outros dois removidos.")
+    print(f"[promover_tema] OK — tema '{args.tema}' promovido para a raiz, os outros removidos.")
 
 
-def promover(tema, pages_dir, config_dir, content_dir, content_config_path, nomes_base_legitimos):
+def promover(tema, pages_dir, config_dir, content_dir, content_config_path):
     sufixo = SUFIXOS[tema]
     origem_pages = pages_dir / tema
     astro_dir = pages_dir.parent.parent  # .../src/pages -> .../src -> _astro
@@ -147,7 +157,10 @@ def promover(tema, pages_dir, config_dir, content_dir, content_config_path, nome
     #    de existir no content.config.ts reescrito no passo 4)
     limpar_arquivos_promovidos(pages_dir, components_paginas_dir, config_dir / "site.ts", tema, sufixo)
 
-    return nomes_base_legitimos | nomes_topo_promovidos
+    # Só o que o tema promovido trouxe fica na raiz. Página do tema base que o
+    # tema promovido NÃO tem (ex: pages/servicos/ no tema-07, que usa planos/)
+    # é resíduo: importa ThemeBase.astro, que é apagado, e quebraria o build.
+    return nomes_topo_promovidos
 
 
 def ajustar_profundidade_imports(arquivo):
@@ -194,7 +207,7 @@ def extrair_bloco(texto, nome_const):
 def reescrever_content_config(path, sufixo):
     """Recria content.config.ts só com as colecoes canonicas (COLECOES) do tema
     escolhido (servicos, equipe, depoimentos, posts) — sem sufixo T3/T4,
-    sem as colecoes dos outros dois temas, loader apontando pro caminho
+    sem as colecoes dos outros temas, loader apontando pro caminho
     canonico dentro de content/."""
     if not path.is_file():
         print(f"[promover_tema] ERRO: content.config.ts nao encontrado: {path}", file=sys.stderr)
@@ -274,14 +287,9 @@ def limpar_public(public_dir):
     que também só serve pra decisão, não pro site em produção)."""
     if not public_dir.is_dir():
         return
-    padroes = [
-        "tema-03.json", "tema-04.json", "tema.json",
-        "llms-tema-03.txt", "llms-tema-04.txt",
-        "sitemap-tema-03.xml", "sitemap-tema-04.xml",
-    ]
-    for nome in padroes:
-        alvo = public_dir / nome
-        if alvo.exists():
+    padroes = ["tema*.json", "llms-tema-*.txt", "sitemap-tema-*.xml"]
+    for padrao in padroes:
+        for alvo in public_dir.glob(padrao):
             alvo.unlink()
 
 
@@ -324,12 +332,13 @@ def remover_residuos_desconhecidos(pages_dir, content_dir, config_dir, allowlist
 
 def limpar_nao_escolhidos(tema_escolhido, pages_dir, config_dir, content_dir, layouts_dir):
     """Apaga por completo tudo que pertence aos temas NÃO escolhidos —
-    nunca deixar um segundo tema coexistindo no ar."""
-    outros = [t for t in ["tema-03", "tema-04"] if t != tema_escolhido]
-    layout_por_tema = {"tema-03": "Tema03Base.astro", "tema-04": "Tema04Base.astro"}
+    nunca deixar um segundo tema coexistindo no ar. Se o escolhido não for o
+    base, o layout e os componentes do base também saem."""
+    outros = [t for t in TEMAS_VALIDOS[1:] if t != tema_escolhido]
+    layout_por_tema = {nome: t["layout"] for nome, t in TEMAS.items() if t["layout"]}
 
     # ThemeBase.astro é o layout do tema base — órfão em qualquer cliente
-    # que promoveu tema-03 ou tema-04 (nenhuma página promovida o importa).
+    # que promoveu outro tema (nenhuma página promovida o importa).
     # Os componentes extraídos do tema base (sem sufixo T3/T4) ficam
     # órfãos pelo mesmo motivo — mesma limpeza que já fazemos pro tema
     # irmão não escolhido, só que pro base.
