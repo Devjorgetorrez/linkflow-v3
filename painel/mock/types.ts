@@ -171,15 +171,6 @@ export interface ItemSaude {
   detalhe: string;
 }
 
-export interface TemaVisual {
-  id: string;
-  nome: string;
-  estilo: string;
-  layout: string;
-  nichos: string[];
-  gradiente: string;
-}
-
 export interface UrlSitemap {
   loc: string;
   ultimaMod: string;

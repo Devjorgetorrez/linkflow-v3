@@ -8,30 +8,46 @@
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
 
+/**
+ * Rotas de API que fazem a PRÓPRIA autenticação (sessão OU x-api-key, em
+ * lib/auth.ts → verificarAcesso). O middleware deixa passar; o handler barra.
+ *
+ * Lista ÚNICA, usada nos dois pontos abaixo. Rota de API nova precisa entrar
+ * aqui, senão o agente (que usa x-api-key, sem sessão) é redirecionado para o
+ * login. (Antes eram duas listas copiadas à mão, e rota nova ficava de fora.)
+ */
+const ROTAS_API_PROPRIAS = [
+  "/api/posts",
+  "/api/config",
+  "/api/build",
+  "/api/usuarios",
+  "/api/stats",
+  "/api/robots",
+  "/api/llms",
+  "/api/menus",
+  "/api/midia",
+  "/api/leads",
+  "/api/formularios",
+  "/api/submissao",
+  "/api/tarefas",
+  "/api/redirects",
+  "/api/paginas",
+  "/api/autores",
+  "/api/categorias",
+  "/api/layout",
+  "/api/links-internos",
+];
+
+function ehRotaApiPropria(pathname: string): boolean {
+  return ROTAS_API_PROPRIAS.some((rota) => pathname.startsWith(rota));
+}
+
 export default withAuth(
   function middleware(req) {
     const { pathname } = req.nextUrl;
     const token = req.nextauth.token;
 
-    // Rotas de API internas (protegidas por API key, não por sessão)
-    if (pathname.startsWith("/api/posts") ||
-        pathname.startsWith("/api/config") ||
-        pathname.startsWith("/api/build") ||
-        pathname.startsWith("/api/usuarios") ||
-        pathname.startsWith("/api/stats") ||
-        pathname.startsWith("/api/robots") ||
-        pathname.startsWith("/api/llms") ||
-        pathname.startsWith("/api/menus") ||
-        pathname.startsWith("/api/build") ||
-        pathname.startsWith("/api/midia") ||
-        pathname.startsWith("/api/leads") ||
-        pathname.startsWith("/api/formularios") ||
-        pathname.startsWith("/api/submissao") ||
-        pathname.startsWith("/api/tarefas") ||
-        pathname.startsWith("/api/redirects") ||
-        pathname.startsWith("/api/paginas") ||
-        pathname.startsWith("/api/autores") ||
-        pathname.startsWith("/api/categorias")) {
+    if (ehRotaApiPropria(pathname)) {
       return NextResponse.next();
     }
 
@@ -49,27 +65,10 @@ export default withAuth(
       authorized: ({ token, req }) => {
         const { pathname } = req.nextUrl;
 
-        // Rotas públicas
+        // Rotas públicas (login e as APIs que se autenticam sozinhas)
         if (pathname.startsWith("/login") ||
             pathname.startsWith("/api/auth") ||
-            pathname.startsWith("/api/posts") ||
-            pathname.startsWith("/api/config") ||
-            pathname.startsWith("/api/build") ||
-            pathname.startsWith("/api/usuarios") ||
-        pathname.startsWith("/api/stats") ||
-        pathname.startsWith("/api/robots") ||
-        pathname.startsWith("/api/llms") ||
-        pathname.startsWith("/api/menus") ||
-        pathname.startsWith("/api/build") ||
-        pathname.startsWith("/api/midia") ||
-        pathname.startsWith("/api/leads") ||
-        pathname.startsWith("/api/formularios") ||
-        pathname.startsWith("/api/submissao") ||
-        pathname.startsWith("/api/tarefas") ||
-        pathname.startsWith("/api/redirects") ||
-        pathname.startsWith("/api/paginas") ||
-        pathname.startsWith("/api/autores") ||
-        pathname.startsWith("/api/categorias")) {
+            ehRotaApiPropria(pathname)) {
           return true;
         }
 

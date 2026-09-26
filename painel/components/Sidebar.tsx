@@ -94,7 +94,7 @@ const GRUPOS: NavGroup[] = [
         label: "Aparência",
         icone: Palette,
         subitens: [
-          { href: "/aparencia/temas", label: "Tema" },
+          { href: "/aparencia/temas", label: "Layout" },
           { href: "/aparencia/personalizar", label: "Personalizar" },
         ],
       },
