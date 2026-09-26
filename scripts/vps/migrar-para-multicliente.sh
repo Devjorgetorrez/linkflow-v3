@@ -81,8 +81,24 @@ fi
 
 # ─── Parar processo PM2 antigo ─────────────────────────────────────────────────
 echo "  Parando processo PM2 antigo..."
-pm2 stop painel 2>/dev/null || true
-pm2 delete painel 2>/dev/null || true
+# Só mexe no processo "painel" se ele realmente pertence à instalação antiga
+# (o mesmo nome pode existir em outro cliente deste servidor).
+PAINEL_ANTIGO=$(pm2 jlist 2>/dev/null | python3 -c '
+import json, sys
+raw = sys.stdin.read()
+try:
+    lista = json.loads(raw[raw.index("["):])
+except Exception:
+    lista = []
+antigo = sys.argv[1]
+print(any(p.get("name") == "painel" and str(p.get("pm2_env", {}).get("pm_cwd", "")).startswith(antigo) for p in lista))
+' "$DIR_ANTIGO")
+if [ "$PAINEL_ANTIGO" = "True" ]; then
+  pm2 stop painel 2>/dev/null || true
+  pm2 delete painel 2>/dev/null || true
+else
+  echo "  Nenhum processo 'painel' da instalação antiga ($DIR_ANTIGO) encontrado — nada foi parado."
+fi
 
 # ─── Configurar cliente na nova estrutura ─────────────────────────────────────
 echo "  Configurando cliente na nova estrutura..."
@@ -91,7 +107,9 @@ NEXTAUTH_SECRET=$(grep NEXTAUTH_SECRET "$DIR_ANTIGO/painel/.env.local" 2>/dev/nu
 PAINEL_API_KEY=$(grep PAINEL_API_KEY "$DIR_ANTIGO/painel/.env.local" 2>/dev/null | cut -d= -f2 || openssl rand -base64 32 | tr -dc 'a-zA-Z0-9' | head -c 32)
 
 # Descobrir a porta do processo antigo
-PORTA=$(pm2 list 2>/dev/null | grep "painel" | grep -oP ':\K[0-9]+' | head -1 || echo "3210")
+# (a tabela do pm2 não mostra porta — lê do .env da instalação antiga)
+PORTA=$(grep -E '^PORT=' "$DIR_ANTIGO/painel/.env.local" 2>/dev/null | cut -d= -f2 | head -1)
+PORTA=${PORTA:-3210}
 
 cat > "$CLIENTE_DIR/.env" << EOF
 # LinkFlow — $SLUG (migrado)

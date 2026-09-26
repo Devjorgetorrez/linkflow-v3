@@ -37,6 +37,16 @@ usando a estrutura que esta skill deixou pronta.
 
 ---
 
+## Regra: script contornado é problema a reportar
+
+Os scripts de `scripts/vps/` são o caminho único. Se um deles falhar, ou se
+for necessário fazer à mão o que ele faria, isso **não é um detalhe da
+execução**: é defeito do script. Pare, diga em uma frase o que o script
+tentou fazer de errado, e registre no resumo final como
+**"Problema no instalador a corrigir"** — nunca como nota de rodapé nem em
+silêncio. Nunca peça ao operador para rodar o mesmo passo manualmente sem
+antes reportar o defeito.
+
 ## Quando usar esta skill
 
 - Primeiro setup de um VPS novo (nenhum cliente configurado ainda)
@@ -129,6 +139,7 @@ painel e do motor Astro).
 # Copiar scripts de infraestrutura
 scp -P [porta] scripts/vps/setup.sh root@[IP]:/root/
 scp -P [porta] scripts/vps/novo-cliente.sh root@[IP]:/root/
+scp -P [porta] scripts/vps/ssl-cliente.sh root@[IP]:/root/
 scp -P [porta] scripts/promover_tema.py root@[IP]:/root/
 ssh -p [porta] root@[IP] "mkdir -p /opt/linkflow/scripts && mv /root/promover_tema.py /opt/linkflow/scripts/"
 ssh -p [porta] root@[IP] "mkdir -p /opt/linkflow"
@@ -177,6 +188,8 @@ repetir o PASSO 4 para ele.
 ## PASSO 4 — Adicionar novo cliente a um VPS já configurado
 
 ```bash
+# novo-cliente.sh chama ssl-cliente.sh, que precisa estar na mesma pasta
+scp -P [porta] scripts/vps/novo-cliente.sh scripts/vps/ssl-cliente.sh root@[IP]:/root/
 ssh -p [porta] root@[IP] \
   "bash /root/novo-cliente.sh [SLUG] [DOMINIO_SITE] [DOMINIO_PAINEL] [TEMA]"
 ```
@@ -192,7 +205,7 @@ Isso cria, isolado desse cliente:
 - Porta própria (a próxima disponível, a partir de 3210)
 - Processo PM2 próprio (`painel-[SLUG]`)
 - Bloco Nginx próprio para o site e para o painel
-- SSL configurado automaticamente (Certbot, dentro do próprio script)
+- SSL gerado só para os endereços cujo DNS já aponta para este servidor (o script confere antes; DNS pendente não é erro, o SSL fica para o PASSO 6)
 
 Verificar que o processo subiu:
 
@@ -259,26 +272,30 @@ propagando. Só o domínio é que vai demorar a resolver.
 
 ---
 
-## PASSO 6 — Verificar SSL
+## PASSO 6 — SSL (depois que o DNS apontar)
 
-O `novo-cliente.sh` (e o `setup.sh` para o primeiro cliente) já rodam o
-Certbot automaticamente durante a criação — normalmente não é preciso
-fazer nada aqui. Só verificar:
+O `novo-cliente.sh` e o `setup.sh` só pedem certificado para os endereços
+cujo DNS **já** aponta para o servidor. Se o DNS ainda não tinha propagado,
+o script termina normalmente com `SSL: pendente` (ou `parcial`) — isso não
+é falha, é o estado esperado enquanto o DNS não propaga.
 
-```bash
-curl -s -o /dev/null -w "%{http_code}" "https://[DOMINIO]"
-curl -s -o /dev/null -w "%{http_code}" "https://painel.[DOMINIO]"
-```
-
-Se algum retornar erro de certificado (não `200`/`301`/`302`), o SSL
-pode não ter sido gerado (geralmente porque o DNS ainda não tinha
-propagado no momento da criação do cliente). Rodar manualmente:
+Quando o operador avisar que criou os registros de DNS (PASSO 5B) e o `dig`
+mostrar o IP do servidor, gerar o SSL:
 
 ```bash
 ssh -p [porta] root@[IP] \
-  "certbot --nginx -d [DOMINIO] -d www.[DOMINIO] -d painel.[DOMINIO] \
-   --non-interactive --agree-tos -m admin@[DOMINIO] --redirect"
+  "bash /root/ssl-cliente.sh [SLUG] [DOMINIO] painel.[DOMINIO]"
 ```
+
+A última linha da saída é `SSL_STATUS=ok|parcial|pendente|falhou`:
+- `ok` → confirmar com `curl -s -o /dev/null -w "%{http_code}" "https://[DOMINIO]"`
+  (esperado `200`, `301` ou `302`) e o mesmo para `https://painel.[DOMINIO]`.
+- `parcial` / `pendente` → o script lista quais endereços ainda não apontam
+  para o servidor. Voltar ao PASSO 5B para o registro que falta.
+- `falhou` → mostrar a saída do certbot ao operador e parar; não repetir em laço.
+
+Nunca passar um e-mail inventado ao certbot. Sem e-mail informado pelo
+operador, o script emite sem e-mail de contato.
 
 ---
 
@@ -388,7 +405,7 @@ ssh -p [porta] root@[IP] "df -h"
 | Script falha no meio | Ler o output do erro, corrigir e rodar de novo — `novo-cliente.sh` verifica se o cliente já existe antes de recriar |
 | Painel não sobe (PM2 offline) | `ssh ... "pm2 logs painel-[SLUG] --lines 50"` para ver o erro |
 | DNS não propagou | Aguardar até 4h — verificar configuração no registrador do domínio |
-| Certbot falha | DNS precisa estar propagado antes do SSL — tentar depois com o comando do PASSO 6 |
+| SSL `pendente`/`parcial` | DNS ainda não aponta para o servidor — normal; rodar `ssl-cliente.sh` (PASSO 6) depois que o `dig` mostrar o IP |
 | Espaço em disco insuficiente | `df -h` para diagnóstico — considerar upgrade de storage antes de mais um cliente, ver `checar-capacidade.sh` |
 | VPS sem capacidade para mais um cliente | Rodar `checar-capacidade.sh` antes de `novo-cliente.sh` — orientar upgrade de RAM se necessário |
 | `promover_tema.py` falha (tema/config não encontrado) | Confirmar que `/opt/linkflow/_astro` tem os 3 temas completos (páginas, config, conteúdo de demo) — se a cópia inicial excluiu `content/`/`config/`, refazer o `scp` sem exclude |

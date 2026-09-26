@@ -29,14 +29,47 @@ if [ -d "$CLIENTE_DIR" ]; then
   exit 1
 fi
 
-# ─── Porta única para este cliente ────────────────────────────────────────────
-# Pega a maior porta em uso pelos painéis e incrementa
-PORTA_BASE=3210
-ULTIMA_PORTA=$(pm2 list 2>/dev/null | grep "painel-" | grep -oP ':\K[0-9]+' | sort -n | tail -1 || echo $((PORTA_BASE - 1)))
-PORTA=$((ULTIMA_PORTA + 1))
-[ $PORTA -lt $PORTA_BASE ] && PORTA=$PORTA_BASE
+# ─── Não sobrepor domínio de outro site já servido pelo Nginx ────────────────
+for d in "$DOMINIO_SITE" "www.$DOMINIO_SITE" "$DOMINIO_PAINEL"; do
+  dono=$(grep -RlsE "server_name[^;]*[[:space:]]${d//./\\.}([[:space:];])" \
+           /etc/nginx/sites-enabled/ /etc/nginx/conf.d/ 2>/dev/null \
+         | grep -v -e "/site-$SLUG\$" -e "/painel-$SLUG\$" | head -1 || true)
+  if [ -n "$dono" ]; then
+    echo "Erro: o domínio $d já é servido por outra configuração do Nginx ($dono)."
+    echo "Nada foi alterado. Confira o domínio informado antes de continuar."
+    exit 1
+  fi
+done
 
-echo "  Porta do painel: $PORTA"
+# ─── Porta única para este cliente ────────────────────────────────────────────
+# A tabela do `pm2 list` não mostra porta, então a porta é descoberta pelo
+# que está de fato escutando na máquina (qualquer processo, LinkFlow ou não)
+# e pelo PORT= dos .env dos outros clientes (processo pode estar parado).
+PORTA_BASE=3210
+PORTA_TETO=3299
+ESCUTANDO=$(ss -ltn 2>/dev/null || netstat -ltn 2>/dev/null || true)
+if [ -z "$ESCUTANDO" ]; then
+  echo "Erro: não consegui listar as portas em uso (ss/netstat ausentes)."
+  echo "Nada foi alterado. Instale iproute2 ou net-tools e rode de novo."
+  exit 1
+fi
+
+porta_em_uso() {
+  echo "$ESCUTANDO" | awk '{print $4}' | grep -Eq "[:.]$1\$" && return 0
+  grep -qsE "^PORT=$1\$" "$LINKFLOW_DIR"/clientes/*/.env && return 0
+  return 1
+}
+
+PORTA=$PORTA_BASE
+while porta_em_uso $PORTA; do
+  PORTA=$((PORTA + 1))
+  if [ $PORTA -gt $PORTA_TETO ]; then
+    echo "Erro: nenhuma porta livre entre $PORTA_BASE e $PORTA_TETO."
+    exit 1
+  fi
+done
+
+echo "  Porta do painel: $PORTA (livre)"
 
 # ─── Estrutura de pastas do cliente ──────────────────────────────────────────
 echo "  Criando estrutura..."
@@ -212,14 +245,16 @@ ln -sf /etc/nginx/sites-available/painel-$SLUG /etc/nginx/sites-enabled/
 nginx -t && systemctl reload nginx
 
 # ─── SSL ──────────────────────────────────────────────────────────────────────
+# Só pede certificado para os nomes que já apontam para este servidor
+# (ssl-cliente.sh confere o DNS). Se o DNS ainda não propagou, o cliente
+# fica pronto sem SSL e o SSL é gerado depois, sem derrubar nada.
+SSL_STATUS="não solicitado (--sem-ssl)"
 if [ "$SEM_SSL" != "--sem-ssl" ]; then
-  echo "  Gerando SSL..."
-  certbot --nginx \
-    -d "$DOMINIO_SITE" -d "www.$DOMINIO_SITE" \
-    -d "$DOMINIO_PAINEL" \
-    --non-interactive --agree-tos \
-    -m "ssl@$(echo $DOMINIO_SITE | cut -d. -f2-)" \
-    --redirect
+  echo "  Conferindo DNS e gerando SSL..."
+  SAIDA_SSL=$(bash "$(dirname "$0")/ssl-cliente.sh" "$SLUG" "$DOMINIO_SITE" "$DOMINIO_PAINEL" 2>&1) || true
+  echo "$SAIDA_SSL" | sed 's/^/    /'
+  SSL_STATUS=$(echo "$SAIDA_SSL" | grep '^SSL_STATUS=' | tail -1 | cut -d= -f2-)
+  SSL_STATUS=${SSL_STATUS:-"falhou (ver saída acima)"}
 fi
 
 # ─── Resumo ───────────────────────────────────────────────────────────────────
@@ -229,6 +264,7 @@ echo "     Site:        http://$DOMINIO_SITE"
 echo "     Painel:      http://$DOMINIO_PAINEL"
 echo "     Porta:       $PORTA"
 echo "     Processo:    painel-$SLUG"
+echo "     SSL:         $SSL_STATUS"
 echo "     Dados:       $CLIENTE_DIR/dados/"
 echo "     Usuários:    $CLIENTE_DIR/usuarios.json"
 echo "     API Key:     $PAINEL_API_KEY"
