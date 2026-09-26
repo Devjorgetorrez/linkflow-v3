@@ -217,6 +217,17 @@ Quando o usuário digitar `blog` (sem `/link-flow`):
   leia e execute `skills/site-publicar/SKILL.md`. Se `wordpress` ou
   ausente → leia e execute `skills/blog-publicar/SKILL.md`.
 
+## Trigger: senha do painel
+
+Quando o usuário disser que esqueceu ou perdeu a senha do painel ("esqueci a
+senha do painel", "redefina a senha do usuário X", "não consigo entrar no
+painel") — em geral colando o pedido gerado pelo botão "Esqueci minha senha" da
+tela de login:
+- Leia e execute `skills/painel-senha/SKILL.md`. Não há recuperação por e-mail:
+  a redefinição é feita por SSH, só no site deste projeto.
+- Nunca guarde a senha provisória em arquivo; ela aparece uma única vez, na
+  resposta ao usuário.
+
 ## Trigger: automatizar blog
 
 Quando o usuário digitar "automatizar blog", "agendar blog", "publicar automaticamente" ou similar:

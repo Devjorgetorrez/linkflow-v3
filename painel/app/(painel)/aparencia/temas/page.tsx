@@ -1,8 +1,9 @@
 "use client";
 
-import { Check, Copy, ExternalLink } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import { BotaoCopiar } from "@/components/BotaoCopiar";
 import { Botao } from "@/components/ui";
 import { CATALOGO_LAYOUTS, type LayoutCatalogo } from "@/lib/catalogo-layouts";
 import { cn } from "@/lib/utils";
@@ -33,35 +34,6 @@ function pedidoDeTroca(l: LayoutCatalogo): string {
 
 const PEDIDO_ABRIR_CATALOGO =
   "Abra o catálogo de layouts no localhost para eu ver as demonstrações e escolher.";
-
-function BotaoCopiar({ texto }: { texto: string }) {
-  const [copiado, setCopiado] = useState(false);
-
-  async function copiar() {
-    try {
-      await navigator.clipboard.writeText(texto);
-    } catch {
-      // Sem permissão de área de transferência (contexto não seguro): seleção manual.
-      const ta = document.createElement("textarea");
-      ta.value = texto;
-      ta.style.position = "fixed";
-      ta.style.opacity = "0";
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand("copy");
-      document.body.removeChild(ta);
-    }
-    setCopiado(true);
-    setTimeout(() => setCopiado(false), 2200);
-  }
-
-  return (
-    <Botao variante="primario" tamanho="sm" onClick={copiar}>
-      {copiado ? <Check size={12} /> : <Copy size={12} />}
-      {copiado ? "Copiado" : "Copiar"}
-    </Botao>
-  );
-}
 
 function Cartao({
   layout,

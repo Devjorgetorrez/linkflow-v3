@@ -324,8 +324,10 @@ curl -s -X POST https://painel.[DOMINIO]/api/usuarios \
   }'
 ```
 
-Orientar o operador a guardar a senha em local seguro — não há
-recuperação de senha automática ainda.
+Orientar o operador a guardar a senha em local seguro. O painel não recupera
+senha por e-mail: se ela for perdida, o botão "Esqueci minha senha" da tela
+de login gera um pedido que ele cola aqui, e a skill `painel-senha` redefine a
+senha pelo servidor.
 
 Confirmar que o login funciona:
 > "Acesse https://painel.[dominio]/login e entre com o e-mail e senha
