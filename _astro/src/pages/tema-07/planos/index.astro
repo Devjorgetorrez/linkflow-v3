@@ -11,7 +11,7 @@ import Faq          from '../../../components/blocos/Faq.astro'
 import Cta          from '../../../components/blocos/Cta.astro'
 import Footer       from '../../../components/blocos/Footer.astro'
 import { site }     from '../../../config/tema-07.ts'
-import { textoCredencial } from '../../../lib/schema.ts'
+import { textoCredencial, areaLista } from '../../../lib/schema.ts'
 import { getCollection } from 'astro:content'
 
 const planos = (await getCollection('servicosT7'))
@@ -80,7 +80,7 @@ const jsonLd = {
         'Seus dados são usados apenas para elaborar a cotação. Não repassamos seu contato a terceiros.',
       ]}
       whatsapp={site.nap.whatsapp}
-      cidades={site.cidades}
+      cidades={areaLista(site)}
     />
   </div>
 
@@ -102,7 +102,7 @@ const jsonLd = {
     eyebrow="Cobertura"
     titulo="Cidades atendidas"
     descricao="Presencial em Sorocaba e remoto nas demais cidades da região."
-    regioes={site.cidades}
+    regioes={areaLista(site)}
     bullets={site.cidadesBullets}
     imagem="https://images.unsplash.com/photo-1449844908441-8829872d2607?w=420&h=480&fit=crop&auto=format"
     imagemAlt="Rua residencial arborizada"

@@ -11,7 +11,7 @@ import Faq          from '../../../components/blocos/Faq.astro'
 import Cta          from '../../../components/blocos/Cta.astro'
 import Footer       from '../../../components/blocos/Footer.astro'
 import { site }     from '../../../config/tema-04.ts'
-import { textoCredencial } from '../../../lib/schema.ts'
+import { textoCredencial, areaLista } from '../../../lib/schema.ts'
 import { getCollection } from 'astro:content'
 
 const servicos = (await getCollection('servicosT4'))
@@ -80,7 +80,7 @@ const jsonLd = {
     eyebrow="Cobertura"
     titulo="Onde atendemos"
     descricao="Se o seu bairro não estiver na lista, pergunte mesmo assim — a rota muda conforme a semana."
-    regioes={site.regioes}
+    regioes={areaLista(site)}
     bullets={site.regioesBullets}
     imagem="https://images.unsplash.com/photo-1449844908441-8829872d2607?w=420&h=480&fit=crop&auto=format"
     imagemAlt="Rua residencial arborizada"

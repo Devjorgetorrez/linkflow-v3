@@ -132,11 +132,6 @@ export const site = {
   numerosNota: 'Indicadores da operação apurados em janeiro de 2026. Tempo de chegada e taxa de localização variam conforme região, tipo de imóvel e complexidade do caso.',
 
   /* Regiões atendidas */
-  regioes: [
-    'Goiânia — Setor Bueno', 'Setor Oeste', 'Jardim Goiás', 'Setor Marista', 'Alto da Glória',
-    'Setor Sul', 'Campinas', 'Vila Nova', 'Aparecida de Goiânia', 'Senador Canedo',
-    'Trindade', 'Goianira', 'Anápolis', 'Hidrolândia',
-  ],
 
   regioesBullets: [
     'Atendimento em Goiânia e região metropolitana',

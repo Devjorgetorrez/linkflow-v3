@@ -22,6 +22,12 @@ export const site = {
     { dias: ['sab'], abre: '08:00', fecha: '14:00' },
   ] as { dias: ('seg'|'ter'|'qua'|'qui'|'sex'|'sab'|'dom')[]; abre: string; fecha: string; fechado?: boolean }[],
 
+  areaAtendimento: [
+    'Campinas — Centro', 'Cambuí', 'Jardim Proença', 'Barão Geraldo', 'Taquaral',
+    'Nova Campinas', 'Swiss Park', 'Valinhos', 'Vinhedo', 'Paulínia',
+    'Sumaré', 'Hortolândia', 'Indaiatuba', 'Americana',
+  ],
+
   nap: {
     logradouro:  'Rua das Acácias, 415',
     complemento: 'Galpão 2',
@@ -115,11 +121,6 @@ export const site = {
   ],
 
   /* Regiões atendidas — bloco AreaAtendida */
-  regioes: [
-    'Campinas — Centro', 'Cambuí', 'Jardim Proença', 'Barão Geraldo', 'Taquaral',
-    'Nova Campinas', 'Swiss Park', 'Valinhos', 'Vinhedo', 'Paulínia',
-    'Sumaré', 'Hortolândia', 'Indaiatuba', 'Americana',
-  ],
 
   regioesBullets: [
     'Atendimento em domicílio em toda a região metropolitana',

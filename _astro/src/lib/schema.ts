@@ -57,12 +57,19 @@ export function horariosSchema(site: Site): any[] {
  * areaServed: `site.areaAtendimento` se existir; senão as listas próprias do
  * layout (`regioes` no tema-04/06, `cidades` no tema-07); senão a cidade do NAP.
  */
-export function areaServida(site: Site): any[] {
-  const nomes: string[] =
+export function areaLista(site: Site): string[] {
+  // Precedência: areaAtendimento (fonte mestra, editada no painel) > regioes > cidades
+  // (legado dos layouts) > cidade do NAP. Toda página que mostra a cobertura usa esta lista.
+  return (
     (Array.isArray(site.areaAtendimento) && site.areaAtendimento.length ? site.areaAtendimento : null) ??
     (Array.isArray(site.regioes) && site.regioes.length ? site.regioes : null) ??
     (Array.isArray(site.cidades) && site.cidades.length ? site.cidades : null) ??
     (site.nap?.cidade ? [site.nap.cidade] : [])
+  )
+}
+
+export function areaServida(site: Site): any[] {
+  const nomes: string[] = areaLista(site)
   return nomes
     .filter((n) => typeof n === 'string' && n.trim())
     .map((n) => ({ '@type': n === site.nap?.cidade ? 'City' : 'Place', name: n }))

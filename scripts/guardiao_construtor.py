@@ -330,6 +330,15 @@ def valores_de_demonstracao(astro_dir_cliente):
     return {}
 
 
+def cobertura_duplicada(config_conteudo):
+    """Chaves (regioes/cidades) com lista diferente de areaAtendimento no mesmo config."""
+    area = _bloco_lista(config_conteudo, "areaAtendimento")
+    if not area or area == "[]":
+        return []
+    return [c for c in ("regioes", "cidades")
+            if _bloco_lista(config_conteudo, c) not in (None, "[]", area)]
+
+
 def demonstracao_que_sobrou(config_conteudo, astro_dir_cliente):
     ref = valores_de_demonstracao(astro_dir_cliente)
     achados = []
@@ -469,6 +478,11 @@ def verificar_saida(slug, fase="saida"):
             )
         if len(achados) > 6:
             erros.append(f"... e mais {len(achados) - 6} valor(es) de demonstracao no config/site.ts.")
+
+        for chave in cobertura_duplicada(config_conteudo):
+            avisos.append(
+                f"cobertura duplicada: o site usa areaAtendimento; remova {chave} do config/site.ts"
+            )
 
         # NAP no config
         match_tel = re.search(r"telefone:\s*['\"]([^'\"]+)['\"]", config_conteudo)

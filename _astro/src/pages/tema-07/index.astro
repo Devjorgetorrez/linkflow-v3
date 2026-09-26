@@ -24,7 +24,7 @@ import PostLista    from '../../components/blocos/PostLista.astro'
 import BuscasFrequentes from '../../components/blocos/BuscasFrequentes.astro'
 import Footer       from '../../components/blocos/Footer.astro'
 import { site }     from '../../config/tema-07.ts'
-import { textoCredencial, organizacaoSchema } from '../../lib/schema.ts'
+import { textoCredencial, organizacaoSchema, areaLista } from '../../lib/schema.ts'
 import { getCollection } from 'astro:content'
 import { ehPublicado } from '../../lib/publicacao.ts'
 import { nomeAutor } from '../../lib/autores.ts'
@@ -133,7 +133,7 @@ const jsonLd = {
         'Seus dados são usados apenas para elaborar a cotação. Não repassamos seu contato a terceiros.',
       ]}
       whatsapp={site.nap.whatsapp}
-      cidades={site.cidades}
+      cidades={areaLista(site)}
     />
   </div>
 
@@ -176,7 +176,7 @@ const jsonLd = {
     eyebrow="Cobertura"
     titulo={`Atendemos ${site.nap.cidade} e toda a região`}
     descricao="Presencial em Sorocaba e remoto nas demais cidades. O corretor designado é o mesmo do começo ao fim."
-    regioes={site.cidades}
+    regioes={areaLista(site)}
     bullets={site.cidadesBullets}
     imagem="https://images.unsplash.com/photo-1449844908441-8829872d2607?w=420&h=480&fit=crop&auto=format"
     imagemAlt="Rua residencial arborizada"

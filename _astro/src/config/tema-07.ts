@@ -161,11 +161,6 @@ export const site = {
   ],
 
   /* Cidades atendidas */
-  cidades: [
-    'Sorocaba', 'Votorantim', 'Itu', 'Salto', 'Porto Feliz', 'Boituva', 'Tatuí',
-    'Piedade', 'Araçoiaba da Serra', 'Iperó', 'Capela do Alto', 'Cerquilho',
-    'Tietê', 'Alumínio', 'Mairinque', 'São Roque', 'Ibiúna', 'Indaiatuba',
-  ],
 
   cidadesBullets: [
     'Atendimento presencial em Sorocaba e remoto em toda a região',

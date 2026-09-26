@@ -21,7 +21,7 @@ import Servicos     from '../../components/blocos/Servicos.astro'
 import Cta          from '../../components/blocos/Cta.astro'
 import Footer       from '../../components/blocos/Footer.astro'
 import { site }     from '../../config/tema-07.ts'
-import { textoCredencial, areaServida } from '../../lib/schema.ts'
+import { textoCredencial, areaServida, areaLista } from '../../lib/schema.ts'
 import { getCollection, render } from 'astro:content'
 
 interface Props {
@@ -145,7 +145,7 @@ const jsonLd = {
         'Seus dados são usados apenas para elaborar a cotação. Não repassamos seu contato a terceiros.',
       ]}
       whatsapp={site.nap.whatsapp}
-      cidades={site.cidades}
+      cidades={areaLista(site)}
     />
   </div>
 
