@@ -128,6 +128,19 @@ export async function GET(req: NextRequest) {
       // (dados/legal.json). O bloco `legal:` acima é regenerado a partir
       // deste a cada PATCH — ver lib/legal.ts.
       legalPainel: lerDados<LegalPainel>("legal.json", LEGAL_PAINEL_INICIAL),
+      // Identidade, mídia e dados estruturados (campos restaurados na Fase 1.1b)
+      razaoSocial: site.razaoSocial ?? "",
+      descricao: site.descricao ?? "",
+      favicon: site.favicon ?? "",
+      ogImagem: site.ogImagem ?? "",
+      logo: site.logo ?? {},
+      credencial: site.credencial ?? {},
+      schemaTipo: site.schemaTipo ?? [],
+      especialidade: site.especialidade ?? "",
+      faixaPreco: site.faixaPreco ?? "",
+      areaAtendimento: site.areaAtendimento ?? [],
+      atendimentoOnline: site.atendimentoOnline ?? false,
+      funcionamento: site.funcionamento ?? [],
       // Analytics e verificações (opcionais)
       googleAnalyticsId: site.googleAnalyticsId ?? "",
       metaPixelId: site.metaPixelId ?? "",

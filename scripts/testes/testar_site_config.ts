@@ -11,6 +11,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   aplicarPatch, lerSite, patchDeBody, literal, cnpjValido, enderecoFormatado,
+  derivarHorarios, separarNumero, juntarNumero,
 } from "../../painel/lib/site-config.ts";
 
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
@@ -126,6 +127,72 @@ for (const arq of ARQUIVOS) {
   ok(lerSite(r13.src).cnpj === "não possui", "CNPJ 'não possui' aceito");
 }
 
+
+// ── campos restaurados (razão social, logo, credencial, schema, horários estruturados, área) nos 6 configs reais ──
+console.log("\n=== campos restaurados (nos 6 configs reais)");
+for (const arq of ARQUIVOS) {
+  const src = fs.readFileSync(path.join(CFG, arq), "utf-8").replace(/\r\n/g, "\n");
+  const antes = lerSite(src);
+  const tag = `[${arq}]`;
+
+  // razão social + descrição + favicon + og
+  const r1 = aplicarPatch(src, { razaoSocial: "Clínica Sorriso Vivo Ltda", descricao: "Clínica odontológica em Jundiaí.", favicon: "/midia/fav.png", ogImagem: "/midia/og.jpg" });
+  const l1 = lerSite(r1.src);
+  ok(l1.razaoSocial === "Clínica Sorriso Vivo Ltda" && l1.descricao === "Clínica odontológica em Jundiaí." && l1.favicon === "/midia/fav.png" && l1.ogImagem === "/midia/og.jpg", `${tag} razaoSocial/descricao/favicon/ogImagem gravados (inseridos ou alterados)`);
+
+  // logo: cria o objeto se não existe; altera só o alt depois
+  const r2 = aplicarPatch(src, { logo: { src: "/midia/logo.png", alt: "Logo Sorriso Vivo" } });
+  ok(JSON.stringify(lerSite(r2.src).logo) === JSON.stringify({ ...(antes.logo ?? {}), src: "/midia/logo.png", alt: "Logo Sorriso Vivo" }), `${tag} logo gravado`);
+  const r2b = aplicarPatch(r2.src, { logo: { alt: "Novo alt" } });
+  ok(lerSite(r2b.src).logo?.src === "/midia/logo.png" && lerSite(r2b.src).logo?.alt === "Novo alt", `${tag} alterar só o alt preserva o src`);
+  const r2c = aplicarPatch(r2.src, { logo: { src: "" } });
+  ok(r2c.src === r2.src && r2c.ignorados.some((x) => x.campo === "logo.src"), `${tag} logo.src vazio sem confirmação é ignorado`);
+  const r2d = aplicarPatch(r2.src, { logo: { src: "" }, limpar: ["logo.src"] });
+  ok(!lerSite(r2d.src).logo?.src, `${tag} logo.src removido com limpar`);
+
+  // credencial
+  const r3 = aplicarPatch(src, { credencial: { conselho: "CRO-SP", registro: "12345", responsavel: "Dra. Helena" } });
+  ok(JSON.stringify(lerSite(r3.src).credencial) === JSON.stringify({ conselho: "CRO-SP", registro: "12345", responsavel: "Dra. Helena" }), `${tag} credencial gravada`);
+
+  // schemaTipo, areaAtendimento, atendimentoOnline
+  const r4 = aplicarPatch(src, { schemaTipo: ["Dentist", "LocalBusiness"], areaAtendimento: ["Jundiaí", "Várzea Paulista"], atendimentoOnline: true, faixaPreco: "$$", especialidade: "Implantodontia" });
+  const l4 = lerSite(r4.src);
+  ok(JSON.stringify(l4.schemaTipo) === '["Dentist","LocalBusiness"]' && JSON.stringify(l4.areaAtendimento) === '["Jundiaí","Várzea Paulista"]' && l4.atendimentoOnline === true && l4.faixaPreco === "$$" && l4.especialidade === "Implantodontia", `${tag} schemaTipo, areaAtendimento, atendimentoOnline, faixaPreco, especialidade`);
+  const r4b = aplicarPatch(r4.src, { areaAtendimento: [] });
+  ok(r4b.src === r4.src && r4b.ignorados.some((x) => x.campo === "areaAtendimento"), `${tag} lista vazia sem confirmação é ignorada`);
+
+  // horários estruturados + texto derivado
+  const func = [
+    { dias: ["seg", "ter", "qua", "qui", "sex"], abre: "08:00", fecha: "18:00" },
+    { dias: ["sab"], abre: "08:00", fecha: "12:30" },
+    { dias: ["dom"], abre: "", fecha: "", fechado: true },
+  ];
+  const r5 = aplicarPatch(src, { funcionamento: func as never });
+  const l5 = lerSite(r5.src);
+  ok(l5.funcionamento?.length === 3 && l5.funcionamento[0].abre === "08:00" && l5.funcionamento[2].fechado === true, `${tag} funcionamento estruturado gravado`);
+  ok(JSON.stringify(l5.horarios) === JSON.stringify([{ dia: "Segunda a Sexta", hora: "8h às 18h" }, { dia: "Sábado", hora: "8h às 12h30" }, { dia: "Domingo", hora: "Fechado" }]), `${tag} texto de horários DERIVADO do editor estruturado`, JSON.stringify(l5.horarios));
+  const r5b = aplicarPatch(src, { funcionamento: func as never, horarios: [{ dia: "Plantão", hora: "24h" }] });
+  ok(JSON.stringify(lerSite(r5b.src).horarios) === JSON.stringify([{ dia: "Plantão", hora: "24h" }]), `${tag} horarios explícito prevalece sobre o derivado`);
+
+  // validações
+  const rv = aplicarPatch(src, { funcionamento: [{ dias: ["seg"], abre: "18:00", fecha: "08:00" }] as never, schemaTipo: ["dentist"], favicon: "logo.txt", credencial: { registro: "x".repeat(50) } });
+  ok(rv.src === src && ["funcionamento.0", "schemaTipo", "favicon", "credencial.registro"].every((k) => rv.erros[k]), `${tag} validação: horário invertido, tipo minúsculo, favicon não-imagem, registro longo`, JSON.stringify(Object.keys(rv.erros)));
+
+  // idempotência com os campos novos
+  const r6 = aplicarPatch(r4.src, { schemaTipo: ["Dentist", "LocalBusiness"], areaAtendimento: ["Jundiaí", "Várzea Paulista"], atendimentoOnline: true });
+  ok(r6.src === r4.src && r6.alterados.length === 0, `${tag} reaplicar os mesmos valores não muda nada (byte a byte)`);
+
+  // rede nova: Threads
+  const r7 = aplicarPatch(src, { redes: { threads: "https://threads.net/@clinica" } });
+  ok(lerSite(r7.src).redes.some((r) => r.nome === "Threads" && r.href === "https://threads.net/@clinica"), `${tag} rede Threads`);
+}
+
+// helpers puros
+ok(JSON.stringify(derivarHorarios([{ dias: ["seg", "qua", "sex"], abre: "09:00", fecha: "17:00" }])) === '[{"dia":"Segunda, Quarta e Sexta","hora":"9h às 17h"}]', "derivarHorarios: dias não consecutivos");
+ok(separarNumero("Av. Dom Pedro II, 980").numero === "980" && separarNumero("Av. Dom Pedro II, 980").rua === "Av. Dom Pedro II", "separarNumero: rua e número");
+ok(separarNumero("Rua Sem Numero").numero === "" && separarNumero("Rua X, s/n").numero === "s/n", "separarNumero: sem número e s/n");
+ok(juntarNumero("Rua A", "12") === "Rua A, 12" && juntarNumero("Rua A", "") === "Rua A", "juntarNumero");
+
 // ── fixture mínima: arquivo sem vírgula final, sem nap.telefone2, com comentários ──
 console.log("\n=== fixture mínima");
 const mini = `// cabeçalho
@@ -152,10 +219,11 @@ ok(enderecoFormatado({ logradouro: "Rua A, 1", complemento: "Sala 2", bairro: "C
 
 // ── patchDeBody ──
 console.log("\n=== patchDeBody");
-const pb = patchDeBody({ tagline: "Slogan novo", cep: "13201-000", nap: { bairro: "Centro" }, instagram: "https://x.com/a", descricaoSite: "x", logo: "y" });
+const pb = patchDeBody({ tagline: "Slogan novo", cep: "13201-000", nap: { bairro: "Centro" }, instagram: "https://x.com/a", descricaoSite: "x", corPrimaria: "y", logo: { src: "/midia/l.png" } });
 ok(pb.patch.slogan === "Slogan novo", "tagline vira slogan");
 ok(pb.patch.nap?.cep === "13201-000" && pb.patch.nap?.bairro === "Centro", "campos soltos e aninhados do nap são juntados");
-ok(pb.naoSuportados.includes("descricaoSite") && pb.naoSuportados.includes("logo"), "descricaoSite e logo são reportados como NÃO gravados");
+ok(pb.naoSuportados.includes("descricaoSite") && pb.naoSuportados.includes("corPrimaria") && !pb.naoSuportados.includes("logo"), "campos desconhecidos são reportados como NÃO gravados; logo agora é gravável");
+ok(pb.patch.logo?.src === "/midia/l.png", "logo entra no patch");
 
 console.log(falhas ? `\n${falhas} FALHA(S)` : "\nTUDO OK");
 process.exit(falhas ? 1 : 0);

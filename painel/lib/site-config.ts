@@ -202,6 +202,65 @@ function lerNumero(s: string, e: Entrada): number | null | undefined {
   return /^-?\d+(\.\d+)?$/.test(t) ? Number(t) : undefined;
 }
 
+/** Valor de um literal simples (string, número, booleano, null, array, objeto); undefined se não der para ler. */
+function valorDe(s: string, ini: number, fim: number): unknown {
+  const t = s.slice(ini, fim);
+  if (!t.trim()) return undefined;
+  const q = t[0];
+  if (q === "'" || q === '"' || q === "`") {
+    if (t.length < 2 || t[t.length - 1] !== q || (q === "`" && t.includes("${"))) return undefined;
+    return desescapar(t.slice(1, -1));
+  }
+  if (t === "true") return true;
+  if (t === "false") return false;
+  if (t === "null") return null;
+  if (/^-?\d+(\.\d+)?$/.test(t)) return Number(t);
+  if (q === "[") {
+    const { elementos } = elementosDoArray(s, ini);
+    const r: unknown[] = [];
+    for (const el of elementos) {
+      const v = valorDe(s, el.ini, el.fim);
+      if (v === undefined) return undefined;
+      r.push(v);
+    }
+    return r;
+  }
+  if (q === "{") {
+    const o = objetoEm(s, ini);
+    const r: Record<string, unknown> = {};
+    for (const e of o.entradas) {
+      const v = valorDe(s, e.iniValor, e.fimValor);
+      if (v !== undefined) r[e.chave] = v;
+    }
+    return r;
+  }
+  return undefined;
+}
+
+/** Escreve um valor JSON-like como literal TypeScript (aspas simples, listas curtas numa linha). */
+function renderValor(v: unknown, ind: string): string {
+  if (v === null) return "null";
+  if (typeof v === "boolean" || typeof v === "number") return String(v);
+  if (typeof v === "string") return literal(v);
+  if (Array.isArray(v)) {
+    if (v.length === 0) return "[]";
+    if (v.every((x) => typeof x === "string")) {
+      const uma = "[" + v.map((x) => literal(x as string)).join(", ") + "]";
+      if (uma.length <= 90) return uma;
+      return "[\n" + v.map((x) => `${ind}  ${literal(x as string)},`).join("\n") + `\n${ind}]`;
+    }
+    return "[\n" + v.map((x) => `${ind}  ${renderValor(x, ind + "  ")},`).join("\n") + `\n${ind}]`;
+  }
+  if (v && typeof v === "object") {
+    const ent = Object.entries(v as Record<string, unknown>).filter(([, x]) => x !== undefined);
+    if (!ent.length) return "{}";
+    const uma = "{ " + ent.map(([k, x]) => `${k}: ${renderValor(x, ind)}`).join(", ") + " }";
+    if (uma.length <= 110 && !uma.includes("\n")) return uma;
+    return "{\n" + ent.map(([k, x]) => `${ind}  ${k}: ${renderValor(x, ind + "  ")},`).join("\n") + `\n${ind}}`;
+  }
+  return "null";
+}
+
 /** Literal de string em aspas simples, com escape correto (não remove nada). */
 export function literal(v: string): string {
   return "'" + v.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/\r?\n/g, " ") + "'";
@@ -277,6 +336,16 @@ export const CAMPOS_INTEGRACAO = [
   "googleAnalyticsId", "metaPixelId", "googleTagManagerId", "googleVerificacao", "bingVerificacao",
 ] as const;
 
+export type DiaSemana = "seg" | "ter" | "qua" | "qui" | "sex" | "sab" | "dom";
+export const DIAS_SEMANA: DiaSemana[] = ["seg", "ter", "qua", "qui", "sex", "sab", "dom"];
+export interface Funcionamento { dias: DiaSemana[]; abre: string; fecha: string; fechado?: boolean }
+export interface LogoSite { src?: string; srcEscuro?: string; alt?: string }
+export interface CredencialSite { conselho?: string; registro?: string; responsavel?: string }
+
+/** Campos de texto simples na raiz do site (identidade, SEO, mídia). */
+export const CAMPOS_TEXTO = ["razaoSocial", "descricao", "favicon", "ogImagem", "especialidade", "faixaPreco"] as const;
+export type CampoTexto = (typeof CAMPOS_TEXTO)[number];
+
 export interface SiteLido {
   nome?: string;
   nomeBreve?: string;
@@ -292,6 +361,18 @@ export interface SiteLido {
   googleTagManagerId?: string;
   googleVerificacao?: string;
   bingVerificacao?: string;
+  razaoSocial?: string;
+  descricao?: string;
+  favicon?: string;
+  ogImagem?: string;
+  especialidade?: string;
+  faixaPreco?: string;
+  logo?: LogoSite;
+  credencial?: CredencialSite;
+  schemaTipo?: string[];
+  areaAtendimento?: string[];
+  funcionamento?: Funcionamento[];
+  atendimentoOnline?: boolean;
 }
 
 function lerObjetoDeStrings(s: string, abre: number): Record<string, string> {
@@ -314,6 +395,7 @@ function lerLista(s: string, e: Entrada | undefined): Record<string, string>[] {
 export function lerSite(s: string): SiteLido {
   const o = objetoSite(s);
   const str = (k: string) => { const e = achar(o, k); return e ? lerString(s, e) : undefined; };
+  const val = (k: string) => { const e = achar(o, k); return e ? valorDe(s, e.iniValor, e.fimValor) : undefined; };
   const cnpjE = achar(o, "cnpj");
   const anoE = achar(o, "anoFundacao");
   const napE = achar(o, "nap");
@@ -332,6 +414,18 @@ export function lerSite(s: string): SiteLido {
     googleTagManagerId: str("googleTagManagerId"),
     googleVerificacao: str("googleVerificacao"),
     bingVerificacao: str("bingVerificacao"),
+    razaoSocial: str("razaoSocial"),
+    descricao: str("descricao"),
+    favicon: str("favicon"),
+    ogImagem: str("ogImagem"),
+    especialidade: str("especialidade"),
+    faixaPreco: str("faixaPreco"),
+    logo: val("logo") as LogoSite | undefined,
+    credencial: val("credencial") as CredencialSite | undefined,
+    schemaTipo: val("schemaTipo") as string[] | undefined,
+    areaAtendimento: val("areaAtendimento") as string[] | undefined,
+    funcionamento: val("funcionamento") as Funcionamento[] | undefined,
+    atendimentoOnline: val("atendimentoOnline") as boolean | undefined,
   };
 }
 
@@ -381,6 +475,48 @@ export function semCnpj(v: string): boolean {
   return /^n[ãa]o possui$/i.test(v.trim());
 }
 
+export function caminhoMidiaValido(v: string): boolean {
+  const t = v.trim();
+  return (t.startsWith("/") || /^https?:\/\//i.test(t)) && /\.(png|jpe?g|webp|svg|gif|avif|ico)(\?.*)?$/i.test(t);
+}
+export function horaValida(v: string): boolean {
+  return /^([01]?\d|2[0-3]):[0-5]\d$/.test(v.trim());
+}
+
+/** "Rua A, 123" → { rua: "Rua A", numero: "123" }. O número vai junto do logradouro no site. */
+export function separarNumero(logradouro: string): { rua: string; numero: string } {
+  const m = /^(.*?),\s*(\d+[A-Za-z]?(?:[-/]\d+)?|s\/n|S\/N)\s*$/.exec(logradouro.trim());
+  return m ? { rua: m[1].trim(), numero: m[2] } : { rua: logradouro.trim(), numero: "" };
+}
+export function juntarNumero(rua: string, numero: string): string {
+  const r = rua.trim();
+  const n = numero.trim();
+  return n ? `${r}, ${n}` : r;
+}
+
+const NOME_DIA: Record<DiaSemana, string> = {
+  seg: "Segunda", ter: "Terça", qua: "Quarta", qui: "Quinta", sex: "Sexta", sab: "Sábado", dom: "Domingo",
+};
+function rotuloDias(dias: DiaSemana[]): string {
+  const idx = [...new Set(dias)].map((d) => DIAS_SEMANA.indexOf(d)).filter((i) => i >= 0).sort((a, b) => a - b);
+  if (!idx.length) return "";
+  const nome = (i: number) => NOME_DIA[DIAS_SEMANA[i]];
+  if (idx.length === 1) return nome(idx[0]);
+  if (idx.every((v, i) => i === 0 || v === idx[i - 1] + 1)) return `${nome(idx[0])} a ${nome(idx[idx.length - 1])}`;
+  const nomes = idx.map(nome);
+  return nomes.slice(0, -1).join(", ") + " e " + nomes[nomes.length - 1];
+}
+function horaCurta(v: string): string {
+  const [h, m] = v.split(":");
+  return `${Number(h)}h${m && m !== "00" ? m : ""}`;
+}
+/** Texto que as páginas exibem ({dia, hora}) a partir do editor estruturado. */
+export function derivarHorarios(func: Funcionamento[]): Horario[] {
+  return func
+    .filter((f) => f.dias?.length)
+    .map((f) => ({ dia: rotuloDias(f.dias), hora: f.fechado ? "Fechado" : `${horaCurta(f.abre)} às ${horaCurta(f.fecha)}` }));
+}
+
 export function normalizarCep(v: string): string {
   const d = digitos(v);
   return d.length === 8 ? `${d.slice(0, 5)}-${d.slice(5)}` : v.trim();
@@ -408,13 +544,26 @@ export interface PatchSite {
   googleTagManagerId?: string;
   googleVerificacao?: string;
   bingVerificacao?: string;
+  razaoSocial?: string;
+  descricao?: string;
+  favicon?: string;
+  ogImagem?: string;
+  especialidade?: string;
+  faixaPreco?: string;
+  logo?: LogoSite;
+  credencial?: CredencialSite;
+  schemaTipo?: string[];
+  areaAtendimento?: string[];
+  /** Editor estruturado de horários. Se vier sem `horarios`, o texto exibido é derivado dele. */
+  funcionamento?: Funcionamento[];
+  atendimentoOnline?: boolean;
   /** Campos que o usuário APAGOU de propósito ("nap.bairro", "redes.instagram", "horarios"). */
   limpar?: string[];
 }
 
 const NOMES_REDES: Record<string, string> = {
   instagram: "Instagram", facebook: "Facebook", youtube: "YouTube", linkedin: "LinkedIn",
-  tiktok: "TikTok", twitter: "Twitter", pinterest: "Pinterest",
+  tiktok: "TikTok", twitter: "Twitter", pinterest: "Pinterest", threads: "Threads",
 };
 
 /**
@@ -445,6 +594,13 @@ export function patchDeBody(body: Record<string, unknown>): { patch: PatchSite; 
   if (body.anoFundacao !== undefined) patch.anoFundacao = body.anoFundacao as number | string | null;
 
   if (Array.isArray(body.horarios)) patch.horarios = body.horarios as Horario[];
+  for (const k of CAMPOS_TEXTO) if (body[k] !== undefined) patch[k] = str(body[k]);
+  if (body.logo && typeof body.logo === "object") patch.logo = body.logo as LogoSite;
+  if (body.credencial && typeof body.credencial === "object") patch.credencial = body.credencial as CredencialSite;
+  if (Array.isArray(body.schemaTipo)) patch.schemaTipo = body.schemaTipo.map(String);
+  if (Array.isArray(body.areaAtendimento)) patch.areaAtendimento = body.areaAtendimento.map(String);
+  if (Array.isArray(body.funcionamento)) patch.funcionamento = body.funcionamento as Funcionamento[];
+  if (typeof body.atendimentoOnline === "boolean") patch.atendimentoOnline = body.atendimentoOnline;
 
   const redes: Record<string, string> = {};
   for (const k of Object.keys(NOMES_REDES)) {
@@ -458,7 +614,8 @@ export function patchDeBody(body: Record<string, unknown>): { patch: PatchSite; 
   // O que chegou mas não vira campo do site.ts
   const conhecidos = new Set([
     "nome", "nomeBreve", "slogan", "tagline", "dominio", "cnpj", "anoFundacao", "nap", "redes", "horarios",
-    "limpar", "legalPainel", ...CAMPOS_NAP, ...CAMPOS_INTEGRACAO, ...Object.keys(NOMES_REDES),
+    "limpar", "legalPainel", "logo", "credencial", "schemaTipo", "areaAtendimento", "funcionamento", "atendimentoOnline",
+    ...CAMPOS_TEXTO, ...CAMPOS_NAP, ...CAMPOS_INTEGRACAO, ...Object.keys(NOMES_REDES),
   ]);
   for (const k of Object.keys(body)) if (!conhecidos.has(k)) naoSuportados.push(k);
 
@@ -489,6 +646,35 @@ export function validarPatch(p: PatchSite): Record<string, string> {
   }
   for (const [i, h] of (p.horarios ?? []).entries()) {
     if (vazio(h.dia) || vazio(h.hora)) e[`horarios.${i}`] = "Preencha o dia e o horário.";
+  }
+  if (!vazio(p.razaoSocial) && p.razaoSocial!.trim().length < 2) e.razaoSocial = "Razão social inválida.";
+  if (p.descricao !== undefined && p.descricao.trim().length > 320) e.descricao = "Descrição muito longa (máximo 320 caracteres).";
+  if (!vazio(p.especialidade) && p.especialidade!.trim().length > 120) e.especialidade = "Especialidade muito longa.";
+  if (!vazio(p.faixaPreco) && p.faixaPreco!.trim().length > 20) e.faixaPreco = "Faixa de preço muito longa (ex.: $$).";
+  for (const k of ["favicon", "ogImagem"] as const) {
+    if (!vazio(p[k]) && !caminhoMidiaValido(p[k]!)) e[k] = "Escolha uma imagem da biblioteca de mídia (png, jpg, webp, svg, ico).";
+  }
+  for (const k of ["src", "srcEscuro"] as const) {
+    const v = p.logo?.[k];
+    if (!vazio(v) && !caminhoMidiaValido(v!)) e[`logo.${k}`] = "Escolha uma imagem da biblioteca de mídia.";
+  }
+  if (p.credencial) {
+    if ((p.credencial.conselho ?? "").length > 30) e["credencial.conselho"] = "Conselho muito longo.";
+    if ((p.credencial.registro ?? "").length > 40) e["credencial.registro"] = "Registro muito longo.";
+    if ((p.credencial.responsavel ?? "").length > 80) e["credencial.responsavel"] = "Nome do responsável muito longo.";
+  }
+  if (p.schemaTipo) {
+    if (p.schemaTipo.length > 5) e.schemaTipo = "Use no máximo 5 tipos.";
+    else if (p.schemaTipo.some((x) => x.trim() && !/^[A-Z][A-Za-z]+$/.test(x.trim()))) e.schemaTipo = "Tipo schema.org inválido (ex.: Dentist, LocalBusiness).";
+  }
+  if (p.areaAtendimento && p.areaAtendimento.length > 40) e.areaAtendimento = "Lista de áreas muito longa.";
+  for (const [i, f] of (p.funcionamento ?? []).entries()) {
+    const k = `funcionamento.${i}`;
+    if (!Array.isArray(f.dias) || !f.dias.length || f.dias.some((d) => !DIAS_SEMANA.includes(d))) e[k] = "Escolha ao menos um dia da semana.";
+    else if (!f.fechado) {
+      if (!horaValida(f.abre ?? "") || !horaValida(f.fecha ?? "")) e[k] = "Horário inválido — use HH:MM.";
+      else if ((f.abre ?? "") >= (f.fecha ?? "")) e[k] = "O horário de abertura deve ser antes do fechamento.";
+    }
   }
   for (const k of CAMPOS_INTEGRACAO) {
     const v = p[k];
@@ -574,6 +760,87 @@ export function aplicarPatch(original: string, patchEntrada: PatchSite): Resulta
     if (p[k] !== undefined) definirStr([k], String(p[k]).trim(), k, (x) => x[k]);
   }
 
+  // ── campos novos da raiz (texto, objetos, listas, booleano) ─────────────
+  const igualJson = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+  const definirTop = (chave: string, valor: unknown) => {
+    const o = objetoSite(s);
+    const e = achar(o, chave);
+    if (e) {
+      const atual = valorDe(s, e.iniValor, e.fimValor);
+      if (igualJson(atual, valor)) return;
+      s = s.slice(0, e.iniValor) + renderValor(valor, indentacaoDe(s, e.iniChave)) + s.slice(e.fimValor);
+    } else {
+      const ult = o.entradas[o.entradas.length - 1];
+      const ind = ult ? indentacaoDe(s, ult.iniChave) : "  ";
+      s = definirEmObjeto(s, o.abre, chave, renderValor(valor, ind)).s;
+    }
+    alterados.push(chave);
+    esperado.push({ ler: (x) => (x as unknown as Record<string, unknown>)[chave], valor, nome: chave });
+  };
+
+  for (const k of CAMPOS_TEXTO) {
+    if (p[k] === undefined) continue;
+    const v = p[k]!.trim();
+    const atual = (antes[k] as string | undefined) ?? "";
+    if (v === "" && atual !== "" && !ehLimpar(p, k)) {
+      ignorados.push({ campo: k, motivo: "veio vazio sobre um valor existente sem confirmação de que foi apagado" });
+      continue;
+    }
+    if (v === "" && atual === "") continue;
+    definirTop(k, v);
+  }
+
+  for (const [chave, permitidos] of [["logo", ["src", "srcEscuro", "alt"]], ["credencial", ["conselho", "registro", "responsavel"]]] as const) {
+    const pObj = p[chave] as Record<string, string> | undefined;
+    if (!pObj) continue;
+    const atualObj = ((antes[chave] as Record<string, string> | undefined) ?? {});
+    const novo: Record<string, string> = { ...atualObj };
+    for (const k of permitidos) {
+      if (pObj[k] === undefined) continue;
+      const v = String(pObj[k]).trim();
+      if (v === "") {
+        if (atualObj[k] && !ehLimpar(p, `${chave}.${k}`, chave)) {
+          ignorados.push({ campo: `${chave}.${k}`, motivo: "veio vazio sobre um valor existente sem confirmação de que foi apagado" });
+          continue;
+        }
+        delete novo[k];
+      } else novo[k] = v;
+    }
+    if (Object.keys(novo).length === 0 && Object.keys(atualObj).length === 0) continue;
+    definirTop(chave, novo);
+  }
+
+  for (const chave of ["schemaTipo", "areaAtendimento"] as const) {
+    if (p[chave] === undefined) continue;
+    const lista = [...new Set(p[chave]!.map((x) => x.trim()).filter(Boolean))];
+    const atual = (antes[chave] as string[] | undefined) ?? [];
+    if (lista.length === 0 && atual.length > 0 && !ehLimpar(p, chave)) {
+      ignorados.push({ campo: chave, motivo: "lista vazia sobre valores existentes sem confirmação" });
+      continue;
+    }
+    if (lista.length === 0 && atual.length === 0 && !(chave in antes)) continue;
+    definirTop(chave, lista);
+  }
+
+  let horariosDerivados: Horario[] | undefined;
+  if (p.funcionamento !== undefined) {
+    const func = p.funcionamento.map((f) => {
+      const dias = DIAS_SEMANA.filter((d) => f.dias.includes(d));
+      return f.fechado
+        ? { dias, fechado: true }
+        : { dias, abre: f.abre.trim().padStart(5, "0"), fecha: f.fecha.trim().padStart(5, "0") };
+    }) as Funcionamento[];
+    const atual = antes.funcionamento ?? [];
+    if (func.length === 0 && atual.length > 0 && !ehLimpar(p, "funcionamento")) {
+      ignorados.push({ campo: "funcionamento", motivo: "lista vazia sobre horários existentes sem confirmação" });
+    } else if (!(func.length === 0 && atual.length === 0 && !("funcionamento" in antes))) {
+      definirTop("funcionamento", func);
+      if (p.horarios === undefined) horariosDerivados = derivarHorarios(func);
+    }
+  }
+
+  if (p.atendimentoOnline !== undefined) definirTop("atendimentoOnline", p.atendimentoOnline);
+
   // ── nap ─────────────────────────────────────────────────────────────────
   let napMudou = false;
   for (const c of CAMPOS_NAP) {
@@ -603,9 +870,10 @@ export function aplicarPatch(original: string, patchEntrada: PatchSite): Resulta
   }
 
   // ── horários ────────────────────────────────────────────────────────────
-  if (p.horarios !== undefined) {
-    const novos = p.horarios.map((h) => ({ dia: h.dia.trim(), hora: h.hora.trim() }));
-    if (novos.length === 0 && antes.horarios.length > 0 && !ehLimpar(p, "horarios")) {
+  const horariosPedidos = p.horarios ?? horariosDerivados;
+  if (horariosPedidos !== undefined) {
+    const novos = horariosPedidos.map((h) => ({ dia: h.dia.trim(), hora: h.hora.trim() }));
+    if (novos.length === 0 && antes.horarios.length > 0 && !ehLimpar(p, "horarios") && p.funcionamento === undefined) {
       ignorados.push({ campo: "horarios", motivo: "lista vazia sobre horários existentes sem confirmação" });
     } else if (JSON.stringify(novos) !== JSON.stringify(antes.horarios)) {
       const o = objetoSite(s);
@@ -688,7 +956,11 @@ export function aplicarPatch(original: string, patchEntrada: PatchSite): Resulta
   }
   // o que NÃO foi pedido não pode ter mudado
   const tocados = new Set(esperado.map((x) => x.nome.split(".")[0]));
-  const chavesRaiz: (keyof SiteLido)[] = ["nome", "nomeBreve", "slogan", "dominio", "cnpj", "anoFundacao", "googleAnalyticsId", "metaPixelId", "googleTagManagerId", "googleVerificacao", "bingVerificacao"];
+  const chavesRaiz: (keyof SiteLido)[] = [
+    "nome", "nomeBreve", "slogan", "dominio", "cnpj", "anoFundacao", "googleAnalyticsId", "metaPixelId",
+    "googleTagManagerId", "googleVerificacao", "bingVerificacao", "razaoSocial", "descricao", "favicon", "ogImagem",
+    "especialidade", "faixaPreco", "logo", "credencial", "schemaTipo", "areaAtendimento", "funcionamento", "atendimentoOnline",
+  ];
   for (const k of chavesRaiz) {
     if (!tocados.has(k) && JSON.stringify(antes[k]) !== JSON.stringify(depois[k])) {
       throw new Error(`site-config: '${k}' mudou sem ter sido pedido — nada foi gravado`);
