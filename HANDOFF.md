@@ -1,4 +1,4 @@
-# Handoff — SiteFlow CMS / LinkFlow (Jorge Torrez) — v3 (25/09/2026, R6 fechamento)
+# Handoff — SiteFlow CMS / LinkFlow (Jorge Torrez) — v4 (26/09/2026, Relatório de Testes 3)
 
 > **Mudança de fluxo (25/09/2026):** a partir da rodada R0, o modelo de duas
 > sessões (chat edita / Code valida) foi encerrado. `C:\Projetos\linkflow-completo`
@@ -17,6 +17,88 @@
 > transferência de conversa, então este documento é o que faz a sessão nova
 > saber o que as anteriores sabiam. Rode `git log --oneline` e `git status`
 > logo de cara para confirmar que a pasta bate com o que está descrito aqui.
+
+## Estado atual em uma tela (26/09/2026)
+
+- Última rodada: **Relatório de Testes 3** (`relatorios/Relatorio-Testes-3-LinkFlow-19-09.docx`),
+  9 erros. Todos tratados no código (tabela abaixo). **Nada disso foi testado numa VPS real.**
+- **Próximo relatório a tratar:** `relatorios/Relatorio_QA_Painel_SiteFlow.pdf` (mais extenso; o
+  Lucas pediu para abordá-lo só depois de concluir o 3).
+- **Pendência única de validação:** R5, teste de ponta a ponta na VPS de teste, agora incluindo o
+  instalador novo e o fluxo em marcos. **Pedir autorização ao Lucas antes de tocar no VPS.**
+- `relatorios/` e `templates-layout-temas/` (os 4 zips) estão **sem commit**, de propósito: falta
+  decidir se entram no git ou no `.gitignore`.
+
+## Relatório de Testes 3 — o que foi feito
+
+| # | Erro | Correção | Commit |
+|---|---|---|---|
+| 25 | Instalador da VPS podia derrubar cliente ativo | `setup.sh` sem `apt upgrade` (só `--no-upgrade`, só o que falta); não remove `sites-enabled/default` se há outro site; porta via `ss`/`.env` (o `pm2 list` não mostra porta, então sempre caía em 3210); SSL sai do fluxo crítico (`ssl-cliente.sh` só pede certificado para nomes cujo DNS já aponta para o servidor); e-mail do certbot deixou de ser inventado (`ssl@com.br`); recusa domínio já servido por outro bloco Nginx; `migrar` só para o processo `painel` se for da instalação antiga. `.gitattributes` fixa LF nos `.sh` | `62cfd2b`, `4c5e659` |
+| 28 | Auditoria acusava órfã falsa | `lib/links-internos.ts` lê o HTML real do `dist/`; regra de órfã só roda com grafo real (sem `dist/` avisa "não verificado" em vez de tratar "sem dado" como "sem link"); `links_saindo` continua sendo o plano | `9a6f015` |
+| 23 | Domínio exigido antes de construir | `guardiao_construtor.py` tem 4 fases: `construcao` (domínio e e-mail viram aviso), `previa`, `publicacao` (exige `visual_aprovado: sim`, domínio real, e-mail, `tema_pasta`) e `saida`. `entrada` é apelido de `construcao` | `9960476` |
+| 20, 21, 22, 24 | Escolha às cegas / referência / 3 tarefas numa resposta | Prévia em `localhost` antes de qualquer servidor; layouts do catálogo em vez de referência externa; 3 marcos com um pedido por vez (`CLAUDE.md › Rotina em marcos`) | `726d857` e anteriores |
+| 27 | Sem recuperação de senha | Botão "Esqueci minha senha" gera pedido para colar no Claude Code; skill `painel-senha` + `scripts/painel_redefinir_senha.cjs` redefinem por SSH (não há rota de reset por chave, de propósito) | `a844295` |
+
+Além do relatório: 3 layouts novos (05, 06, 07), catálogo, tela Layout do painel, pilar `/planos`.
+
+## Layouts e o que "tema" significa agora
+
+Duas palavras, dois níveis. Para o usuário, **layout** = o visual. No código, cada layout é uma
+**base por nicho** (`base`, `tema-03` … `tema-07`), com coleções e campos próprios; o
+`projeto.md` registra `tema_pasta`. Trocar de layout **não** é um campo: reconstrói-se o conteúdo
+no esquema do layout novo — barato só até publicar.
+
+| Layout | Nome | Páginas ao promover | Observação |
+|---|---|---|---|
+| `base` | HealthCare Institucional | 22 | saúde |
+| `tema-03` | Vértice Institucional | 22 | serviço profissional |
+| `tema-04` | Renovar Serviço Local | 21 | serviço local |
+| `tema-05` | Amparo Institucional | 23 | profissão regulamentada; página fixa `direito-previdenciario` |
+| `tema-06` | Hidroponto Institucional | 20 | serviço técnico de emergência |
+| `tema-07` | Vereda Institucional | 21 | **pilar `/planos`** (coleção continua `servicos`; `rotaPilar: '/planos'` no config) |
+
+Motor de referência completo, sem promoção: **131 páginas** (inclui `/catalogo`).
+
+- **Catálogo:** fonte única em `_astro/src/config/catalogo-layouts.json`. Gera a capa
+  `/catalogo` (só no motor de referência; a promoção a remove) e
+  `painel/lib/catalogo-layouts.ts` via `python scripts/gerar_catalogo_layouts.py`, que **valida** o
+  JSON contra `public/tema*.json` (cores/fontes) e contra `promover_tema.py`. Use `--check` em CI.
+- **`scripts/promover_tema.py`:** registro único `TEMAS`. Tema novo entra **só ali** (mais o
+  catálogo). Só o que o layout promovido trouxe fica na raiz (o `pages/servicos/` do base é
+  resíduo no tema-07). Grava `_astro/tema-ativo.json`, que o painel lê.
+- **Origem dos layouts 05/06/07:** zip `Luas Corretora` (superset dos outros três zips). Vieram no
+  formato antigo (rotas `[id]`, sem autor/categoria) e foram convertidos ao padrão do tema-03 —
+  ponto de rastreio `df93f2f` (importado "como entregue"). Autores e categorias derivam do que os
+  posts de demonstração já declaravam; `descricao`/`metaDescription` das categorias são **texto
+  de demonstração**, não fato de cliente.
+
+## Fluxo do site Astro em marcos
+
+1. **Marco 1 — aprovar o visual (localhost):** `guardiao ... --fase construcao` →
+   `python scripts/preparar_site_local.py --slug <slug> --tema <tema_pasta>` (cria
+   `projetos/<slug>/site/_astro`, promove, apaga a demonstração) → substituir o `config/site.ts`
+   **campo a campo** → build → `--fase previa` → `npm run preview -- --port 4321` → **um pedido** ao
+   usuário. Vitrine dos layouts: `cd _astro && npx astro dev --port 4322` → `/catalogo`.
+   Aprovação é uma frase explícita → `visual_aprovado: sim`.
+2. **Marco 2 — colocar no ar:** `--fase publicacao` → domínio e e-mail (um por vez) → regera com o
+   domínio real → `vps-setup` Parte A → envia `src/` e `public/` → Parte B (DNS, depois SSL, depois
+   admin do painel) → `--fase saida`.
+3. **Marco 3:** `fase3-conteudo`.
+
+**Risco descoberto:** o `config/site.ts` que sobra da promoção é o de **demonstração** do layout
+(empresa, CNPJ, telefone fictícios), e o formato mínimo que a skill antiga mandava gerar não cobria
+`faq`, `diferenciais`, `selos`, `numeros`, `passos`, `legal`… O guardião (`previa` e `saida`) agora
+reprova se sobrar qualquer valor de demonstração no config do cliente.
+
+## Testes (guardados em `scripts/testes/`)
+
+- `bash scripts/testes/testar_promocao.sh <tema|sem-promocao> <dir_de_build>` — cópia isolada,
+  promoção, build real, contagens e vazamento de `/tema-0X` (cabeçalho explica como criar o
+  `dir_de_build`). Números esperados no cabeçalho.
+- `python scripts/testes/testar_guardiao.py` — 19 cenários das 4 fases do guardião.
+- Painel: `tsc --noEmit` + `npm run build` numa cópia com `npm ci`; APIs testadas com `x-api-key`
+  e login por sessão contra um site promovido. O efeito no navegador (marcar "Em uso", copiar,
+  o botão de "Esqueci minha senha") **não foi visto**.
 
 ## Quem é quem
 
@@ -383,14 +465,18 @@ Resumo:
 
 ## Pendências, em ordem
 
-1. **R5 — Teste de ponta a ponta no VPS de teste** (única pendência ativa,
-   pulada a pedido do Lucas em 25/09/2026 — não por falha). Critério de
-   "concluído": a Torrez criada do zero pelo fluxo do agente, com site e
-   painel no ar, publicando um post pelo painel sem intervenção manual.
-   **Pedir autorização ao Lucas antes de tocar no VPS**, retomando esta
-   sessão ou uma nova com este `HANDOFF.md`.
-
-R6 (este fechamento) está concluída — ver seção "R6 — Fechamento" acima.
+1. **R5 — teste de ponta a ponta na VPS de teste** (pulada a pedido do Lucas em 25/09/2026, não por
+   falha). Agora precisa cobrir também: o instalador novo (`setup.sh`, `novo-cliente.sh`,
+   `ssl-cliente.sh`, escolha de porta), a cópia com `tar` (sem `node_modules`), e o fluxo em
+   marcos até o painel entregue. **Pedir autorização ao Lucas antes de tocar no VPS.**
+2. **Relatório QA do painel** (`relatorios/Relatorio_QA_Painel_SiteFlow.pdf`) — só depois do 3.
+3. Decidir o destino de `relatorios/` e `templates-layout-temas/` (git ou `.gitignore`).
+4. Limites conhecidos, ainda sem correção:
+   - `hashtags`/`buscasFrequentes` dos configs apontam direto para slugs de post e de serviço; se o
+     post virar rascunho, o link fica morto (vale para o tema-03 também).
+   - `public/tema-0X.json` ainda descreve as rotas antigas (`/tema-0X/servicos/[id]`); só informativo.
+   - Tela Layout do painel: o efeito no navegador não foi exercitado.
+   - Login do painel é renderizado só no cliente (já era assim antes desta rodada).
 
 ## VPS de teste
 
