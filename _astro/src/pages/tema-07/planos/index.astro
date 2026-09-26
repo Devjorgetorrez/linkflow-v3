@@ -18,7 +18,7 @@ const planos = (await getCollection('servicosT7'))
   .map(s => ({
     titulo: s.data.titulo, descricao: s.data.resumo, icone: s.data.icone ?? '',
     imagem: s.data.imagem, imagemAlt: s.data.imagemAlt,
-    href: `/tema-07/planos/${s.id}`, categoria: s.data.categoria,
+    href: `/tema-07/${s.id}`, categoria: s.data.categoria,
   }))
 
 const wa        = `https://wa.me/${site.nap.whatsapp}`

@@ -2,15 +2,10 @@
 titulo: "Reajuste de plano: os dois tipos que existem"
 metaDescription: "Diferença entre reajuste anual e por faixa etária, por que o teto da ANS não vale para plano coletivo e como comparar o histórico de reajuste das operadoras."
 publicadoEm: "2026-08-20"
-categoria: "Custos"
+categoria: custos
 imagemCapa: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=1200&h=630&fit=crop&auto=format"
 imagemCapaAlt: "Documentos de cálculo e planilha sobre a mesa"
-autor: "André Lombardi"
-autorFoto: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&auto=format"
-autorCargo: "Corretor · SUSEP 20.987654"
-autorBio: "Corretor especializado em pessoa física, plano sênior e portabilidade de carência. Atende famílias na região de Sorocaba."
-autorLinkedin: "https://linkedin.com/in/andrelombardi"
-autorEmail: "andre@veredacorretora.com.br"
+autor: andre-lombardi
 ---
 
 Todo ano a mesma pergunta: por que subiu tanto? A resposta depende de qual dos dois reajustes você levou — e às vezes você levou os dois no mesmo ano.

@@ -2,15 +2,10 @@
 titulo: "Coparticipação vale a pena? Depende do uso"
 metaDescription: "Como funciona a coparticipação, qual o limite que a ANS permite cobrar e como fazer a conta com o seu histórico de consultas e exames antes de decidir."
 publicadoEm: "2026-08-06"
-categoria: "Custos"
+categoria: custos
 imagemCapa: "https://images.unsplash.com/photo-1631217868264-e5b90bb7e133?w=1200&h=630&fit=crop&auto=format"
 imagemCapaAlt: "Recepção de clínica médica"
-autor: "Silvana Quintela"
-autorFoto: "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=200&h=200&fit=crop&auto=format"
-autorCargo: "Sócia-fundadora · SUSEP 20.123456"
-autorBio: "Corretora de planos de saúde desde 2009. Conduz as negociações de reajuste e as migrações de carteira na Vereda Corretora."
-autorLinkedin: "https://linkedin.com/in/silvanaquintela"
-autorEmail: "silvana@veredacorretora.com.br"
+autor: silvana-quintela
 ---
 
 Coparticipação troca mensalidade menor por pagamento a cada uso. Se compensa ou não é uma conta, não uma opinião — e ela leva dez minutos.

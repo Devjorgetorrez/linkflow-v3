@@ -8,13 +8,18 @@ import Cta         from '../../../components/blocos/Cta.astro'
 import Footer      from '../../../components/blocos/Footer.astro'
 import { site }    from '../../../config/tema-07.ts'
 import { getCollection } from 'astro:content'
+import { ehPublicado } from '../../../lib/publicacao.ts'
+import { nomeAutor } from '../../../lib/autores.ts'
+import { nomeCategoria } from '../../../lib/categorias.ts'
 
-const posts = (await getCollection('postsT7'))
+const autores = await getCollection('autoresT7')
+const categorias = await getCollection('categoriasT7')
+const posts = (await getCollection('postsT7', ehPublicado))
   .sort((a, b) => new Date(b.data.publicadoEm).getTime() - new Date(a.data.publicadoEm).getTime())
   .map(p => ({
-    titulo: p.data.titulo, publicadoEm: p.data.publicadoEm, categoria: p.data.categoria,
+    titulo: p.data.titulo, publicadoEm: p.data.publicadoEm, categoria: nomeCategoria(p.data.categoria, categorias),
     imagemCapa: p.data.imagemCapa, imagemCapaAlt: p.data.imagemCapaAlt,
-    autor: p.data.autor, href: `/tema-07/blog/${p.id}`,
+    autor: nomeAutor(p.data, autores), href: `/tema-07/${p.id}`,
   }))
 
 const wa        = `https://wa.me/${site.nap.whatsapp}`

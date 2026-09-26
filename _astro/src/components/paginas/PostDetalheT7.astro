@@ -1,35 +1,62 @@
 ---
-/** Artigo do Tema 07 — mesmo padrão de autor dos temas anteriores. */
-import Tema07Base  from '../../../layouts/Tema07Base.astro'
-import Header      from '../../../components/blocos/Header.astro'
-import Autor       from '../../../components/blocos/Autor.astro'
-import PostLista   from '../../../components/blocos/PostLista.astro'
-import Cta         from '../../../components/blocos/Cta.astro'
-import Footer      from '../../../components/blocos/Footer.astro'
-import { site }    from '../../../config/tema-07.ts'
+/**
+ * Artigo do Tema 07 (renderizado por pages/tema-07/[slug].astro, em /<slug>).
+ * Autor e categoria resolvidos pelas coleções autoresT7/categoriasT7, com
+ * link para /autor/<slug> e /<categoria>. Byline logo abaixo do H1 e
+ * assinatura completa ao fim, pelo bloco compartilhado Autor.astro.
+ */
+import Tema07Base  from '../../layouts/Tema07Base.astro'
+import Header      from '../../components/blocos/Header.astro'
+import Autor       from '../../components/blocos/Autor.astro'
+import PostLista   from '../../components/blocos/PostLista.astro'
+import Cta         from '../../components/blocos/Cta.astro'
+import Footer      from '../../components/blocos/Footer.astro'
+import { site }    from '../../config/tema-07.ts'
 import { getCollection, render } from 'astro:content'
+import { ehPublicado } from '../../lib/publicacao.ts'
+import { resolverAutor, nomeAutor } from '../../lib/autores.ts'
+import { resolverCategoria, nomeCategoria } from '../../lib/categorias.ts'
 
-export async function getStaticPaths() {
-  const posts = await getCollection('postsT7')
-  return posts.map(p => ({ params: { id: p.id }, props: { entry: p } }))
+interface Props {
+  entry: Awaited<ReturnType<typeof getCollection<'postsT7'>>>[number]
 }
 
 const { entry }   = Astro.props
 const { Content } = await render(entry)
-const canonical   = `${site.dominio}/blog/${entry.id}`
+const canonical   = `${site.dominio}/${entry.id}`
 const wa          = `https://wa.me/${site.nap.whatsapp}`
 
 const dataFormatada = new Intl.DateTimeFormat('pt-BR', {
   day: 'numeric', month: 'long', year: 'numeric',
 }).format(new Date(entry.data.publicadoEm + 'T12:00:00'))
 
-const relacionados = (await getCollection('postsT7'))
+// Autor: perfil em content/autores (slug em `autor:`), com link /autor/<slug>
+const autores = await getCollection('autoresT7')
+const autor   = resolverAutor(entry.data, autores, '/tema-07')
+const autorJsonLd = autor
+  ? {
+      '@type': 'Person',
+      ...(autor.href ? { '@id': `${site.dominio}${autor.href}#person`, url: `${site.dominio}${autor.href}` } : {}),
+      name: autor.nome,
+      ...(autor.cargo ? { jobTitle: autor.cargo } : {}),
+      ...(autor.foto ? { image: autor.foto } : {}),
+      worksFor: { '@id': `${site.dominio}/#organization` },
+      ...(autor.sameAs.length ? { sameAs: autor.sameAs } : {}),
+    }
+  : undefined
+
+// Categoria: perfil em content/categorias (slug em `categoria:`), com link /<slug>
+const categorias = await getCollection('categoriasT7')
+const categoria  = resolverCategoria(entry.data.categoria, categorias, '/tema-07')
+
+const relacionados = (await getCollection('postsT7', ehPublicado))
   .filter(p => p.id !== entry.id)
   .sort((a, b) => new Date(b.data.publicadoEm).getTime() - new Date(a.data.publicadoEm).getTime())
   .map(p => ({
-    titulo: p.data.titulo, publicadoEm: p.data.publicadoEm, categoria: p.data.categoria,
+    titulo: p.data.titulo, publicadoEm: p.data.publicadoEm,
+    categoria: nomeCategoria(p.data.categoria, categorias),
     imagemCapa: p.data.imagemCapa, imagemCapaAlt: p.data.imagemCapaAlt,
-    autor: p.data.autor, href: `/tema-07/blog/${p.id}`,
+    autor: nomeAutor(p.data, autores), href: `/tema-07/${p.id}`,
   }))
 
 const shareUrl  = encodeURIComponent(canonical)
@@ -42,12 +69,8 @@ const jsonLd = {
       '@type': 'BlogPosting', '@id': `${canonical}#article`,
       headline: entry.data.titulo, description: entry.data.metaDescription,
       datePublished: entry.data.publicadoEm, dateModified: entry.data.publicadoEm,
-      inLanguage: 'pt-BR', image: entry.data.imagemCapa, articleSection: entry.data.categoria,
-      author: {
-        '@type': 'Person', name: entry.data.autor, jobTitle: entry.data.autorCargo,
-        image: entry.data.autorFoto, worksFor: { '@id': `${site.dominio}/#organization` },
-        ...(entry.data.autorLinkedin ? { sameAs: [entry.data.autorLinkedin] } : {}),
-      },
+      inLanguage: 'pt-BR', image: entry.data.imagemCapa, articleSection: categoria?.nome,
+      ...(autorJsonLd ? { author: autorJsonLd } : {}),
       publisher: { '@id': `${site.dominio}/#organization` },
       mainEntityOfPage: { '@id': `${canonical}#webpage` },
     },
@@ -77,7 +100,7 @@ const jsonLd = {
     whatsapp={site.nap.whatsapp}
     nav={site.nav}
     ctaTexto="Solicitar cotação"
-    ctaHref="#cotacao"
+    ctaHref="/tema-07/#cotacao"
   />
 
   <article>
@@ -87,18 +110,27 @@ const jsonLd = {
           <a href="/tema-07" class="no-underline transition-colors hover:text-primary">Home</a>
           <span class="mx-1.5 text-ink-muted/50">›</span>
           <a href="/tema-07/blog" class="no-underline transition-colors hover:text-primary">Blog</a>
-          {entry.data.categoria && (
+          {categoria && (
             <>
               <span class="mx-1.5 text-ink-muted/50">›</span>
-              <span>{entry.data.categoria}</span>
+              <span>{categoria.nome}</span>
             </>
           )}
         </nav>
 
-        {entry.data.categoria && (
-          <span class="mb-3 inline-block rounded-[var(--radius-btn)] bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-            {entry.data.categoria}
-          </span>
+        {categoria && (
+          categoria.href
+            ? (
+              <a href={categoria.href}
+                 class="mb-3 inline-block rounded-[var(--radius-btn)] bg-primary/10 px-3 py-1 text-xs font-semibold text-primary no-underline hover:bg-primary/15">
+                {categoria.nome}
+              </a>
+            )
+            : (
+              <span class="mb-3 inline-block rounded-[var(--radius-btn)] bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                {categoria.nome}
+              </span>
+            )
         )}
 
         <h1 class="mb-6 font-display text-[clamp(1.625rem,4vw,2.5rem)] font-bold leading-tight text-secondary">
@@ -107,9 +139,10 @@ const jsonLd = {
 
         <Autor
           variante="byline"
-          nome={entry.data.autor}
-          foto={entry.data.autorFoto}
-          cargo={entry.data.autorCargo}
+          nome={autor?.nome ?? ""}
+          foto={autor?.foto}
+          cargo={autor?.cargo}
+          href={autor?.href}
           data={dataFormatada}
         />
       </div>
@@ -147,12 +180,15 @@ const jsonLd = {
 
       <Autor
         variante="assinatura"
-        nome={entry.data.autor}
-        foto={entry.data.autorFoto}
-        cargo={entry.data.autorCargo}
-        bio={entry.data.autorBio}
-        linkedin={entry.data.autorLinkedin}
-        email={entry.data.autorEmail}
+        nome={autor?.nome ?? ""}
+        foto={autor?.foto}
+        cargo={autor?.cargo}
+        credencial={autor?.credencial}
+        bio={autor?.bio}
+        linkedin={autor?.linkedin}
+        instagram={autor?.instagram}
+        email={autor?.email}
+        href={autor?.href}
       />
     </div>
   </article>

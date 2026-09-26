@@ -19,6 +19,12 @@ export const site = {
   registro:    'SUSEP 20.123456',
   anoFundacao: 2009,
 
+  /* Rota FINAL do pilar de oferta, sem prefixo de tema. É lida depois da
+     promoção pelo guardião e pelo painel, por isso não leva /tema-07. Neste
+     nicho a oferta se chama "plano", então o pilar é /planos; os demais temas
+     usam /servicos, que é o padrão quando este campo não existe. */
+  rotaPilar: '/planos',
+
   nap: {
     logradouro:  'Av. Barão de Tatuí, 620',
     complemento: 'Sala 1503',
@@ -62,12 +68,12 @@ export const site = {
     {
       titulo: 'Tipos de plano',
       itens: [
-        { label: 'Plano Empresarial',       href: '/tema-07/planos/plano-empresarial' },
-        { label: 'Plano Individual',        href: '/tema-07/planos/plano-individual-familiar' },
-        { label: 'Plano por Adesão',        href: '/tema-07/planos/plano-por-adesao' },
-        { label: 'Plano Odontológico',      href: '/tema-07/planos/plano-odontologico' },
-        { label: 'Plano Sênior',            href: '/tema-07/planos/plano-senior' },
-        { label: 'Portabilidade',           href: '/tema-07/planos/portabilidade-de-carencia' },
+        { label: 'Plano Empresarial',       href: '/tema-07/plano-empresarial' },
+        { label: 'Plano Individual',        href: '/tema-07/plano-individual-familiar' },
+        { label: 'Plano por Adesão',        href: '/tema-07/plano-por-adesao' },
+        { label: 'Plano Odontológico',      href: '/tema-07/plano-odontologico' },
+        { label: 'Plano Sênior',            href: '/tema-07/plano-senior' },
+        { label: 'Portabilidade',           href: '/tema-07/portabilidade-de-carencia' },
       ],
     },
     {
@@ -159,27 +165,27 @@ export const site = {
   avaliacao: { nota: '4,9', total: '+320', fonte: 'avaliações no Google' },
 
   tags: [
-    { label: '#PlanoEmpresarial',   href: '/tema-07/planos/plano-empresarial' },
-    { label: '#PlanoIndividual',    href: '/tema-07/planos/plano-individual-familiar' },
-    { label: '#PlanoPorAdesão',     href: '/tema-07/planos/plano-por-adesao' },
-    { label: '#Portabilidade',      href: '/tema-07/planos/portabilidade-de-carencia' },
-    { label: '#Carência',           href: '/tema-07/blog/carencia-e-cpt-o-que-muda' },
-    { label: '#Reajuste',           href: '/tema-07/blog/reajuste-de-plano-de-saude' },
-    { label: '#Coparticipação',     href: '/tema-07/blog/coparticipacao-vale-a-pena' },
+    { label: '#PlanoEmpresarial',   href: '/tema-07/plano-empresarial' },
+    { label: '#PlanoIndividual',    href: '/tema-07/plano-individual-familiar' },
+    { label: '#PlanoPorAdesão',     href: '/tema-07/plano-por-adesao' },
+    { label: '#Portabilidade',      href: '/tema-07/portabilidade-de-carencia' },
+    { label: '#Carência',           href: '/tema-07/carencia-e-cpt-o-que-muda' },
+    { label: '#Reajuste',           href: '/tema-07/reajuste-de-plano-de-saude' },
+    { label: '#Coparticipação',     href: '/tema-07/coparticipacao-vale-a-pena' },
     { label: '#Sorocaba',           href: '/tema-07/contato' },
   ],
 
   buscasFrequentes: [
-    { label: 'plano de saúde empresarial sorocaba',   href: '/tema-07/planos/plano-empresarial' },
-    { label: 'plano de saúde individual sorocaba',    href: '/tema-07/planos/plano-individual-familiar' },
-    { label: 'plano de saúde 2 vidas cnpj',           href: '/tema-07/planos/plano-empresarial' },
-    { label: 'portabilidade de carência como funciona', href: '/tema-07/planos/portabilidade-de-carencia' },
-    { label: 'plano de saúde para idoso',             href: '/tema-07/planos/plano-senior' },
-    { label: 'plano odontológico empresarial',        href: '/tema-07/planos/plano-odontologico' },
-    { label: 'coparticipação vale a pena',            href: '/tema-07/blog/coparticipacao-vale-a-pena' },
-    { label: 'reajuste anual plano de saúde',         href: '/tema-07/blog/reajuste-de-plano-de-saude' },
+    { label: 'plano de saúde empresarial sorocaba',   href: '/tema-07/plano-empresarial' },
+    { label: 'plano de saúde individual sorocaba',    href: '/tema-07/plano-individual-familiar' },
+    { label: 'plano de saúde 2 vidas cnpj',           href: '/tema-07/plano-empresarial' },
+    { label: 'portabilidade de carência como funciona', href: '/tema-07/portabilidade-de-carencia' },
+    { label: 'plano de saúde para idoso',             href: '/tema-07/plano-senior' },
+    { label: 'plano odontológico empresarial',        href: '/tema-07/plano-odontologico' },
+    { label: 'coparticipação vale a pena',            href: '/tema-07/coparticipacao-vale-a-pena' },
+    { label: 'reajuste anual plano de saúde',         href: '/tema-07/reajuste-de-plano-de-saude' },
     { label: 'corretora de plano de saúde votorantim', href: '/tema-07/contato' },
-    { label: 'plano de saúde por adesão sindicato',   href: '/tema-07/planos/plano-por-adesao' },
+    { label: 'plano de saúde por adesão sindicato',   href: '/tema-07/plano-por-adesao' },
   ],
 
   faq: [
@@ -269,5 +275,13 @@ export const site = {
     medicao: [
       { ferramenta: 'Medição de audiência do site', dado: 'Páginas visitadas, origem do acesso e tipo de dispositivo. Sem coleta de IP completo.' },
     ],
+
+    /* Termos de Uso (obrigatório) — lido por <ConteudoLegal documento="termos">.
+       Campo vazio bloqueia a publicação, igual aos campos da política. */
+    termos: {
+      naoSubstitui:  'O conteúdo deste site tem finalidade informativa e não substitui a leitura do contrato e da proposta da operadora. A cotação apresentada é uma estimativa; a contratação, a carência, a cobertura e o reajuste são regidos pelo contrato firmado com a operadora, que prevalece em caso de divergência com estes termos.',
+      foro:          { cidade: 'Sorocaba', uf: 'SP' },
+      vigenciaDesde: '2026-09-04',
+    },
   },
 }

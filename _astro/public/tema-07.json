@@ -130,11 +130,8 @@
     },
     "termos-de-uso": {
       "rota": "/tema-07/termos-de-uso",
-      "opcional": true,
-      "ligado_por_padrao": false,
-      "noindex": true,
       "blocos": ["Header:padrao", "PageHero:destaque", "ConteudoLegal:termos", "Footer:colunas"],
-      "observacao": "§6.3 — opcional e desligado por padrão."
+      "observacao": "Obrigatória (uma das 4 institucionais da lista fechada do fase3-conteudo). Indexável. Campos do cliente em site.legal.termos — campo vazio bloqueia a publicação."
     }
   },
 

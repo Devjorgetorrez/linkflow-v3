@@ -2,15 +2,10 @@
 titulo: "Carência e CPT: o que cada uma significa"
 metaDescription: "Diferença entre carência e cobertura parcial temporária, os prazos máximos que a ANS permite e por que omitir doença na declaração de saúde é o pior caminho."
 publicadoEm: "2026-09-03"
-categoria: "Contratação"
+categoria: contratacao
 imagemCapa: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=1200&h=630&fit=crop&auto=format"
 imagemCapaAlt: "Profissional de saúde revisando documentos com paciente"
-autor: "Silvana Quintela"
-autorFoto: "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=200&h=200&fit=crop&auto=format"
-autorCargo: "Sócia-fundadora · SUSEP 20.123456"
-autorBio: "Corretora de planos de saúde desde 2009. Conduz as negociações de reajuste e as migrações de carteira na Vereda Corretora."
-autorLinkedin: "https://linkedin.com/in/silvanaquintela"
-autorEmail: "silvana@veredacorretora.com.br"
+autor: silvana-quintela
 ---
 
 São duas coisas diferentes que quase todo mundo confunde — e a confusão só aparece na hora de usar o plano, que é o pior momento possível.

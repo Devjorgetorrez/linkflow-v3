@@ -1,35 +1,35 @@
 ---
 /**
- * Página de tipo de plano do Tema 07.
+ * Página de tipo de plano interno do Tema 07 (renderizada por pages/tema-07/[slug].astro,
+ * em /<slug> — URL plana; o pilar é /planos).
  *
  * Estrutura da referência: apresentação do produto, formulário de cotação
  * logo no topo, texto explicativo, números e prova social, e a cotação
  * repetida ao fim — porque nesse modelo a página inteira serve ao lead.
  */
-import Tema07Base   from '../../../layouts/Tema07Base.astro'
-import Header       from '../../../components/blocos/Header.astro'
-import Hero         from '../../../components/blocos/Hero.astro'
-import FormContato  from '../../../components/blocos/FormContato.astro'
-import Prova        from '../../../components/blocos/Prova.astro'
-import Passos       from '../../../components/blocos/Passos.astro'
-import Numeros      from '../../../components/blocos/Numeros.astro'
-import Depoimentos  from '../../../components/blocos/Depoimentos.astro'
-import Faq          from '../../../components/blocos/Faq.astro'
-import Localizacao  from '../../../components/blocos/Localizacao.astro'
-import Servicos     from '../../../components/blocos/Servicos.astro'
-import Cta          from '../../../components/blocos/Cta.astro'
-import Footer       from '../../../components/blocos/Footer.astro'
-import { site }     from '../../../config/tema-07.ts'
+import Tema07Base   from '../../layouts/Tema07Base.astro'
+import Header       from '../../components/blocos/Header.astro'
+import Hero         from '../../components/blocos/Hero.astro'
+import FormContato  from '../../components/blocos/FormContato.astro'
+import Prova        from '../../components/blocos/Prova.astro'
+import Passos       from '../../components/blocos/Passos.astro'
+import Numeros      from '../../components/blocos/Numeros.astro'
+import Depoimentos  from '../../components/blocos/Depoimentos.astro'
+import Faq          from '../../components/blocos/Faq.astro'
+import Localizacao  from '../../components/blocos/Localizacao.astro'
+import Servicos     from '../../components/blocos/Servicos.astro'
+import Cta          from '../../components/blocos/Cta.astro'
+import Footer       from '../../components/blocos/Footer.astro'
+import { site }     from '../../config/tema-07.ts'
 import { getCollection, render } from 'astro:content'
 
-export async function getStaticPaths() {
-  const planos = await getCollection('servicosT7')
-  return planos.map(s => ({ params: { id: s.id }, props: { entry: s } }))
+interface Props {
+  entry: Awaited<ReturnType<typeof getCollection<'servicosT7'>>>[number]
 }
 
 const { entry }   = Astro.props
 const { Content } = await render(entry)
-const canonical   = `${site.dominio}/planos/${entry.id}`
+const canonical   = `${site.dominio}/${entry.id}`
 const wa          = `https://wa.me/${site.nap.whatsapp}`
 
 const outros = (await getCollection('servicosT7'))
@@ -38,7 +38,7 @@ const outros = (await getCollection('servicosT7'))
   .map(s => ({
     titulo: s.data.titulo, descricao: s.data.resumo, icone: s.data.icone ?? '',
     imagem: s.data.imagem, imagemAlt: s.data.imagemAlt,
-    href: `/tema-07/planos/${s.id}`, categoria: s.data.categoria,
+    href: `/tema-07/${s.id}`, categoria: s.data.categoria,
   }))
 
 const depoimentos = (await getCollection('depoimentosT7'))
@@ -84,6 +84,7 @@ const jsonLd = {
   canonical={canonical}
   jsonLd={jsonLd}
   nodeId="plano"
+  noindex={entry.data.noindex ?? false}
 >
   <Header
     variante="padrao"

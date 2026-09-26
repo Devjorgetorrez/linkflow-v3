@@ -25,25 +25,30 @@ import BuscasFrequentes from '../../components/blocos/BuscasFrequentes.astro'
 import Footer       from '../../components/blocos/Footer.astro'
 import { site }     from '../../config/tema-07.ts'
 import { getCollection } from 'astro:content'
+import { ehPublicado } from '../../lib/publicacao.ts'
+import { nomeAutor } from '../../lib/autores.ts'
+import { nomeCategoria } from '../../lib/categorias.ts'
 
 const planos = (await getCollection('servicosT7'))
   .sort((a, b) => a.data.ordem - b.data.ordem)
   .map(s => ({
     titulo: s.data.titulo, descricao: s.data.resumo, icone: s.data.icone ?? '',
     imagem: s.data.imagem, imagemAlt: s.data.imagemAlt,
-    href: `/tema-07/planos/${s.id}`, categoria: s.data.categoria,
+    href: `/tema-07/${s.id}`, categoria: s.data.categoria,
   }))
 
 const depoimentos = (await getCollection('depoimentosT7'))
   .sort((a, b) => a.data.ordem - b.data.ordem)
   .map(d => ({ nome: d.data.nome, cidade: d.data.cidade, servico: d.data.servico, corpo: d.body.trim() }))
 
-const posts = (await getCollection('postsT7'))
+const autores = await getCollection('autoresT7')
+const categorias = await getCollection('categoriasT7')
+const posts = (await getCollection('postsT7', ehPublicado))
   .sort((a, b) => new Date(b.data.publicadoEm).getTime() - new Date(a.data.publicadoEm).getTime())
   .map(p => ({
-    titulo: p.data.titulo, publicadoEm: p.data.publicadoEm, categoria: p.data.categoria,
+    titulo: p.data.titulo, publicadoEm: p.data.publicadoEm, categoria: nomeCategoria(p.data.categoria, categorias),
     imagemCapa: p.data.imagemCapa, imagemCapaAlt: p.data.imagemCapaAlt,
-    autor: p.data.autor, href: `/tema-07/blog/${p.id}`,
+    autor: nomeAutor(p.data, autores), href: `/tema-07/${p.id}`,
   }))
 
 const anos      = new Date().getFullYear() - site.anoFundacao
