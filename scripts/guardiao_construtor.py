@@ -1,12 +1,28 @@
 """
-guardiao_construtor.py - Valida antes E depois do construtor Astro (fase2-site-astro)
+guardiao_construtor.py - Guardiao do construtor Astro (fase2-site-astro)
+
+O caminho tem DOIS gates, na ordem em que o trabalho acontece:
+
+  GATE DE CONSTRUCAO - layout, identidade e dados do negocio. O dominio NAO
+  e exigido: o build local usa placeholder, e o usuario ve e aprova o visual
+  no localhost antes de gastar com dominio ou servidor.
+  GATE DE PUBLICACAO - dominio real, e-mail, aprovacao visual. So aqui o
+  dominio bloqueia, e so depois dele o servidor e configurado.
 
 Uso:
-  # Verificar ENTRADA (antes de construir)
-  python scripts/guardiao_construtor.py --slug <slug> --fase entrada
+  # 1. Antes de construir
+  python scripts/guardiao_construtor.py --slug <slug> --fase construcao
 
-  # Verificar SAIDA (depois de construir, antes de reportar "pronto")
+  # 2. Build local pronto, ANTES de mostrar a previa ao usuario
+  python scripts/guardiao_construtor.py --slug <slug> --fase previa
+
+  # 3. Depois que o usuario aprovou o visual, ANTES de servidor/dominio/deploy
+  python scripts/guardiao_construtor.py --slug <slug> --fase publicacao
+
+  # 4. Depois do deploy, antes de reportar "no ar"
   python scripts/guardiao_construtor.py --slug <slug> --fase saida
+
+  (--fase entrada continua aceito, como apelido de "construcao".)
 
 Retorna:
   0 = PASS (pode continuar)
@@ -21,6 +37,42 @@ from pathlib import Path
 
 _PROJECT_DIR = Path(os.environ.get('CLAUDE_PROJECT_DIR', '.'))
 _LINKFLOW_DIR = Path(os.environ.get('LINKFLOW_DIR', _PROJECT_DIR))
+# Onde o Nginx serve os sites (o build publicado). Configuravel so para poder
+# testar em maquina que nao e o VPS.
+_SITES_DIR = Path(os.environ.get('LINKFLOW_SITES_DIR', '/var/www'))
+
+# Lista de temas: fonte unica e promover_tema.py (mesma pasta).
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+try:
+    from promover_tema import TEMAS_VALIDOS
+except ImportError:  # pragma: no cover
+    TEMAS_VALIDOS = ["base", "tema-03", "tema-04", "tema-05", "tema-06", "tema-07"]
+
+DOMINIOS_PLACEHOLDER = ("seudominio.com.br", "exemplo.com.br", "teste.com.br", "test.com.br", "dominio.com.br")
+
+
+def dominio_do_projeto(conteudo):
+    """Retorna (dominio, motivo). dominio e None quando falta ou e placeholder."""
+    match = re.search(r"dominio[^:\n]*:[ \t]*(.+)", conteudo, re.IGNORECASE)
+    if not match or campo_vazio(match.group(1)):
+        return None, "nao preenchido no projeto.md"
+    dominio = match.group(1).strip().lower()
+    if dominio in DOMINIOS_PLACEHOLDER or dominio.startswith("teste.") or dominio.startswith("test."):
+        return None, f"parece ser placeholder: '{dominio}'"
+    return dominio, ""
+
+
+def campo_email_institucional(conteudo):
+    match = re.search(r"email_institucional[^:\n]*:[ \t]*(.+)", conteudo, re.IGNORECASE)
+    if not match or campo_vazio(match.group(1)):
+        return None
+    return match.group(1).strip()
+
+
+def rota_pilar_do_config(config_conteudo):
+    """Rota final do pilar de oferta (ex.: '/planos' no tema-07). Padrao '/servicos'."""
+    m = re.search(r"rotaPilar\s*:\s*['\"]([^'\"]+)['\"]", config_conteudo or "")
+    return m.group(1) if m else "/servicos"
 
 
 # ─── HELPERS ──────────────────────────────────────────────────────────────────
@@ -56,7 +108,7 @@ def imprimir_resultado(erros, avisos, fase):
             print(f"  {len(avisos)} aviso(s) (nao bloqueiam):")
             for a in avisos:
                 print(f"  ⚠️  {a}")
-            if fase == "saida":
+            if fase in ("previa", "saida"):
                 print()
                 print(
                     "  ⚠️  ATENCAO: os avisos acima sao pendencias reais (logo, fotos, "
@@ -71,10 +123,12 @@ def imprimir_resultado(erros, avisos, fase):
 
 # ─── VERIFICAÇÃO DE ENTRADA ───────────────────────────────────────────────────
 
-def verificar_entrada(slug):
+def verificar_construcao(slug):
     """
-    Verifica se o projeto.md tem tudo que o construtor precisa ANTES de rodar.
-    Bloqueia se faltar NAP, direção visual, dados reais do negócio.
+    GATE DE CONSTRUCAO - o que o construtor precisa para gerar a previa local.
+    Bloqueia se faltar NAP, layout escolhido, dados reais do negocio.
+    NAO exige dominio nem e-mail: esses so travam o gate de publicacao
+    (verificar_publicacao). Ate la o build usa placeholder de dominio.
     """
     caminho = _PROJECT_DIR / f"projetos/{slug}/projeto.md"
     if not caminho.exists():
@@ -109,24 +163,31 @@ def verificar_entrada(slug):
     if not match or campo_vazio(match.group(1)):
         erros.append("NAP incompleto: cidade nao preenchida no projeto.md")
 
-    # ── Domínio real ──────────────────────────────────────────────────────────
-    match = re.search(r"dominio[^:\n]*:[ \t]*(.+)", conteudo, re.IGNORECASE)
-    if not match or campo_vazio(match.group(1)):
-        erros.append("Dominio nao preenchido no projeto.md — necessario para gerar sitemap e robots.txt")
-    else:
-        dominio = match.group(1).strip().lower()
-        placeholders_dominio = ("seudominio.com.br", "exemplo.com.br", "teste.com.br", "test.com.br", "dominio.com.br")
-        if dominio in placeholders_dominio or dominio.startswith("teste.") or dominio.startswith("test."):
-            erros.append(f"Dominio parece ser placeholder: '{dominio}' — preencha o dominio real")
+    # ── Domínio: NÃO bloqueia a construção ───────────────────────────────────
+    # O layout é alinhado e aprovado na prévia local, onde o domínio é
+    # irrelevante. O domínio real só é exigido no gate de publicação, que
+    # regera sitemap, robots e dados estruturados com ele.
+    dominio, motivo = dominio_do_projeto(conteudo)
+    if dominio is None:
+        avisos.append(
+            f"Dominio {motivo} - tudo bem para construir: a previa local usa um "
+            "dominio provisorio. O gate de publicacao exige o dominio real."
+        )
 
-    # ── Direção visual ────────────────────────────────────────────────────────
-    tem_tema = re.search(r"tema[^:\n]*:[ \t]*(tema-\d+|\w+-\w+)", conteudo, re.IGNORECASE)
-    tem_referencia = re.search(r"(referencia.*visual|visual.*referencia|layout.*proprio)", conteudo, re.IGNORECASE)
-
-    if not tem_tema and not tem_referencia:
+    # ── Layout escolhido ─────────────────────────────────────────────────────
+    # O construtor parte de um layout padrao sugerido pelo nicho (marco 0) e o
+    # usuario pode trocar depois de ver a previa - mas sempre entre os layouts
+    # que o LinkFlow entrega. Nao existe "referencia visual" externa.
+    m_tema = re.search(r"^tema_pasta[ \t]*:[ \t]*(\S+)", conteudo, re.MULTILINE | re.IGNORECASE)
+    if not m_tema:
         erros.append(
-            "Direcao visual nao definida: informe o tema escolhido (tema-01, tema-03, tema-04) "
-            "OU uma URL de referencia visual antes de construir"
+            "Layout nao definido: registre 'tema_pasta: <layout>' no projeto.md "
+            f"(um de: {', '.join(TEMAS_VALIDOS)}) antes de construir"
+        )
+    elif m_tema.group(1).strip().lower() not in TEMAS_VALIDOS:
+        erros.append(
+            f"Layout '{m_tema.group(1).strip()}' nao existe - tema_pasta deve ser um de: "
+            f"{', '.join(TEMAS_VALIDOS)}"
         )
 
     # ── Serviços definidos ────────────────────────────────────────────────────
@@ -181,9 +242,13 @@ def verificar_entrada(slug):
             "registrar explicitamente 'cnpj: nao possui' (ETAPA 0.5, Parte 3)"
         )
 
-    match = re.search(r"email_institucional[^:\n]*:[ \t]*(.+)", conteudo, re.IGNORECASE)
-    if not match or campo_vazio(match.group(1)):
-        erros.append("email_institucional nao registrado no projeto.md (ETAPA 0.5, Parte 3)")
+    # E-mail: nao bloqueia a construcao (o site sai com [CAMPO] no lugar); o
+    # gate de publicacao exige o e-mail real.
+    if campo_email_institucional(conteudo) is None:
+        avisos.append(
+            "email_institucional ainda nao registrado - a previa sai com [CAMPO] "
+            "no lugar; o gate de publicacao exige o e-mail real"
+        )
 
     # ── ETAPA 0.5 — Prova social ─────────────────────────────────────────────────
     match = re.search(r"diferenciais[^:\n]*:[ \t]*(.+)", conteudo, re.IGNORECASE)
@@ -200,16 +265,61 @@ def verificar_entrada(slug):
     if not re.search(r"(whatsapp|wpp|zap)", conteudo, re.IGNORECASE):
         avisos.append("WhatsApp nao encontrado — botao de contato ficara sem numero")
 
-    return imprimir_resultado(erros, avisos, "entrada")
+    return imprimir_resultado(erros, avisos, "construcao")
+
+
+# ─── GATE DE PUBLICAÇÃO ───────────────────────────────────────────────────────
+
+def verificar_publicacao(slug):
+    """
+    GATE DE PUBLICACAO - roda depois que o usuario aprovou o visual na previa
+    local e ANTES de configurar servidor, dominio e DNS. Aqui o dominio real
+    e o e-mail bloqueiam: sao eles que regeram sitemap, robots, dados
+    estruturados e contato do site.
+    """
+    caminho = _PROJECT_DIR / f"projetos/{slug}/projeto.md"
+    if not caminho.exists():
+        print(f"FAIL: projeto.md nao encontrado em {caminho}")
+        return 1
+
+    conteudo = caminho.read_text(encoding="utf-8")
+    erros = []
+    avisos = []
+
+    m_aprov = re.search(r"^visual_aprovado[ \t]*:[ \t]*(.+)$", conteudo, re.MULTILINE | re.IGNORECASE)
+    if not m_aprov or m_aprov.group(1).strip().lower() not in ("sim", "aprovado", "true"):
+        erros.append(
+            "Visual ainda nao aprovado pelo usuario - registre 'visual_aprovado: sim' no "
+            "projeto.md SO depois que ele abriu a previa local e aprovou. Nada e publicado "
+            "sem essa aprovacao."
+        )
+
+    dominio, motivo = dominio_do_projeto(conteudo)
+    if dominio is None:
+        erros.append(f"Dominio {motivo} - necessario para publicar (sitemap, robots, dados estruturados)")
+
+    if campo_email_institucional(conteudo) is None:
+        erros.append("email_institucional nao registrado no projeto.md - necessario para publicar")
+
+    m_tema = re.search(r"^tema_pasta[ \t]*:[ \t]*(\S+)", conteudo, re.MULTILINE | re.IGNORECASE)
+    if not m_tema or m_tema.group(1).strip().lower() not in TEMAS_VALIDOS:
+        erros.append("tema_pasta ausente ou invalido no projeto.md - o layout precisa estar definido para promover")
+
+    return imprimir_resultado(erros, avisos, "publicacao")
 
 
 # ─── VERIFICAÇÃO DE SAÍDA ─────────────────────────────────────────────────────
 
-def verificar_saida(slug):
+def verificar_saida(slug, fase="saida"):
     """
-    Verifica se o construtor entregou tudo antes de reportar 'pronto'.
-    Bloqueia se faltar sitemap, robots, llms.txt, config real, conteúdo real.
+    fase="previa": build LOCAL pronto, antes de mostrar ao usuario. Confere
+      config, conteudo e o dist/ local; dominio provisorio e aceito e nada do
+      servidor e exigido.
+    fase="saida": depois do deploy. Confere tambem o site publicado em
+      /var/www/<slug>/ e o dominio real.
+    Bloqueia se faltar sitemap, robots, llms.txt, config real, conteudo real.
     """
+    previa = fase == "previa"
     caminho_projeto = _PROJECT_DIR / f"projetos/{slug}/projeto.md"
     if not caminho_projeto.exists():
         print(f"FAIL: projeto.md nao encontrado em {caminho_projeto}")
@@ -219,20 +329,22 @@ def verificar_saida(slug):
     erros = []
     avisos = []
 
-    # ── DNS — registrado na ETAPA 3.5, nunca bloqueia (aguardando propagacao
-    # e um estado normal), mas precisa aparecer no resumo final se pendente
-    match_dns = re.search(r"dns_status[^:\n]*:[ \t]*(.+)", conteudo, re.IGNORECASE)
-    if not match_dns or not match_dns.group(1).strip():
-        avisos.append(
-            "dns_status nao registrado — confirme se o DNS do dominio foi "
-            "checado/orientado (ETAPA 3.5), mesmo que ainda esteja propagando"
-        )
-    elif "aguardando" in match_dns.group(1).lower():
-        avisos.append(
-            f"DNS ainda propagando ({match_dns.group(1).strip()}) — o site "
-            "esta publicado no servidor, mas o dominio pode ainda nao "
-            "resolver. Isso precisa aparecer no resumo final ao cliente."
-        )
+    # ── DNS — nunca bloqueia (aguardando propagacao e um estado normal), mas
+    # precisa aparecer no resumo final se pendente. So faz sentido depois do
+    # deploy: na previa local nao ha DNS.
+    if not previa:
+        match_dns = re.search(r"dns_status[^:\n]*:[ \t]*(.+)", conteudo, re.IGNORECASE)
+        if not match_dns or not match_dns.group(1).strip():
+            avisos.append(
+                "dns_status nao registrado — confirme se o DNS do dominio foi "
+                "checado/orientado, mesmo que ainda esteja propagando"
+            )
+        elif "aguardando" in match_dns.group(1).lower():
+            avisos.append(
+                f"DNS ainda propagando ({match_dns.group(1).strip()}) — o site "
+                "esta publicado no servidor, mas o dominio pode ainda nao "
+                "resolver. Isso precisa aparecer no resumo final ao cliente."
+            )
 
     # Descobrir LINKFLOW_DIR (já é a pasta isolada deste cliente, via .env —
     # nunca acrescentar o slug de novo aqui, senão aninha em dobro)
@@ -241,7 +353,15 @@ def verificar_saida(slug):
     content_dir = astro_dir / "src" / "content"
     config_file = astro_dir / "src" / "config" / "site.ts"
 
-    # Contagem prévia de serviços — usada abaixo para exigir nav com Serviços
+    # Rota final do pilar de oferta: '/servicos' na maioria dos temas, '/planos'
+    # no tema-07 (campo rotaPilar do config). Vale para nav, rodape e colisao.
+    rota_pilar = "/servicos"
+    if config_file.exists():
+        rota_pilar = rota_pilar_do_config(config_file.read_text(encoding="utf-8"))
+    slug_pilar = rota_pilar.strip("/")
+    rotulo_pilar = slug_pilar.capitalize()
+
+    # Contagem prévia de serviços — usada abaixo para exigir nav com o pilar
     qtd_servicos = 0
     if content_dir.exists() and (content_dir / "servicos").exists():
         qtd_servicos = len(list((content_dir / "servicos").glob("*.md")))
@@ -253,10 +373,12 @@ def verificar_saida(slug):
         config_conteudo = config_file.read_text(encoding="utf-8")
         # Domínio real preenchido
         match = re.search(r"dominio:\s*['\"]([^'\"]+)['\"]", config_conteudo)
-        if not match or campo_vazio(match.group(1)):
-            erros.append("Campo 'dominio' vazio no config do cliente — sitemap e canonical ficarao errados")
-        elif "seudominio" in match.group(1) or "exemplo" in match.group(1):
-            erros.append(f"Campo 'dominio' com placeholder: '{match.group(1)}'")
+        # Na previa local o dominio ainda e provisorio: so a saida (pos-deploy) exige o real.
+        if not previa:
+            if not match or campo_vazio(match.group(1)):
+                erros.append("Campo 'dominio' vazio no config do cliente — sitemap e canonical ficarao errados")
+            elif "seudominio" in match.group(1) or "exemplo" in match.group(1):
+                erros.append(f"Campo 'dominio' com placeholder: '{match.group(1)}'")
 
         # NAP no config
         match_tel = re.search(r"telefone:\s*['\"]([^'\"]+)['\"]", config_conteudo)
@@ -291,14 +413,14 @@ def verificar_saida(slug):
         match_nav = re.search(r"\bnav\s*:\s*\[([\s\S]*?)\]", config_conteudo)
         if not match_nav:
             erros.append("Campo 'nav' nao encontrado no config — cabecalho ficara sem menu")
-        elif qtd_servicos > 1 and "/servicos" not in match_nav.group(1):
+        elif qtd_servicos > 1 and rota_pilar not in match_nav.group(1):
             erros.append(
-                f"'{qtd_servicos} servicos criados, mas 'nav' nao tem link para /servicos — "
-                "pagina pilar de servicos fica orfa, alcancavel so pelo sitemap"
+                f"'{qtd_servicos} itens criados, mas 'nav' nao tem link para {rota_pilar} — "
+                "pagina pilar fica orfa, alcancavel so pelo sitemap"
             )
         elif qtd_servicos > 1 and "filhos" not in match_nav.group(1):
             avisos.append(
-                "Item 'Servicos' do nav nao tem 'filhos' — cada servico fica a 2 "
+                f"Item '{rotulo_pilar}' do nav nao tem 'filhos' — cada item fica a 2 "
                 "cliques da Home (via pilar), em vez de ter link direto no dropdown "
                 "do cabecalho. Nao bloqueia, mas reduz o link interno."
             )
@@ -309,9 +431,10 @@ def verificar_saida(slug):
             match_footer = re.search(
                 r"navFooterColunas\s*:\s*\[([\s\S]*?)\n  \]", config_conteudo
             )
-            if not match_footer or "Serviços" not in match_footer.group(1) and "Servicos" not in match_footer.group(1):
+            rotulos_ok = ("Serviços", "Servicos", rotulo_pilar)
+            if not match_footer or not any(r in match_footer.group(1) for r in rotulos_ok):
                 avisos.append(
-                    "navFooterColunas sem coluna de Servicos — cada servico so tem "
+                    f"navFooterColunas sem coluna de {rotulo_pilar} — cada item so tem "
                     "1 link de entrada (via /servicos), em vez de aparecer no rodape "
                     "de todo o site. Nao bloqueia, mas reduz o link interno."
                 )
@@ -345,7 +468,7 @@ def verificar_saida(slug):
         categorias_dir = content_dir / "categorias"
         categorias = list(categorias_dir.glob("*.md")) if categorias_dir.exists() else []
         PAGINAS_FIXAS = {
-            "sobre", "contato", "servicos", "blog", "autor",
+            "sobre", "contato", slug_pilar, "blog", "autor",
             "politica-de-privacidade", "termos-de-uso",
         }
         slugs_por_tipo = {
@@ -406,35 +529,45 @@ def verificar_saida(slug):
     # confere o PUBLICADO (/var/www/[slug]/), não mais só public/ — que
     # agora pode legitimamente estar vazio até o cliente customizar pelo
     # painel, sem que isso signifique falha.
-    site_dir_seo = Path(f"/var/www/{slug}")
+    # Na previa o "site" e o dist/ local; na saida e o publicado no servidor.
+    site_dir_seo = (astro_dir / "dist") if previa else (_SITES_DIR / slug)
+    onde = "no dist/ local (build)" if previa else f"no site publicado ({_SITES_DIR}/[slug]/)"
 
     robots = site_dir_seo / "robots.txt"
     if not robots.exists():
         erros.append(
-            "robots.txt nao encontrado no site publicado (/var/www/[slug]/) — "
+            f"robots.txt nao encontrado {onde} — "
             "build nao rodou, ou a integracao sitemap-canonico.mjs falhou em gera-lo"
         )
     else:
         robots_conteudo = robots.read_text(encoding="utf-8")
-        if "seudominio" in robots_conteudo or "exemplo" in robots_conteudo:
+        if ("seudominio" in robots_conteudo or "exemplo" in robots_conteudo) and not previa:
             erros.append("robots.txt tem URL placeholder — atualizar com dominio real")
         if "Sitemap:" not in robots_conteudo:
             avisos.append("robots.txt nao referencia o Sitemap — adicionar linha 'Sitemap: https://[dominio]/sitemap.xml'")
 
     llms = site_dir_seo / "llms.txt"
     if not llms.exists():
-        avisos.append("llms.txt nao encontrado no site publicado — recomendado para visibilidade em IAs")
+        avisos.append(f"llms.txt nao encontrado {onde} — recomendado para visibilidade em IAs")
 
     # sitemap — gerado no dist/ após o build
     match_dominio = re.search(r"dominio[^:\n]*:[ \t]*(.+)", conteudo, re.IGNORECASE)
-    if match_dominio and not campo_vazio(match_dominio.group(1)):
+    if previa:
+        # Previa local: o dominio ainda e provisorio, entao nao ha o que
+        # conferir contra o projeto.md - so que o build gerou o sitemap.
+        if not (site_dir_seo / "sitemap.xml").exists():
+            erros.append(
+                "sitemap.xml nao encontrado no dist/ local — "
+                "execute o build (npm run build) antes de mostrar a previa"
+            )
+    elif match_dominio and not campo_vazio(match_dominio.group(1)):
         dominio_slug = match_dominio.group(1).strip().replace("https://", "").replace("http://", "").split("/")[0]
-        site_dir = Path(f"/var/www/{slug}")
+        site_dir = _SITES_DIR / slug
         sitemap = site_dir / "sitemap.xml"
 
         if not sitemap.exists():
             erros.append(
-                "sitemap.xml nao encontrado em /var/www/[slug]/ — "
+                f"sitemap.xml nao encontrado em {_SITES_DIR}/[slug]/ — "
                 "execute o build (npm run build) antes de reportar pronto"
             )
         else:
@@ -463,31 +596,35 @@ def verificar_saida(slug):
                     avisos.append("sitemap.xml nao lista a home (/)")
 
     # ── Build executado ───────────────────────────────────────────────────────
-    site_dir = Path(f"/var/www/{slug}")
-    if not site_dir.exists() or not any(site_dir.iterdir()):
-        erros.append(
-            "Pasta do site vazia ou inexistente — "
-            "o build nao foi executado ou o deploy nao foi feito"
-        )
+    if previa:
+        if not (astro_dir / "dist" / "index.html").exists():
+            erros.append("dist/index.html nao encontrado — o build local nao foi executado")
     else:
-        # Verificar se o index.html nao e o placeholder "Em breve"
-        index = site_dir / "index.html"
-        if index.exists():
-            index_conteudo = index.read_text(encoding="utf-8", errors="ignore")
-            if "Em breve" in index_conteudo or "site em construção" in index_conteudo.lower():
-                erros.append(
-                    "index.html e a pagina placeholder 'Em breve' — "
-                    "o build do Astro nao foi executado/deployado"
-                )
+        site_dir = _SITES_DIR / slug
+        if not site_dir.exists() or not any(site_dir.iterdir()):
+            erros.append(
+                "Pasta do site vazia ou inexistente — "
+                "o build nao foi executado ou o deploy nao foi feito"
+            )
+        else:
+            # Verificar se o index.html nao e o placeholder "Em breve"
+            index = site_dir / "index.html"
+            if index.exists():
+                index_conteudo = index.read_text(encoding="utf-8", errors="ignore")
+                if "Em breve" in index_conteudo or "site em construção" in index_conteudo.lower():
+                    erros.append(
+                        "index.html e a pagina placeholder 'Em breve' — "
+                        "o build do Astro nao foi executado/deployado"
+                    )
 
     # ── Marcar construtor como concluído no projeto.md ─────────────────────────
-    if not re.search(r"(construtor.*conclu[ií]do|site.*astro.*pronto|fase2.site.*ok)", conteudo, re.IGNORECASE):
+    if not previa and not re.search(r"(construtor.*conclu[ií]do|site.*astro.*pronto|fase2.site.*ok)", conteudo, re.IGNORECASE):
         avisos.append(
             "Status do construtor nao registrado no projeto.md — "
             "adicionar linha 'fase2_site_astro: concluido' antes de prosseguir"
         )
 
-    return imprimir_resultado(erros, avisos, "saida")
+    return imprimir_resultado(erros, avisos, fase)
 
 
 # ─── MAIN ─────────────────────────────────────────────────────────────────────
@@ -497,16 +634,22 @@ def main():
     parser.add_argument("--slug", required=True, help="Slug do cliente")
     parser.add_argument(
         "--fase",
-        choices=["entrada", "saida"],
+        choices=["construcao", "entrada", "previa", "publicacao", "saida"],
         required=True,
-        help="'entrada' = antes de construir | 'saida' = depois de construir"
+        help=(
+            "construcao (apelido: entrada) = antes de construir | "
+            "previa = build local pronto, antes de mostrar ao usuario | "
+            "publicacao = visual aprovado, antes de servidor/dominio/deploy | "
+            "saida = depois do deploy"
+        ),
     )
     args = parser.parse_args()
 
-    if args.fase == "entrada":
-        sys.exit(verificar_entrada(args.slug))
-    else:
-        sys.exit(verificar_saida(args.slug))
+    if args.fase in ("construcao", "entrada"):
+        sys.exit(verificar_construcao(args.slug))
+    if args.fase == "publicacao":
+        sys.exit(verificar_publicacao(args.slug))
+    sys.exit(verificar_saida(args.slug, args.fase))
 
 
 if __name__ == "__main__":
