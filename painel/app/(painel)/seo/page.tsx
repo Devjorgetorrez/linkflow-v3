@@ -21,6 +21,7 @@ import { auditarTecnica, type Problema, type Severidade } from "@/motor/auditori
 /* ------------------------------------------------------------------ */
 
 const ROTULO_BADGE: Record<string, string> = {
+  home: "home",
   money: "money",
   pilar: "pilar",
   blog: "blog",
@@ -49,6 +50,7 @@ function BadgeProcedencia({ p }: { p: Problema }) {
 function BadgeTipo({ tipo }: { tipo?: string }) {
   if (!tipo || !ROTULO_BADGE[tipo]) return null;
   const estilos: Record<string, string> = {
+    home:        "bg-surface-2 text-ink-muted",
     money:       "bg-[#7c3aed]/10 text-[#6d28d9]",
     pilar:       "bg-[#0369a1]/10 text-[#0369a1]",
     blog:        "bg-[#16a34a]/10 text-[#15803d]",

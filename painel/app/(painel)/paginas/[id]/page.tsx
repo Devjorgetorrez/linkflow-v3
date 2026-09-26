@@ -14,9 +14,11 @@ import { useEffect, useState } from "react";
 import { useDominio } from "@/lib/useDominio";
 import { CabecalhoTela } from "@/components/Tela";
 import { Botao, Painel, CabecalhoPainel, BadgeStatus } from "@/components/ui";
+import { INTENCAO_DETALHE } from "@/lib/intencao";
 import type { Pagina, TipoPagina, Intencao } from "@/mock/types";
 
 const TIPO_LABEL: Record<TipoPagina, string> = {
+  home: "Home",
   money: "Money",
   pilar: "Pilar",
   supporting: "Supporting",
@@ -24,17 +26,11 @@ const TIPO_LABEL: Record<TipoPagina, string> = {
 };
 
 const TIPO_COR: Record<TipoPagina, string> = {
+  home: "border-emerald-300 bg-emerald-50 text-emerald-700",
   money: "border-orange-300 bg-orange-50 text-orange-700",
   pilar: "border-violet-300 bg-violet-50 text-violet-700",
   supporting: "border-blue-300 bg-blue-50 text-blue-700",
   institucional: "border-slate-300 bg-slate-50 text-slate-700",
-};
-
-const INTENCAO_LABEL: Record<Intencao, string> = {
-  T: "Transacional",
-  C: "Conversão",
-  I: "Informacional",
-  N: "Navegação",
 };
 
 export default function PaginaDetalhe() {
@@ -128,7 +124,7 @@ export default function PaginaDetalhe() {
             <div className="flex items-start gap-3">
               <dt className="w-28 shrink-0 text-[11.5px] text-ink-muted">Intenção</dt>
               <dd className="text-[11.5px] text-ink">
-                {pagina.intencao} — {INTENCAO_LABEL[pagina.intencao] ?? "—"}
+                {pagina.intencao} — {INTENCAO_DETALHE[pagina.intencao] ?? "—"}
               </dd>
             </div>
             <div className="flex items-start gap-3">
@@ -208,25 +204,19 @@ export default function PaginaDetalhe() {
                     do tema e das configurações do cliente. Diferente de um WordPress, não há
                     editor visual — o conteúdo e a estrutura são controlados pelo agente.
                   </p>
-                  <p>Para editar esta página, acione o agente com um dos comandos:</p>
+                  <p>Para alterar esta página, acione o agente com um dos comandos (<code>&lt;slug&gt;</code> é o nome do projeto do cliente):</p>
                   <ul className="mt-2 space-y-1.5">
                     <li className="flex items-center gap-2">
                       <code className="rounded bg-surface-2 px-1.5 py-0.5 font-mono text-[11px] text-ink">
-                        /link-flow editar {pagina.url}
+                        /link-flow conteudo &lt;slug&gt;
                       </code>
-                      <span>— editar conteúdo textual</span>
+                      <span>— reescrever o conteúdo (texto, title, meta e H1)</span>
                     </li>
                     <li className="flex items-center gap-2">
                       <code className="rounded bg-surface-2 px-1.5 py-0.5 font-mono text-[11px] text-ink">
-                        /link-flow seo {pagina.url}
+                        /link-flow publicar &lt;slug&gt;
                       </code>
-                      <span>— otimizar title, meta e H1</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <code className="rounded bg-surface-2 px-1.5 py-0.5 font-mono text-[11px] text-ink">
-                        /link-flow schema {pagina.url}
-                      </code>
-                      <span>— configurar JSON-LD desta página</span>
+                      <span>— publicar as alterações no site</span>
                     </li>
                   </ul>
                   <p className="mt-2">

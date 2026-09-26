@@ -1,6 +1,6 @@
 export type StatusPost = "publicado" | "rascunho" | "revisao" | "agendado" | "lixeira";
 
-export type TipoPagina = "money" | "pilar" | "supporting" | "institucional";
+export type TipoPagina = "home" | "money" | "pilar" | "supporting" | "institucional";
 export type Intencao = "T" | "C" | "I" | "N";
 
 export interface Autor {

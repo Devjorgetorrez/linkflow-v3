@@ -40,7 +40,7 @@ function classificar(url: string, servicos: Set<string>, slugPilar: string): {
   paiId: string | null;
   nivel: number;
 } {
-  if (url === "/") return { tipo: "supporting", paiId: null, nivel: 0 };
+  if (url === "/") return { tipo: "home", paiId: null, nivel: 0 };
   const slug = url.replace(/^\//, "").replace(/\/+$/, "");
   // O pilar é /servicos na maioria dos layouts e /planos no tema-07; a coleção
   // de conteúdo é sempre `servicos`. Cada item da coleção é filho do pilar.
@@ -52,7 +52,7 @@ function classificar(url: string, servicos: Set<string>, slugPilar: string): {
 
 // Inferir Intencao a partir do tipo
 function inferirIntencao(tipo: TipoPagina, url: string): Intencao {
-  if (tipo === "money") return "C";         // Converter
+  if (tipo === "money") return "T";         // Transacional (serviço + cidade = busca de contratação)
   if (tipo === "institucional") return "N"; // Navegar
   if (url === "/blog") return "I";          // Informar
   return "T";                               // Transacional

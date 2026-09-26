@@ -60,6 +60,7 @@ function motivoLabel(m: Motivo): string {
 }
 
 const TIPO_PRIORIDADE: Record<string, number> = {
+  home: 0,
   money: 0,
   pilar: 1,
   institucional: 2,

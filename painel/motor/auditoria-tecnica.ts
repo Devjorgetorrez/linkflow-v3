@@ -290,9 +290,9 @@ export function auditarTecnica(
       const nome = ix.title || ix.h1 || ix.url;
       problemas.push({
         id: `title-${ix.node_id}`,
-        tipo: "title_fora_limite",
+        tipo: len === 0 ? "title_ausente" : len < 3 ? "title_curto" : "title_longo",
         severidade: "prejudica",
-        titulo: len < 3 ? "Title SEO muito curto" : "Title SEO muito longo",
+        titulo: len === 0 ? "Title SEO ausente" : len < 3 ? "Title SEO muito curto" : "Title SEO muito longo",
         detalhe: `"${nome.slice(0, 55)}${nome.length > 55 ? "…" : ""}" (${ix.url}) tem ${len} chars (limite: 3–70).`,
         node_ids: [ix.node_id],
         href_conserto: hrefParaNo(ix),
@@ -318,7 +318,7 @@ export function auditarTecnica(
       const nome = ix.title || ix.h1 || ix.url;
       problemas.push({
         id: `meta-${ix.node_id}`,
-        tipo: "meta_description_invalida",
+        tipo: len === 0 ? "meta_ausente" : len < 80 ? "meta_curta" : "meta_longa",
         severidade: "prejudica",
         titulo: msg,
         detalhe:

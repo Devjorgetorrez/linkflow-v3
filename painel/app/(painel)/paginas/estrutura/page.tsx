@@ -17,11 +17,13 @@ import { useMemo, useState, useEffect } from "react";
 
 import { cn } from "@/lib/utils";
 import { useStore } from "@/lib/store";
+import { INTENCAO_DETALHE } from "@/lib/intencao";
 import type { Intencao, Pagina, TipoPagina } from "@/mock/types";
 
 /* ---------------------------------------------------------------- helpers */
 
 const TIPO_ICONE: Record<TipoPagina, typeof Globe> = {
+  home: Globe,
   money: Star,
   pilar: TreeDeciduous,
   supporting: FileText,
@@ -29,6 +31,7 @@ const TIPO_ICONE: Record<TipoPagina, typeof Globe> = {
 };
 
 const TIPO_COR: Record<TipoPagina, string> = {
+  home: "text-success",
   money: "text-danger",
   pilar: "text-primary",
   supporting: "text-success",
@@ -40,13 +43,6 @@ const INTENCAO_COR: Record<Intencao, string> = {
   C: "bg-accent/10 text-accent border-accent/30",
   I: "bg-primary/10 text-primary border-primary/30",
   N: "bg-success/10 text-success border-success/30",
-};
-
-const INTENCAO_DETALHE: Record<Intencao, string> = {
-  T: "Transacional",
-  C: "Comercial",
-  I: "Informacional",
-  N: "Navegacional",
 };
 
 /* LinkFlow targets (mocked) */
@@ -199,9 +195,10 @@ export default function EstruturaPaginasPage() {
 
           {/* legenda de tipos */}
           <div className="flex items-center gap-4 border-b border-line px-6 py-2">
-            {(["money", "pilar", "supporting", "institucional"] as TipoPagina[]).map((t) => {
+            {(["home", "money", "pilar", "supporting", "institucional"] as TipoPagina[]).map((t) => {
               const Icone = TIPO_ICONE[t];
               const labels: Record<TipoPagina, string> = {
+                home: "Home",
                 money: "Money",
                 pilar: "Pilar",
                 supporting: "Supporting",

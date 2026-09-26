@@ -11,7 +11,7 @@ export interface Indexavel {
   node_id: string;
   url: string;
   tipo: "pagina" | "post" | "categoria" | "autor";
-  tipo_pagina?: "money" | "pilar" | "supporting" | "institucional"; // paginas only
+  tipo_pagina?: "home" | "money" | "pilar" | "supporting" | "institucional"; // paginas only
   status: StatusPost;
   indexavel: boolean;
   title: string;

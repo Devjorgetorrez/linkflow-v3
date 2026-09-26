@@ -49,6 +49,7 @@ function derivarTipo(url: string, tipo: string, tipoPagina?: string): string {
   // não da URL.
   if (tipo === "post") return "Post";
   if (tipo === "autor") return "Autor";
+  if (tipoPagina === "home") return "Home";
   if (tipoPagina === "money") return "Serviço";
   if (tipoPagina === "pilar") return "Pilar";
   if (tipoPagina === "institucional") return "Institucional";

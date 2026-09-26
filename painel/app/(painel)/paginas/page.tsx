@@ -12,11 +12,13 @@ import { useMemo, useState, useEffect } from "react";
 import { BadgeStatus, Botao } from "@/components/ui";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
+import { INTENCAO_DETALHE } from "@/lib/intencao";
 import type { Intencao, Pagina, TipoPagina } from "@/mock/types";
 
 /* ---------------------------------------------------------------- helpers */
 
 const TIPO_LABEL: Record<TipoPagina, string> = {
+  home: "Home",
   money: "Money",
   pilar: "Pilar",
   supporting: "Supporting",
@@ -24,17 +26,11 @@ const TIPO_LABEL: Record<TipoPagina, string> = {
 };
 
 const TIPO_TOM: Record<TipoPagina, string> = {
+  home: "bg-success/10 text-success border-success/30",
   money: "bg-danger/10 text-danger border-danger/30",
   pilar: "bg-primary/10 text-primary border-primary/30",
   supporting: "bg-success/10 text-success border-success/30",
   institucional: "bg-accent/10 text-accent border-accent/30",
-};
-
-const INTENCAO_DETALHE: Record<Intencao, string> = {
-  T: "Transacional",
-  C: "Comercial",
-  I: "Informacional",
-  N: "Navegacional",
 };
 
 const INTENCAO_COR: Record<Intencao, string> = {
@@ -217,6 +213,7 @@ export default function PaginasPage() {
           <option value="">Tipo: todos</option>
           <option value="money">Money</option>
           <option value="pilar">Pilar</option>
+          <option value="home">Home</option>
           <option value="supporting">Supporting</option>
           <option value="institucional">Institucional</option>
         </select>
