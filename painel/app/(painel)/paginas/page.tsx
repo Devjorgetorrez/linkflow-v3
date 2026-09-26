@@ -283,7 +283,7 @@ export default function PaginasPage() {
               <th className="px-3 py-2.5 text-left font-medium text-ink-muted">Tipo</th>
               <th className="px-3 py-2.5 text-left font-medium text-ink-muted">Intenção</th>
               <th className="px-3 py-2.5 text-left font-medium text-ink-muted">Cluster</th>
-              <th className="px-3 py-2.5 text-center font-medium text-ink-muted">Nível</th>
+              <th className="px-3 py-2.5 text-center font-medium text-ink-muted" title="Cliques a partir da home">Nível</th>
               <th className="px-3 py-2.5 text-left font-medium text-ink-muted">Composição</th>
               <th className="px-3 py-2.5 text-left font-medium text-ink-muted">Status</th>
               <th className="px-3 py-2.5 text-center font-medium text-ink-muted">Links</th>

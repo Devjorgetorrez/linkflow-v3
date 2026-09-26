@@ -4,7 +4,8 @@
  *
  * Campos estruturais (composicao, secoes, paiId, linksRecebidos) usam
  * defaults seguros — esses dados não existem no HTML gerado, só no projeto.md.
- * nivel é derivado da profundidade da URL.
+ * nivel = cliques reais a partir da home (grafo de links do HTML); sem grafo ou
+ * página inalcançável, cai no nível planejado da árvore de silos.
  * linksRecebidos é calculado a partir dos links reais do HTML (lib/links-internos.ts).
  */
 
@@ -14,7 +15,7 @@ import path from "path";
 import { getContentDir, getLinkflowDir, getRotaPilar } from "@/lib/fs";
 import { exigirPapel } from "@/lib/auth";
 import { MATRIZ } from "@/lib/permissoes";
-import { lerGrafoLinks, contarRecebidos } from "@/lib/links-internos";
+import { lerGrafoLinks, contarRecebidos, profundidadeDeCliques } from "@/lib/links-internos";
 import { normalizarUrl } from "@/lib/urls-publicas";
 import type { Pagina, TipoPagina, Intencao } from "@/mock/types";
 
@@ -124,8 +125,11 @@ export async function GET(req: NextRequest) {
     const grafo = lerGrafoLinks(distDir);
     const linksRecebidosMap = grafo ? contarRecebidos(grafo.links) : new Map<string, number>();
 
+    const cliques = grafo ? profundidadeDeCliques(grafo.links) : new Map<string, number>();
+
     const paginas: Pagina[] = rawPaginas.map((p) => {
-      const { tipo, paiId, nivel } = classificar(p.url, servicos, slugPilar);
+      const { tipo, paiId, nivel: nivelPlanejado } = classificar(p.url, servicos, slugPilar);
+      const nivel = cliques.get(normalizarUrl(p.url)) ?? nivelPlanejado;
       return {
         // id = slug da URL ("/" -> "home"). paiId aponta para esse mesmo id:
         // serviço interno -> slug do pilar ("servicos" ou "planos"), o resto -> "home".

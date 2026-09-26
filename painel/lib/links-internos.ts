@@ -124,3 +124,21 @@ export function contarRecebidos(links: GrafoLinks): Map<string, number> {
   }
   return recebidos;
 }
+
+/**
+ * Profundidade real: menor número de cliques a partir da home ("/" = 0).
+ * Página que nenhum caminho de links alcança não aparece no mapa.
+ */
+export function profundidadeDeCliques(links: GrafoLinks, origem = "/"): Map<string, number> {
+  const prof = new Map<string, number>([[origem, 0]]);
+  const fila = [origem];
+  for (let i = 0; i < fila.length; i++) {
+    const atual = fila[i];
+    for (const destino of Object.keys(links[atual] ?? {})) {
+      if (prof.has(destino)) continue;
+      prof.set(destino, (prof.get(atual) ?? 0) + 1);
+      fila.push(destino);
+    }
+  }
+  return prof;
+}
