@@ -7,6 +7,7 @@
 
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
+import { paginaPermitida } from "@/lib/permissoes-paginas";
 
 /**
  * Rotas de API que fazem a PRÓPRIA autenticação (sessão OU x-api-key, em
@@ -51,11 +52,12 @@ export default withAuth(
       return NextResponse.next();
     }
 
-    // Verificar papel para rotas administrativas
-    if (pathname.startsWith("/usuarios") || pathname.startsWith("/configuracoes")) {
-      if (token?.papel !== "administrador") {
-        return NextResponse.redirect(new URL("/", req.url));
-      }
+    // Telas por papel (regra única em lib/permissoes-paginas.ts, a mesma da Sidebar).
+    // Bloqueia, mas leva a um aviso claro em vez de jogar no painel sem explicação.
+    if (!paginaPermitida(pathname, token?.papel as string | undefined)) {
+      const destino = new URL("/sem-permissao", req.url);
+      destino.searchParams.set("de", pathname);
+      return NextResponse.redirect(destino);
     }
 
     return NextResponse.next();

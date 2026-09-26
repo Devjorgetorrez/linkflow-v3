@@ -16,6 +16,8 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { AreaTexto, Botao, Campo, Entrada, Mono, Thumb } from "@/components/ui";
+import { useSession } from "next-auth/react";
+import { enviarMidia } from "@/lib/midia-cliente";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import type { Midia } from "@/mock/types";
@@ -459,7 +461,10 @@ function PainelDetalhe({
 /* ---------------------------------------------------------------- page */
 
 export default function BibliotecaMidiaPage() {
-  const { midia: midiaMock, atualizarMidia } = useStore();
+  const { midia: midiaMock, atualizarMidia, recarregarMidia } = useStore();
+  const { data: sessao } = useSession();
+  const papelAtual = (sessao?.user as { papel?: string } | undefined)?.papel;
+  const podeEnviar = papelAtual === "administrador" || papelAtual === "editor";
   const [midia, setMidia] = useState<Midia[]>(midiaMock);
   const [carregando, setCarregando] = useState(true);
 
@@ -576,25 +581,24 @@ export default function BibliotecaMidiaPage() {
     });
   }
 
+  const [erroEnvio, setErroEnvio] = useState<string | null>(null);
+
   async function handleDrop(e: React.DragEvent) {
     const files = Array.from(e.dataTransfer.files);
     if (!files.length) return;
-
-    for (const file of files) {
-      const formData = new FormData();
-      formData.append("arquivo", file);
-      try {
-        const res = await fetch("/api/midia", { method: "POST", body: formData });
-        const data = await res.json();
-        if (data.ok) {
-          // Recarregar lista após upload
-          const listagem = await fetch("/api/midia").then(r => r.json());
-          if (listagem.ok) setMidia(listagem.midia);
-        }
-      } catch (err) {
-        console.error("Erro no upload:", err);
-      }
+    if (!podeEnviar) {
+      setErroEnvio("Seu papel não tem permissão para enviar arquivos à biblioteca.");
+      return;
     }
+    setErroEnvio(null);
+    const falhas: string[] = [];
+    for (const file of files) {
+      const r = await enviarMidia(file, "geral");
+      if (!r.ok) falhas.push(r.erro ?? "Falha no envio.");
+    }
+    const listagem = await recarregarMidia();
+    if (listagem) setMidia(listagem);
+    if (falhas.length) setErroEnvio(falhas.join(" "));
   }
 
   return (
@@ -607,12 +611,19 @@ export default function BibliotecaMidiaPage() {
           </h1>
           <p className="mt-0.5 text-[11.5px] text-ink-muted">{midia.length} arquivos</p>
         </div>
-        <Link href="/midia/adicionar">
-          <Botao variante="primario" tamanho="sm">
-            Adicionar arquivo
-          </Botao>
-        </Link>
+        {podeEnviar && (
+          <Link href="/midia/adicionar">
+            <Botao variante="primario" tamanho="sm">
+              Adicionar arquivo
+            </Botao>
+          </Link>
+        )}
       </div>
+      {erroEnvio && (
+        <p role="alert" className="shrink-0 border-b border-danger/40 bg-danger/10 px-6 py-2 text-[12px] text-danger">
+          {erroEnvio}
+        </p>
+      )}
 
       {/* barra de controles */}
       <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-line bg-surface px-6 py-2.5">
@@ -762,7 +773,7 @@ export default function BibliotecaMidiaPage() {
             onToggle={toggleSelecionado}
             onAbrir={abrirItem}
             onDrop={handleDrop}
-            mostrarDropZone={semFiltrosAtivos}
+            mostrarDropZone={semFiltrosAtivos && podeEnviar}
           />
         ) : (
           <ListaMidia

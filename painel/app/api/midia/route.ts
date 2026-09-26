@@ -1,21 +1,23 @@
 /**
  * app/api/midia/route.ts
  * GET   /api/midia         → lista arquivos de mídia do site
- * POST  /api/midia         → faz upload de um arquivo (multipart/form-data)
+ * POST  /api/midia         → upload (multipart, campo "arquivo"). finalidade=avatar: qualquer papel,
+ *   só imagem até 2 MB, pasta "avatares" (autor troca a PRÓPRIA foto sem upload geral). Sem finalidade: admin/editor.
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import { getSiteSlug } from "@/lib/fs";
-import { exigirPapel } from "@/lib/auth";
+import {
+  LIMITE_AVATAR, LIMITE_IMAGEM, LIMITE_OUTROS, detectarTipo, getMidiaDir,
+  gravarSemSobrescrever, sanitizarBase, sanitizarPasta,
+} from "@/lib/midia-upload";
+import { exigirPapel, obterAtor } from "@/lib/auth";
 import { MATRIZ } from "@/lib/permissoes";
 
-const FORMATOS_IMAGEM = ["jpg", "jpeg", "png", "webp", "gif", "svg", "avif"];
+const FORMATOS_IMAGEM = ["jpg", "jpeg", "png", "webp", "gif", "avif"];
 
-function getMidiaDir(): string {
-  return path.join("/var/www", getSiteSlug(), "midia");
-}
 
 function getUrlBase(): string {
   // URL pública das imagens — lida do config se disponível
@@ -133,48 +135,84 @@ export async function GET(req: NextRequest) {
 // ─── POST — upload ────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
-  const auth = await exigirPapel(req, MATRIZ["midia:POST"]);
-  if (auth) return auth;
-
   try {
-    const formData = await req.formData();
-    const arquivo = formData.get("arquivo") as File | null;
-    const pasta = String(formData.get("pasta") ?? "").replace(/[^a-z0-9-_/]/gi, "");
-
-    if (!arquivo) {
-      return NextResponse.json({ ok: false, erro: "arquivo obrigatório" }, { status: 400 });
-    }
-
-    // Validar tipo de arquivo
-    const ext = arquivo.name.split(".").pop()?.toLowerCase() ?? "";
-    const PERMITIDOS = [...FORMATOS_IMAGEM, "pdf", "mp4", "webm"];
-    if (!PERMITIDOS.includes(ext)) {
+    // Recusa cedo pelo Content-Length, antes de ler o corpo inteiro.
+    const declarado = Number(req.headers.get("content-length") ?? 0);
+    if (declarado > LIMITE_OUTROS + 64 * 1024) {
       return NextResponse.json(
-        { ok: false, erro: `Formato .${ext} não permitido` },
-        { status: 400 }
+        { ok: false, erro: `Arquivo grande demais (máximo ${LIMITE_OUTROS / 1024 / 1024} MB).` },
+        { status: 413 },
       );
     }
 
-    // Sanitizar nome do arquivo
-    const nomeSeguro = arquivo.name
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^a-zA-Z0-9._-]/g, "-")
-      .toLowerCase();
+    let formData: FormData;
+    try {
+      formData = await req.formData();
+    } catch {
+      return NextResponse.json({ ok: false, erro: "Envio inválido (esperado multipart/form-data)." }, { status: 400 });
+    }
 
-    const midiaDir = path.join(getMidiaDir(), pasta);
-    if (!fs.existsSync(midiaDir)) fs.mkdirSync(midiaDir, { recursive: true });
+    const avatar = formData.get("finalidade") === "avatar";
+    const auth = await exigirPapel(req, avatar ? MATRIZ["midia:POST:avatar"] : MATRIZ["midia:POST"]);
+    if (auth) return auth;
 
-    const filePath = path.join(midiaDir, nomeSeguro);
-    const bytes = await arquivo.arrayBuffer();
-    fs.writeFileSync(filePath, Buffer.from(bytes));
+    const arquivo = formData.get("arquivo");
+    if (!arquivo || typeof arquivo === "string") {
+      return NextResponse.json({ ok: false, erro: "Escolha um arquivo para enviar." }, { status: 400 });
+    }
+    if (arquivo.size === 0) {
+      return NextResponse.json({ ok: false, erro: "O arquivo está vazio." }, { status: 400 });
+    }
 
-    const urlBase = getUrlBase();
-    const url = `${urlBase}/midia${pasta ? `/${pasta}` : ""}/${nomeSeguro}`;
+    const buf = Buffer.from(await arquivo.arrayBuffer());
+    const tipo = detectarTipo(buf);
+    if (!tipo) {
+      return NextResponse.json(
+        { ok: false, erro: "Formato não aceito. Envie JPG, PNG, WebP ou GIF (SVG não é aceito por segurança)." },
+        { status: 415 },
+      );
+    }
+    if (avatar && !tipo.imagem) {
+      return NextResponse.json({ ok: false, erro: "A foto de perfil precisa ser uma imagem (JPG, PNG, WebP ou GIF)." }, { status: 415 });
+    }
+    const limite = avatar ? LIMITE_AVATAR : tipo.imagem ? LIMITE_IMAGEM : LIMITE_OUTROS;
+    if (buf.length > limite) {
+      return NextResponse.json(
+        { ok: false, erro: `Arquivo grande demais (${(buf.length / 1024 / 1024).toFixed(1)} MB). O máximo é ${limite / 1024 / 1024} MB.` },
+        { status: 413 },
+      );
+    }
 
-    return NextResponse.json({ ok: true, url, arquivo: nomeSeguro });
+    let pasta = "";
+    let base = sanitizarBase(arquivo.name);
+    if (avatar) {
+      pasta = "avatares";
+      const ator = await obterAtor(req);
+      const dono = ator?.via === "sessao" ? ator.id.replace(/[^a-z0-9]/gi, "").slice(0, 12) : "";
+      base = `avatar-${dono ? `${dono}-` : ""}${Date.now().toString(36)}`;
+    } else {
+      pasta = sanitizarPasta(String(formData.get("pasta") ?? ""));
+    }
+
+    const raiz = path.resolve(getMidiaDir());
+    const dir = path.resolve(raiz, pasta);
+    if (dir !== raiz && !dir.startsWith(raiz + path.sep)) {
+      return NextResponse.json({ ok: false, erro: "Pasta inválida." }, { status: 400 });
+    }
+
+    const nome = gravarSemSobrescrever(dir, base, tipo.ext, buf);
+    const url = `${getUrlBase()}/midia${pasta ? `/${pasta}` : ""}/${nome}`;
+    return NextResponse.json({
+      ok: true,
+      url,
+      arquivo: nome,
+      id: pasta ? `${pasta}/${nome}` : nome,
+      pasta: pasta ? `/${pasta}` : "/",
+      bytes: buf.length,
+      formato: tipo.ext,
+    });
   } catch (err) {
     console.error("[api/midia POST]", err);
-    return NextResponse.json({ ok: false, erro: String(err) }, { status: 500 });
+    return NextResponse.json({ ok: false, erro: "Falha ao gravar o arquivo no servidor." }, { status: 500 });
   }
 }

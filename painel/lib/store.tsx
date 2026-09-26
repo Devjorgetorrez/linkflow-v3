@@ -306,6 +306,8 @@ interface Estado {
   atualizarCategoria: (id: string, patch: Partial<Categoria>) => void;
   atualizarPagina: (id: string, patch: Partial<Pagina>) => void;
   atualizarMidia: (id: string, patch: Partial<Midia>) => void;
+  /** Relê a biblioteca real (após um envio). Devolve a lista nova, ou null se a API falhou. */
+  recarregarMidia: () => Promise<Midia[] | null>;
   adicionarRedirect: (r: Redirect) => void;
   deletarRedirect: (id: string) => void;
   publicarAlteracoes: () => void;
@@ -755,6 +757,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       atualizarPagina: (id, patch) => {
         setPaginas((lista) => lista.map((p) => (p.id === id ? { ...p, ...patch } : p)));
         marcarPendente();
+      },
+      recarregarMidia: async () => {
+        const l = await carregarLista<Midia>("/api/midia", "midia");
+        if (l) setMidia(l);
+        return l;
       },
       atualizarMidia: (id, patch) => {
         setMidia((lista) => lista.map((m) => (m.id === id ? { ...m, ...patch } : m)));

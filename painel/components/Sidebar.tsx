@@ -19,6 +19,7 @@ import { usePathname, useRouter } from "next/navigation";
 
 import { Marca } from "@/components/Marca";
 import { useSession, signOut } from "next-auth/react";
+import { paginaPermitida } from "@/lib/permissoes-paginas";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
@@ -147,6 +148,11 @@ const GRUPOS: NavGroup[] = [
   },
 ];
 
+const SEM_PERMISSAO = "Sem permissão para o seu papel";
+
+/** Item visível porém desabilitado: sem navegação, cinza, com dica ao passar o mouse. */
+const CLASSE_DESABILITADO = "cursor-not-allowed text-white/30";
+
 const NAV_FLAT: NavItem[] = GRUPOS.flatMap((g) => g.itens);
 const SIDEBAR_W = 224;
 const BREAKPOINT_ESTREITO = 900;
@@ -179,9 +185,10 @@ interface FlyoutProps {
   onMouseEnter: () => void;
   onMouseLeave: () => void;
   onNavegar: () => void;
+  permitido: (href: string) => boolean;
 }
 
-function FlyoutPanel({ item, top, caminho, onMouseEnter, onMouseLeave, onNavegar }: FlyoutProps) {
+function FlyoutPanel({ item, top, caminho, onMouseEnter, onMouseLeave, onNavegar, permitido }: FlyoutProps) {
   const maxH = (typeof window !== "undefined" ? window.innerHeight : 800) - top - 8;
 
   return (
@@ -209,6 +216,19 @@ function FlyoutPanel({ item, top, caminho, onMouseEnter, onMouseLeave, onNavegar
                 key={sub.href}
                 className="flex items-center whitespace-nowrap px-5 py-2.5 text-[13px] text-white/35 italic cursor-default"
                 title="Tela ainda não construída"
+              >
+                {sub.label}
+              </span>
+            );
+          }
+          if (!permitido(sub.href)) {
+            return (
+              <span
+                key={sub.href}
+                role="link"
+                aria-disabled="true"
+                title={SEM_PERMISSAO}
+                className={cn("flex items-center whitespace-nowrap px-5 py-2.5 text-[13px]", CLASSE_DESABILITADO)}
               >
                 {sub.label}
               </span>
@@ -250,7 +270,15 @@ export function Sidebar() {
   const caminho = usePathname();
   const router = useRouter();
   const { usuario, sair } = useStore();
-  const { data: session } = useSession();
+  const { data: session, status: statusSessao } = useSession();
+
+  // Papel = fonte única lib/permissoes-paginas.ts (a mesma do middleware).
+  // Enquanto a sessão carrega, nada é desabilitado (evita piscar cinza).
+  const papel = (session?.user as { papel?: string } | undefined)?.papel;
+  const permitido = useCallback(
+    (href: string) => statusSessao === "loading" || paginaPermitida(href, papel),
+    [statusSessao, papel],
+  );
 
   // Dados reais do usuário logado — sobrepõem o mock do store
   const usuarioReal = {
@@ -347,6 +375,28 @@ export function Sidebar() {
                 const Icone = item.icone;
                 const temSub = !!item.subitens?.length;
                 const comFilhoAtivo = filhoAtivo(item, caminho);
+                const subPermitidos = item.subitens?.filter((s) => s.existente !== false && permitido(s.href)) ?? [];
+                const grupoBloqueado = temSub && subPermitidos.length === 0;
+
+                /* ── Grupo inteiro sem permissão: visível, desabilitado ── */
+                if (grupoBloqueado) {
+                  return (
+                    <li key={item.label}>
+                      <span
+                        role="link"
+                        aria-disabled="true"
+                        title={SEM_PERMISSAO}
+                        className={cn(
+                          "flex w-full items-center gap-3 rounded-[var(--radius)] px-3 py-2 text-[13.5px]",
+                          CLASSE_DESABILITADO,
+                        )}
+                      >
+                        <Icone size={15} className="text-white/30" />
+                        <span className="flex-1 text-left">{item.label}</span>
+                      </span>
+                    </li>
+                  );
+                }
 
                 /* ── Item sem submenu (Dashboard) ── */
                 if (!temSub) {
@@ -385,7 +435,7 @@ export function Sidebar() {
                         onMouseEnter={(e) => mostrarFlyout(item.label, e.currentTarget)}
                         onMouseLeave={agendarEsconder}
                         onClick={() => {
-                          const primeiro = item.subitens!.find((s) => s.existente !== false);
+                          const primeiro = subPermitidos[0];
                           if (primeiro) router.push(primeiro.href);
                         }}
                         style={
@@ -458,6 +508,20 @@ export function Sidebar() {
                               </li>
                             );
                           }
+                          if (!permitido(sub.href)) {
+                            return (
+                              <li key={sub.href}>
+                                <span
+                                  role="link"
+                                  aria-disabled="true"
+                                  title={SEM_PERMISSAO}
+                                  className={cn("flex items-center rounded-[var(--radius)] px-2 py-[6px] text-[12.5px]", CLASSE_DESABILITADO)}
+                                >
+                                  {sub.label}
+                                </span>
+                              </li>
+                            );
+                          }
                           const subAtivo =
                             caminho === sub.href ||
                             (sub.href !== "/" && caminho.startsWith(sub.href));
@@ -496,6 +560,7 @@ export function Sidebar() {
           item={flyoutItem}
           top={flyout.top}
           caminho={caminho}
+          permitido={permitido}
           onMouseEnter={cancelarEsconder}
           onMouseLeave={agendarEsconder}
           onNavegar={() => {

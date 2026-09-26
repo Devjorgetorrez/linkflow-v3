@@ -11,13 +11,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
-import { getSiteSlug } from "@/lib/fs";
+import { getMidiaDir } from "@/lib/midia-upload";
 import { exigirPapel } from "@/lib/auth";
 import { MATRIZ } from "@/lib/permissoes";
 
 function idParaPath(id: string): string {
-  const slug = getSiteSlug();
-  const midiaDir = path.join("/var/www", slug, "midia");
+  const midiaDir = path.resolve(getMidiaDir());
   const resolved = path.resolve(midiaDir, id);
   // Comparar com separador incluso para evitar bypass via pasta com nome prefixado
   // Ex: "midia-backup" não pode ser confundido com "midia"

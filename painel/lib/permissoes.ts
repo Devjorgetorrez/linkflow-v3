@@ -27,6 +27,9 @@ export const MATRIZ = {
   "categorias/[id]:DELETE": ADM_ED,
   "midia:GET": TODOS,
   "midia:POST": ADM_ED,
+  // Foto de perfil: qualquer papel envia, mas a rota só aceita imagem até 2 MB na pasta "avatares"
+  // (finalidade=avatar). Não dá ao autor upload geral nem PATCH/DELETE na biblioteca.
+  "midia:POST:avatar": TODOS,
   "midia/[id]:GET": TODOS,
   "midia/[id]:PATCH": ADM_ED,
   "midia/[id]:DELETE": ADM_ED,

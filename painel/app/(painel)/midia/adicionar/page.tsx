@@ -125,14 +125,14 @@ export default function AdicionarMidiaPage() {
             <input
               type="file"
               multiple
-              accept="image/*,.pdf,.mp4,.webm"
+              accept="image/jpeg,image/png,image/webp,image/gif,.pdf,.mp4,.webm"
               className="sr-only"
               onChange={onInputChange}
             />
           </label>
         </div>
         <p className="text-[11px] text-ink-muted">
-          JPG, PNG, WebP, GIF, SVG, PDF, MP4
+          JPG, PNG, WebP, GIF (até 5 MB); PDF, MP4, WebM (até 10 MB). SVG não é aceito.
         </p>
       </div>
 
