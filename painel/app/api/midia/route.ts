@@ -8,7 +8,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
-import { getSiteSlug } from "@/lib/fs";
+import { getConfigPath } from "@/lib/fs";
+import { lerSite } from "@/lib/site-config";
 import {
   LIMITE_AVATAR, LIMITE_IMAGEM, LIMITE_OUTROS, detectarTipo, getMidiaDir,
   gravarSemSobrescrever, sanitizarBase, sanitizarPasta,
@@ -19,9 +20,15 @@ import { MATRIZ } from "@/lib/permissoes";
 const FORMATOS_IMAGEM = ["jpg", "jpeg", "png", "webp", "gif", "avif"];
 
 
+/** Domínio público do site (do config/site.ts). Sem domínio ainda, "" → URL relativa (/midia/x.png). */
 function getUrlBase(): string {
-  // URL pública das imagens — lida do config se disponível
-  return process.env.SITE_URL ?? `https://${getSiteSlug()}.turboblog.com.br`;
+  const env = process.env.SITE_URL?.trim();
+  if (env) return env.replace(/\/+$/, "");
+  try {
+    return (lerSite(fs.readFileSync(getConfigPath(), "utf-8")).dominio ?? "").replace(/\/+$/, "");
+  } catch {
+    return "";
+  }
 }
 
 function getImageDimensions(filePath: string): { largura: number; altura: number } {

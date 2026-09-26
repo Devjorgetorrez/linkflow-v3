@@ -3,7 +3,7 @@
  * PATCH  /api/midia/:id  → atualiza metadados (alt, titulo, legenda, credito, tags)
  * DELETE /api/midia/:id  → deleta o arquivo
  *
- * O id é o path relativo do arquivo dentro de /var/www/[slug]/midia/
+ * O id é o path relativo do arquivo dentro de $LINKFLOW_DIR/midia/
  * Ex: "foto.jpg" ou "2024/foto.jpg"
  * O cliente usa encodeURIComponent(id) ao montar a URL do fetch.
  */

@@ -33,7 +33,7 @@ import { useEffect, useState } from "react";
 
 import { SeletorMidia } from "@/components/SeletorMidia";
 import { Alternador, AreaTexto, Campo, Contador, Entrada, Rotulo } from "@/components/ui";
-import { caminhoDaMidia } from "@/lib/site-config-cliente";
+import { caminhoDaMidia, urlPreviaMidia } from "@/lib/site-config-cliente";
 import { useStore } from "@/lib/store";
 import { SENHA_MIN, ehUltimoAdminAtivo, emailValido, gerarSenhaSegura, validarNovoUsuario, type UsuarioMin } from "@/lib/usuarios-regras";
 import type { PapelUsuario, Usuario } from "@/mock/types";
@@ -938,7 +938,7 @@ export function EditorUsuario({ id, modo = "editar" }: { id: string; modo?: Modo
                   <div className="flex h-20 w-20 flex-none items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-violet-400 to-pink-400 text-xl font-bold text-white">
                     {fotoAtual ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={fotoAtual} alt={fotoAlt || nomePublico} className="h-full w-full object-cover" />
+                      <img src={urlPreviaMidia(fotoAtual)} alt={fotoAlt || nomePublico} className="h-full w-full object-cover" />
                     ) : (
                       nomePublico.split(" ").slice(0, 2).map((n) => n[0]).join("").toUpperCase() || "?"
                     )}

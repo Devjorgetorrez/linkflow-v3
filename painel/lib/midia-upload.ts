@@ -10,7 +10,7 @@
 
 import fs from "fs";
 import path from "path";
-import { getSiteSlug } from "@/lib/fs";
+import { getLinkflowDir } from "@/lib/fs";
 
 export const LIMITE_IMAGEM = 5 * 1024 * 1024;
 export const LIMITE_OUTROS = 10 * 1024 * 1024;
@@ -18,11 +18,15 @@ export const LIMITE_AVATAR = 2 * 1024 * 1024;
 
 export type TipoDetectado = { ext: string; mime: string; imagem: boolean };
 
-/** Pasta física da biblioteca. LINKFLOW_MIDIA_DIR sobrepõe (testes); padrão = /var/www/<slug>/midia. */
+/**
+ * Pasta física da biblioteca: $LINKFLOW_DIR/midia. No servidor, LINKFLOW_DIR é a pasta
+ * DESTE cliente (/opt/linkflow/clientes/<slug>), a mesma que o Nginx serve em /midia/,
+ * então cada cliente tem a sua e nada se mistura. LINKFLOW_MIDIA_DIR sobrepõe (testes).
+ */
 export function getMidiaDir(): string {
   return process.env.LINKFLOW_MIDIA_DIR
     ? path.resolve(process.env.LINKFLOW_MIDIA_DIR)
-    : path.join("/var/www", getSiteSlug(), "midia");
+    : path.join(getLinkflowDir(), "midia");
 }
 
 export function detectarTipo(b: Buffer): TipoDetectado | null {

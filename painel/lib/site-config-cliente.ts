@@ -87,6 +87,20 @@ export async function enviarConfig(body: Record<string, unknown>): Promise<Respo
 /* Listas, objetos aninhados, mídia e validação (campos restaurados)   */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Endereço para MOSTRAR a mídia dentro do painel. O painel roda em outro endereço que o
+ * site, então "/midia/x.png" (ou a URL pública) não abre nele: a prévia passa pela rota
+ * autenticada /api/midia/arquivo/. URL de outro domínio (que não seja /midia/) fica como está.
+ */
+export function urlPreviaMidia(url: string): string {
+  if (!url) return url;
+  let caminho = url.trim();
+  if (/^https?:\/\//i.test(caminho)) {
+    try { caminho = new URL(caminho).pathname; } catch { return url; }
+  }
+  return caminho.startsWith("/midia/") ? `/api/midia/arquivo/${caminho.slice("/midia/".length)}` : url;
+}
+
 /** A API de mídia devolve URL absoluta; o site.ts guarda o CAMINHO (`/midia/logo.png`). */
 export function caminhoDaMidia(url: string): string {
   const t = url.trim();

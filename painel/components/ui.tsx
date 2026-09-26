@@ -11,6 +11,7 @@ import {
   type TextareaHTMLAttributes,
 } from "react";
 
+import { urlPreviaMidia } from "@/lib/site-config-cliente";
 import { cn } from "@/lib/utils";
 
 /* ---------------------------------------------------------------- Botão */
@@ -434,7 +435,7 @@ export function Thumb({
       {url && !falhou && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={url}
+          src={urlPreviaMidia(url)}
           alt={alt}
           loading="lazy"
           onError={() => setFalhou(true)}
