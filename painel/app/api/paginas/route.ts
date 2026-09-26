@@ -11,7 +11,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
-import { getContentDir, getLinkflowDir } from "@/lib/fs";
+import { getContentDir, getLinkflowDir, getRotaPilar } from "@/lib/fs";
 import { verificarAcesso } from "@/lib/auth";
 import { lerGrafoLinks, contarRecebidos } from "@/lib/links-internos";
 import { normalizarUrl } from "@/lib/urls-publicas";
@@ -35,15 +35,17 @@ function slugsDaColecao(colecao: string): Set<string> {
   );
 }
 
-function classificar(url: string, servicos: Set<string>): {
+function classificar(url: string, servicos: Set<string>, slugPilar: string): {
   tipo: TipoPagina;
   paiId: string | null;
   nivel: number;
 } {
   if (url === "/") return { tipo: "supporting", paiId: null, nivel: 0 };
   const slug = url.replace(/^\//, "").replace(/\/+$/, "");
-  if (slug === "servicos") return { tipo: "pilar", paiId: "home", nivel: 1 };
-  if (servicos.has(slug)) return { tipo: "money", paiId: "servicos", nivel: 2 };
+  // O pilar é /servicos na maioria dos layouts e /planos no tema-07; a coleção
+  // de conteúdo é sempre `servicos`. Cada item da coleção é filho do pilar.
+  if (slug === slugPilar) return { tipo: "pilar", paiId: "home", nivel: 1 };
+  if (servicos.has(slug)) return { tipo: "money", paiId: slugPilar, nivel: 2 };
   if (INSTITUCIONAIS.has(slug)) return { tipo: "institucional", paiId: "home", nivel: 1 };
   return { tipo: "supporting", paiId: "home", nivel: 1 };
 }
@@ -106,6 +108,7 @@ export async function GET(req: NextRequest) {
     // dist/ inteiro é o site (pós-promoção) — nunca dist/<slug>/
     const distDir = path.join(getLinkflowDir(), "_astro/dist");
     const servicos = slugsDaColecao("servicos");
+    const slugPilar = getRotaPilar().slice(1);
     const posts = slugsDaColecao("posts");
     // Artigos saem daqui: são listados por /api/posts. Sem este filtro, com
     // URL plana, cada artigo apareceria duas vezes (como página e como post).
@@ -121,10 +124,10 @@ export async function GET(req: NextRequest) {
     const linksRecebidosMap = grafo ? contarRecebidos(grafo.links) : new Map<string, number>();
 
     const paginas: Pagina[] = rawPaginas.map((p) => {
-      const { tipo, paiId, nivel } = classificar(p.url, servicos);
+      const { tipo, paiId, nivel } = classificar(p.url, servicos, slugPilar);
       return {
         // id = slug da URL ("/" -> "home"). paiId aponta para esse mesmo id:
-        // serviço interno -> "servicos" (a pilar), o resto -> "home".
+        // serviço interno -> slug do pilar ("servicos" ou "planos"), o resto -> "home".
         id: p.url === "/" ? "home" : p.url.replace(/^\//, "").replace(/\//g, "--"),
         titulo: p.titulo,
         url: p.url,

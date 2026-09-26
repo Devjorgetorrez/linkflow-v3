@@ -18,7 +18,7 @@
  */
 import fs from "fs";
 import path from "path";
-import { getContentDir, linhaYaml } from "./fs";
+import { getContentDir, getRotaPilar, linhaYaml } from "./fs";
 import type { Categoria } from "@/mock/types";
 
 const MARCA = "painel";
@@ -101,17 +101,20 @@ function slugsExistentes(subpasta: string): Set<string> {
   );
 }
 
-const PAGINAS_FIXAS = new Set([
-  "sobre", "contato", "servicos", "blog", "autor",
-  "politica-de-privacidade", "termos-de-uso",
-]);
+/** Páginas fixas do site; o pilar de oferta é "servicos" ou "planos" (tema-07). */
+function paginasFixas(): Set<string> {
+  return new Set([
+    "sobre", "contato", getRotaPilar().slice(1), "blog", "autor",
+    "politica-de-privacidade", "termos-de-uso",
+  ]);
+}
 
 /** Aviso (não bloqueia o salvamento) se o slug da categoria colide com
  *  página fixa, serviço ou artigo — mesma regra do guardiao_construtor.py. */
 export function avisoColisaoSlug(slug: string): string | null {
   const s = slug.trim();
   if (!s) return null;
-  if (PAGINAS_FIXAS.has(s)) {
+  if (paginasFixas().has(s)) {
     return `Slug "${s}" colide com uma página fixa do site (${s}) — a categoria não vai ter página própria.`;
   }
   if (slugsExistentes("servicos").has(s)) {

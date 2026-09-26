@@ -31,6 +31,40 @@ export function getConfigPath(): string {
   return path.join(getLinkflowDir(), "_astro/src/config", "site.ts");
 }
 
+/**
+ * Rota final do pilar de oferta do site: "/servicos" na maioria dos layouts,
+ * "/planos" no tema-07 (campo `rotaPilar` do config/site.ts). Sempre com a
+ * barra inicial e sem barra final.
+ */
+export function getRotaPilar(): string {
+  try {
+    const raw = fs.readFileSync(getConfigPath(), "utf-8");
+    const m = raw.match(/rotaPilar\s*:\s*['"]([^'"]+)['"]/);
+    if (m) {
+      const rota = "/" + m[1].replace(/^\/+|\/+$/g, "");
+      if (rota.length > 1) return rota;
+    }
+  } catch {
+    /* sem config: cai no padrão */
+  }
+  return "/servicos";
+}
+
+/**
+ * Layout (base do motor) que este site usa: "base" | "tema-03" … "tema-07".
+ * Lido do marcador que scripts/promover_tema.py grava em _astro/tema-ativo.json.
+ * null = site sem marcador (criado antes dele existir, ou ainda não promovido).
+ */
+export function getTemaAtivo(): string | null {
+  try {
+    const raw = fs.readFileSync(path.join(getLinkflowDir(), "_astro", "tema-ativo.json"), "utf-8");
+    const tema = JSON.parse(raw)?.tema;
+    return typeof tema === "string" && tema ? tema : null;
+  } catch {
+    return null;
+  }
+}
+
 // ─── Frontmatter parser simples (sem dependências externas) ───────────────────
 
 export interface ParsedMd {

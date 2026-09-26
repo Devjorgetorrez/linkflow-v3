@@ -11,7 +11,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
-import { getConfigPath, getSiteSlug } from "@/lib/fs";
+import { getConfigPath, getRotaPilar, getSiteSlug } from "@/lib/fs";
 import { verificarAcesso } from "@/lib/auth";
 import { lerDados, salvarDados } from "@/lib/dados";
 import { gerarBlocoLegal, LEGAL_PAINEL_INICIAL, type LegalPainel } from "@/lib/legal";
@@ -124,6 +124,8 @@ export async function GET(req: NextRequest) {
       cnpj: lerCampoSimples(raw, "cnpj"),
       anoFundacao: lerCampoNumero(raw, "anoFundacao"),
       tema: lerCampoSimples(raw, "tema"),
+      // Rota do pilar de oferta: "/servicos" ou "/planos" (tema-07)
+      rotaPilar: getRotaPilar(),
       // NAP
       nap,
       // Contato (flattened para facilitar as telas)

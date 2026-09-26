@@ -18,7 +18,7 @@ export interface Problema {
 }
 
 // Páginas raiz que nunca são consideradas órfãs
-const URLS_RAIZ = new Set(["/", "/blog", "/servicos", "/sobre", "/contato"]);
+const URLS_RAIZ = new Set(["/", "/blog", "/servicos", "/planos", "/sobre", "/contato"]);
 
 function hrefParaNo(ix: Indexavel): string {
   if (ix.tipo === "post") return `/posts/${ix.node_id.replace("post-", "")}`;
