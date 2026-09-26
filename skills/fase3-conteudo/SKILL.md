@@ -563,8 +563,8 @@ para os termos). Editar
 esses campos no `config/site.ts` é publicar a página — não existe
 arquivo de conteúdo separado pra essas quatro.
 
-Os 3 temas (base, tema-03, tema-04) têm as quatro rotas. Se alguma
-faltar no tema promovido (motor desatualizado), ver a ressalva da
+Todos os layouts (base, tema-03 a tema-07) têm as quatro rotas. Se alguma
+faltar no layout promovido (motor desatualizado), ver a ressalva da
 ETAPA 4.5 do `fase2-site-astro`.
 
 Rodar `guardiao_institucionais.py` (Passo 6, já cobre os dois casos —

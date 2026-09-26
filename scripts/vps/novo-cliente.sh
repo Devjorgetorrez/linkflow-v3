@@ -3,10 +3,10 @@
 #
 # Cria estrutura isolada, configura Nginx, gera SSL, builda painel e inicia PM2.
 # Cada cliente tem: pasta própria, porta própria, processo PM2 próprio,
-# motor Astro isolado com só UM tema (nunca aparece na URL do cliente).
+# motor Astro isolado com só UM layout (nunca aparece na URL do cliente).
 #
 # Uso: bash novo-cliente.sh [SLUG] [DOMINIO_SITE] [DOMINIO_PAINEL] [TEMA] [--sem-ssl]
-# TEMA: base | tema-03 | tema-04
+# TEMA: base | tema-03 | tema-04 | tema-05 | tema-06 | tema-07
 # Ex:  bash novo-cliente.sh luis-oficina luisoficinamecanica.com.br painel.luisoficinamecanica.com.br tema-04
 
 set -e
@@ -14,7 +14,7 @@ set -e
 SLUG=${1:?"Erro: informe o slug (ex: luis-oficina)"}
 DOMINIO_SITE=${2:?"Erro: informe o domínio do site (ex: luisoficinamecanica.com.br)"}
 DOMINIO_PAINEL=${3:?"Erro: informe o domínio do painel (ex: painel.luisoficinamecanica.com.br)"}
-TEMA=${4:?"Erro: informe o tema (base | tema-03 | tema-04)"}
+TEMA=${4:?"Erro: informe o tema (base | tema-03 | tema-04 | tema-05 | tema-06 | tema-07)"}
 SEM_SSL=${5:-""}
 
 LINKFLOW_DIR="/opt/linkflow"
@@ -85,9 +85,9 @@ echo "[]" > $CLIENTE_DIR/dados/tarefas.json
 echo "[]" > $CLIENTE_DIR/dados/redirects.json
 
 # ─── Motor Astro do cliente ───────────────────────────────────────────────────
-# Copia o motor compartilhado inteiro (os 3 temas lado a lado, igual ao
-# repositório de referência) e promove só o tema escolhido pra raiz — os
-# outros dois somem por completo. Isso garante a regra de que a escolha
+# Copia o motor compartilhado inteiro (todos os layouts lado a lado, igual ao
+# repositório de referência) e promove só o layout escolhido pra raiz — os
+# outros somem por completo. Isso garante a regra de que a escolha
 # de tema nunca aparece na URL do cliente ("/tema-04/..." nunca acontece).
 echo "  Copiando motor Astro compartilhado..."
 if [ ! -d "$LINKFLOW_DIR/_astro" ]; then
@@ -101,7 +101,7 @@ echo "  Promovendo tema '$TEMA' para a raiz..."
 python3 "$LINKFLOW_DIR/scripts/promover_tema.py" --tema "$TEMA" --astro-dir "$CLIENTE_DIR/_astro"
 
 # O motor compartilhado vem com conteúdo de demonstração (os exemplos dos
-# 3 temas) — o cliente começa com as coleções vazias. fase2-site-astro
+# layouts) — o cliente começa com as coleções vazias. fase2-site-astro
 # escreve o conteúdo real depois.
 echo "  Limpando conteúdo de demonstração..."
 rm -f "$CLIENTE_DIR/_astro/src/content/servicos/"*.md 2>/dev/null || true

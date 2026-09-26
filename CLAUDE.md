@@ -82,17 +82,25 @@ Ao receber `/link-flow site <slug>`, ler `## Ambiente de Publicacao` no `projeto
   (`fase3-conteudo`), como já era.
 
 **Se `site_tipo: astro`** (VPS Hostgator, gerenciado via SSH):
-→ encadear automaticamente, sem pausar nem perguntar, para `fase2-site-astro`
-  — ele usa o que `fase2-site` acabou de gerar (Money Pages, handoff) para
-  construir o site de verdade. A própria ETAPA 3 do `fase2-site-astro`
-  verifica se a infraestrutura VPS já existe e invoca `vps-setup`
-  automaticamente se não existir (bootstrap do servidor, Nginx, PM2, SSL,
-  DNS) — não é preciso chamar `vps-setup` à parte aqui, mas ela também
-  pode ser invocada isolada via `/link-flow vps <slug>` para diagnóstico
-  ou para adicionar mais um cliente a um VPS já configurado.
-  `fase2-site-astro` já roda seu próprio guardião (`guardiao_construtor.py`,
-  entrada e saída) — não pular essa parte.
-→ Deploy via SSH (dentro da própria `fase2-site-astro`, ETAPA 6)
+→ encadear automaticamente, sem perguntar, para `fase2-site-astro` — ele usa o
+  que `fase2-site` acabou de gerar (Money Pages, handoff) para construir o site.
+  A skill roda em **dois marcos**, e entre eles há **uma pausa obrigatória**:
+  - **Marco 1 (aprovar o visual):** constrói o site numa cópia LOCAL
+    (`projetos/<slug>/site/`), sobe a prévia em `http://localhost:4321` e ajusta
+    até o usuário aprovar. Não usa domínio, servidor nem custo. Termina quando o
+    usuário diz, explicitamente, que aprova; o agente então registra
+    `visual_aprovado: sim` no `projeto.md`.
+  - **Marco 2 (colocar no ar):** só com `visual_aprovado: sim`. Pede domínio e
+    e-mail (um por vez), configura o servidor (`vps-setup`), publica, orienta o
+    DNS e entrega o acesso ao painel. O deploy é a ETAPA 6 da própria
+    `fase2-site-astro`.
+  O servidor **nunca** é configurado antes da aprovação do visual. `vps-setup`
+  também pode ser invocada isolada via `/link-flow vps <slug>` para diagnóstico
+  ou para adicionar mais um cliente a um servidor já configurado.
+  `fase2-site-astro` roda seu próprio guardião (`guardiao_construtor.py`, fases
+  `construcao`, `previa`, `publicacao` e `saida`) — não pular nenhuma.
+→ O usuário só vê "o site no ar" no fim do Marco 2. Tudo o que ele vê antes é um
+  endereço `localhost` que só ele acessa.
 
 **Nunca perguntar ao cliente qual tipo de site** — está definido no `projeto.md`.
 Se o campo não existir, usar `wordpress` como padrão.
@@ -160,6 +168,42 @@ STATUS — [Nome do Cliente]
 
 Se o projeto não existir: "Não encontrei o projeto `<slug>`. Use `/link-flow novo` para cadastrar."
 **Regra:** sempre terminar com o próximo comando exato, pronto para copiar.
+
+---
+
+## Rotina em marcos (site Astro)
+
+O trabalho do site tem três marcos, cada um com **um único pedido** ao usuário:
+
+| Marco | O que acontece | O pedido ao usuário |
+|---|---|---|
+| 1 — Aprovar o visual | Construção local, prévia em `localhost`, ajustes até aprovar. Sem domínio, sem servidor, sem custo | "Abra este endereço e me diga o que quer mudar" |
+| 2 — Colocar no ar | Domínio, e-mail, servidor, publicação, DNS, SSL, acesso ao painel | Um pedido por vez ("qual é o domínio?", "crie estes dois registros de DNS e me avise") |
+| 3 — Encher de conteúdo | Fase 3, dados reais, fotos, depoimentos, blog | "Preciso destes itens para tirar o site do modo rascunho" (lista fechada, com o que cada um libera) |
+
+Regras que valem em todos os marcos:
+
+1. **Uma ação por resposta.** Nunca mais de um pedido ao usuário numa mesma mensagem.
+2. **Estado em duas linhas** no fim: `Onde estamos: …` e `Falta para o próximo marco: …`.
+   O detalhe fica no `projeto.md`.
+3. **Vocabulário do usuário.** Nada de PM2, porta, build, dist, propagação de DNS,
+   redirecionamento 307. Diga "o site está no servidor, mas o endereço ainda não
+   abre". Comando que o usuário precisa colar é a única exceção.
+4. **Pendências separadas das ações.** A lista de pendências (logo, fotos, CNPJ,
+   depoimentos, campos `[CAMPO]`) só aparece na vez dela — ao fim do Marco 2 e no
+   Marco 3 —, nunca misturada com uma tarefa urgente.
+5. **Falha vira alerta, não rodapé.** Ferramenta que falha (captura, script,
+   instalador) → pare e diga em uma frase o que falhou. Nunca construa ou siga
+   adiante como se tivesse dado certo. Script contornado é defeito do script e sobe
+   como problema a corrigir.
+6. **Aprovação é uma frase explícita.** Silêncio, elogio vago ou "tá quase" não
+   aprovam nada. `visual_aprovado: sim` só é gravado depois de um "aprovado"
+   (ou equivalente claro) do usuário.
+
+O usuário escolhe o layout **olhando**: a prévia começa com um layout sugerido pelo
+nicho e, se quiser outro, o agente sobe a vitrine (`http://localhost:4322/catalogo`).
+Só existem os layouts que o LinkFlow entrega — **não** existe "faça igual a este
+site" (referência externa não é opção).
 
 ---
 
@@ -271,18 +315,20 @@ Novamira (wordpress) ou VPS via SSH (astro), conforme `site_tipo`.
 
 **Se `site_tipo: wordpress`** — verificar se as tools `mcp__novamira__*` estão disponíveis na sessão (não ler o `projeto.md` — checar as tools de fato). Se ausentes, ver seção "Regra de roteamento" abaixo.
 
-**Se `site_tipo: astro`** — verificar se `## Ambiente VPS` no `projeto.md` tem `vps_ip` e `vps_cliente_dir` preenchidos (registrados pelo `vps-setup`).
+**Se `site_tipo: astro`** — **a falta de servidor não bloqueia o Marco 1**: o site é
+construído e mostrado em `localhost` antes de qualquer infraestrutura. Só a
+publicação (Marco 2, ou `site-publicar`/`site-atualizar`) precisa de `## Ambiente VPS`
+com `vps_ip` e `vps_cliente_dir` preenchidos (registrados pelo `vps-setup`).
 
-Se a infraestrutura VPS estiver **AUSENTE**, não tentar publicar.
-Avisar o cliente:
+Se a infraestrutura VPS estiver **AUSENTE** quando algo precisar publicar, não tente
+e **não ofereça opções**: diga em uma frase onde estamos e siga o caminho único.
 
-> "Ainda não configurei o servidor para publicar automaticamente.
-> Posso escrever e preparar todo o conteúdo mesmo assim.
->
-> Você tem duas opções:
-> (1) Configurar o servidor agora — uso `/link-flow vps <slug>` para isso.
-> (2) Seguir sem publicar — eu escrevo tudo e salvo os arquivos. Você publica
->     depois, quando o servidor estiver configurado."
+> "Seu site ainda não foi publicado — publicar é o próximo marco.
+> Onde estamos: [prévia local pronta | visual aprovado].
+> Falta para o próximo marco: [a sua aprovação do visual | o endereço (domínio) do site]."
+
+Se `visual_aprovado` ainda não for `sim`, volte à prévia (Marco 1). Se já for,
+retome o Marco 2 pelo passo que falta.
 
 ## Regra de roteamento — decisão automática, ZERO pergunta ao cliente
 

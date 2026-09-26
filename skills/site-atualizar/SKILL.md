@@ -22,7 +22,7 @@ pergunta identidade nem infraestrutura de novo: o site já existe, isso é
 só publicar o que já foi escrito.
 
 **Nunca usar esta skill para o primeiro deploy de um cliente novo** —
-isso é `fase2-site-astro` (que por sua vez invoca `vps-setup` se a
+isso é `fase2-site-astro` (Marco 2, que por sua vez invoca `vps-setup` se a
 infraestrutura ainda não existir). Esta skill exige que o VPS já esteja
 configurado e o site já tenha sido publicado ao menos uma vez.
 

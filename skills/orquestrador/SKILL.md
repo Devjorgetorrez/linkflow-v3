@@ -49,7 +49,7 @@ O agente escolhe o caminho — nunca o cliente.
 |---|---|---|
 | auditoria | `fase0-auditoria-site` | — (somente leitura; bloqueia Fase 3 se molde sujo) |
 | planejamento | `fase1-planejamento` | `guardiao_fase1.py` -> **GATE HUMANO 1** (`.approved`) — ⛔ PRÉ-REQUISITO: `auditoria_global: concluida` no projeto.md |
-| vps | `vps-setup` (só site_tipo=astro) | — (infraestrutura; sem gate humano, mas sem ela `fase2-site-astro` não builda) |
+| vps | `vps-setup` (só site_tipo=astro; roda no Marco 2, depois da aprovação do visual) | — (infraestrutura; sem ela `fase2-site-astro` não publica) |
 | site | `fase2-site` (+ `fase2-site-astro` se site_tipo=astro — ver Roteamento site) | `guardiao_fase2.py` (exige `.approved`) — se astro, também `guardiao_construtor.py` |
 | conteudo | `fase3-conteudo` | `guardiao_fase3.py` -> **GATE HUMANO 2** (`.publish-approved`) |
 | backlinks | `fase4-backlinks` (stub v2) | — |
@@ -74,21 +74,24 @@ do `orq-icp` — nunca decidir aqui nem inferir).
 A injeção de conteúdo no WordPress acontece na Fase 3 (`fase3-conteudo`),
 via `/link-flow conteudo`, como já era.
 
-**SE site_tipo: astro** — encadear automaticamente, sem perguntar nem pausar
-entre as etapas (para o cliente Astro, a "Fase 2" inclui infraestrutura e
-construção, diferente do WordPress onde Fase 2 é só blueprint):
+**SE site_tipo: astro** — encadear automaticamente, sem perguntar, entre
+`fase2-site` e `fase2-site-astro` (para o cliente Astro, a "Fase 2" inclui a
+construção do site, diferente do WordPress onde Fase 2 é só blueprint):
 3. Invocar `fase2-site-astro` — usa o que `fase2-site` acabou de gerar
    (Money Pages reconciliadas, handoff) para construir o site de verdade.
-   A própria ETAPA 3 do `fase2-site-astro` verifica se a infraestrutura
-   VPS já existe (`## Ambiente VPS` no projeto.md) e invoca `vps-setup`
-   automaticamente se não existir — não é preciso chamar `vps-setup`
-   separadamente aqui, mas se o operador pedir `/link-flow vps <slug>`
-   isoladamente (diagnóstico, adicionar cliente a um VPS existente,
-   etc.), essa é a mesma skill, invocável direto.
-   `fase2-site-astro` já tem seu próprio guardião embutido
-   (`guardiao_construtor.py`, fases entrada/saída) — não duplicar essa
-   checagem aqui, só confirmar que ele rodou e passou antes de reportar
-   a Fase 2 como concluída.
+   A skill roda em dois marcos com **uma pausa obrigatória entre eles**:
+   - **Marco 1 — aprovar o visual:** constrói numa cópia LOCAL, sobe a prévia
+     em `localhost` e ajusta até o usuário aprovar (`visual_aprovado: sim`).
+     Sem domínio, sem servidor.
+   - **Marco 2 — colocar no ar:** só depois da aprovação. Nele a própria
+     `fase2-site-astro` (ETAPA 6) chama `vps-setup` — não é preciso chamá-la
+     separadamente aqui; se o operador pedir `/link-flow vps <slug>` isolado
+     (diagnóstico, adicionar cliente a um servidor existente), é a mesma skill.
+   O servidor nunca é configurado antes da aprovação do visual.
+   `fase2-site-astro` tem seu próprio guardião (`guardiao_construtor.py`, fases
+   `construcao`, `previa`, `publicacao` e `saida`) — não duplicar essa checagem
+   aqui, só confirmar que ele rodou e passou antes de reportar a Fase 2 como
+   concluída.
 
 Sem esse encadeamento, `fase2-site-astro` poderia ser chamada isolada, sem
 nunca ter passado pela análise técnica — site sem arquitetura, sem árvore
