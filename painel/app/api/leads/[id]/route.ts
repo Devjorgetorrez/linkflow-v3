@@ -6,7 +6,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { lerDados, salvarDados } from "@/lib/dados";
-import { verificarAcesso } from "@/lib/auth";
+import { exigirPapel } from "@/lib/auth";
+import { MATRIZ } from "@/lib/permissoes";
 import type { Lead, StatusLead } from "@/mock/types";
 
 const STATUS_VALIDOS: StatusLead[] = ["novo", "em_contato", "convertido", "descartado"];
@@ -15,7 +16,7 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await verificarAcesso(req);
+  const auth = await exigirPapel(req, MATRIZ["leads/[id]:PATCH"]);
   if (auth) return auth;
 
   try {
@@ -45,7 +46,7 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await verificarAcesso(req);
+  const auth = await exigirPapel(req, MATRIZ["leads/[id]:DELETE"]);
   if (auth) return auth;
 
   try {

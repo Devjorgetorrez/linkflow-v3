@@ -6,6 +6,7 @@
  * - autoria: perfil público de autor (nome, bio, credenciais, redes)
  */
 
+import crypto from "crypto";
 import fs from "fs";
 import path from "path";
 import bcrypt from "bcryptjs";
@@ -68,21 +69,53 @@ export function getUsuariosPath(): string {
   return path.join(getLinkflowDir(), "usuarios.json");
 }
 
+/** usuarios.json existe mas não dá para ler: NÃO tratar como "sem usuários". */
+export class UsuariosIlegiveisError extends Error {
+  constructor(detalhe: string) {
+    super(
+      `usuarios.json ilegível (${detalhe}). Nada foi alterado. Restaure o backup usuarios.json.bak ` +
+        "ou corrija o arquivo antes de continuar.",
+    );
+    this.name = "UsuariosIlegiveisError";
+  }
+}
+
+/** Id novo (UUID). Ids antigos `u<timestamp>` continuam válidos. */
+export function novoIdUsuario(): string {
+  return crypto.randomUUID();
+}
+
 export function lerUsuarios(): Usuario[] {
   const filePath = getUsuariosPath();
   if (!fs.existsSync(filePath)) return [];
+  let dados: unknown;
   try {
-    return JSON.parse(fs.readFileSync(filePath, "utf-8"));
-  } catch {
-    return [];
+    dados = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+  } catch (err) {
+    throw new UsuariosIlegiveisError(err instanceof Error ? err.message : String(err));
   }
+  if (!Array.isArray(dados)) throw new UsuariosIlegiveisError("o conteúdo não é uma lista");
+  return dados as Usuario[];
 }
 
 export function salvarUsuarios(usuarios: Usuario[]): void {
   const filePath = getUsuariosPath();
   const dir = path.dirname(filePath);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(filePath, JSON.stringify(usuarios, null, 2), "utf-8");
+
+  // Escrita atômica: grava num temporário e troca de nome; o arquivo anterior
+  // (se legível) vira usuarios.json.bak. Nunca deixa o JSON pela metade.
+  const tmp = `${filePath}.tmp-${process.pid}-${Date.now()}`;
+  fs.writeFileSync(tmp, JSON.stringify(usuarios, null, 2), "utf-8");
+  if (fs.existsSync(filePath)) {
+    try {
+      JSON.parse(fs.readFileSync(filePath, "utf-8"));
+      fs.copyFileSync(filePath, `${filePath}.bak`);
+    } catch {
+      // arquivo atual corrompido: não sobrescreve um backup bom com lixo
+    }
+  }
+  fs.renameSync(tmp, filePath);
 
   // Espelha os autores no site (content/autores/). Falha aqui não pode
   // impedir o salvamento do usuário — só registra no log.

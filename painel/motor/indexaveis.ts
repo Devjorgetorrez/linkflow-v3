@@ -151,6 +151,7 @@ export function gerarIndexaveis(dados: {
   // ── Autores ────────────────────────────────────────────────────────────
   // Autor tem página própria no site: /autor/<slug>
   for (const autor of autores) {
+    if (!autor.slug?.trim()) continue; // rascunho sem slug não tem página no site
     const url = urlAutor(autor.slug);
     indexaveis.push({
       node_id: `autor-${autor.id}`,

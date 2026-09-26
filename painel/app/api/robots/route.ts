@@ -8,14 +8,15 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import { getLinkflowDir } from "@/lib/fs";
-import { verificarAcesso } from "@/lib/auth";
+import { exigirPapel } from "@/lib/auth";
+import { MATRIZ } from "@/lib/permissoes";
 
 function robotsPath(): string {
   return path.join(getLinkflowDir(), "_astro/public/robots.txt");
 }
 
 export async function GET(req: NextRequest) {
-  const auth = await verificarAcesso(req);
+  const auth = await exigirPapel(req, MATRIZ["robots:GET"]);
   if (auth) return auth;
 
   try {
@@ -30,7 +31,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const auth = await verificarAcesso(req);
+  const auth = await exigirPapel(req, MATRIZ["robots:PATCH"]);
   if (auth) return auth;
 
   try {

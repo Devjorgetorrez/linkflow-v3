@@ -9,7 +9,8 @@ import fs from "fs";
 import path from "path";
 import { lerDados, salvarDados } from "@/lib/dados";
 import { getLinkflowDir, getSiteSlug } from "@/lib/fs";
-import { verificarAcesso } from "@/lib/auth";
+import { exigirPapel } from "@/lib/auth";
+import { MATRIZ } from "@/lib/permissoes";
 import type { Redirect } from "@/mock/types";
 
 function gerarArquivoRedirects(redirects: Redirect[]): void {
@@ -33,7 +34,7 @@ function gerarArquivoRedirects(redirects: Redirect[]): void {
 }
 
 export async function GET(req: NextRequest) {
-  const auth = await verificarAcesso(req);
+  const auth = await exigirPapel(req, MATRIZ["redirects:GET"]);
   if (auth) return auth;
 
   const redirects = lerDados<Redirect[]>("redirects.json", []);
@@ -41,7 +42,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const auth = await verificarAcesso(req);
+  const auth = await exigirPapel(req, MATRIZ["redirects:POST"]);
   if (auth) return auth;
 
   try {

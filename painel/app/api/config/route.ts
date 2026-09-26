@@ -16,7 +16,8 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import { getConfigPath, getLinkflowDir, getRotaPilar, getSiteSlug } from "@/lib/fs";
-import { verificarAcesso } from "@/lib/auth";
+import { exigirPapel } from "@/lib/auth";
+import { MATRIZ } from "@/lib/permissoes";
 import { lerDados, salvarDados } from "@/lib/dados";
 import { LEGAL_PAINEL_INICIAL, type LegalPainel } from "@/lib/legal";
 import { aplicarLegal, importarLegal, integracoesAtivas, validarLegal } from "@/lib/legal-site";
@@ -74,7 +75,7 @@ function gravarAtomico(filePath: string, conteudo: string): void {
 // ─── GET ──────────────────────────────────────────────────────────────────────
 
 export async function GET(req: NextRequest) {
-  const auth = await verificarAcesso(req);
+  const auth = await exigirPapel(req, MATRIZ["config:GET"]);
   if (auth) return auth;
 
   try {
@@ -168,7 +169,7 @@ export async function GET(req: NextRequest) {
 // ─── PATCH ────────────────────────────────────────────────────────────────────
 
 export async function PATCH(req: NextRequest) {
-  const auth = await verificarAcesso(req);
+  const auth = await exigirPapel(req, MATRIZ["config:PATCH"]);
   if (auth) return auth;
 
   try {

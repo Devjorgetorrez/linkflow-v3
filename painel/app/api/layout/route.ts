@@ -12,7 +12,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getTemaAtivo } from "@/lib/fs";
-import { verificarAcesso } from "@/lib/auth";
+import { exigirPapel } from "@/lib/auth";
+import { MATRIZ } from "@/lib/permissoes";
 
 function catalogoUrl(): string | null {
   const definido = process.env.LINKFLOW_CATALOGO_URL?.trim();
@@ -21,7 +22,7 @@ function catalogoUrl(): string | null {
 }
 
 export async function GET(req: NextRequest) {
-  const auth = await verificarAcesso(req);
+  const auth = await exigirPapel(req, MATRIZ["layout:GET"]);
   if (auth) return auth;
 
   return NextResponse.json({ ok: true, ativo: getTemaAtivo(), catalogoUrl: catalogoUrl() });

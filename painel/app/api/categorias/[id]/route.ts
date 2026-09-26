@@ -6,7 +6,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { lerDados, salvarDados } from "@/lib/dados";
-import { verificarAcesso } from "@/lib/auth";
+import { exigirPapel } from "@/lib/auth";
+import { MATRIZ } from "@/lib/permissoes";
 import { sincronizarCategorias, avisoColisaoSlug } from "@/lib/sync-categorias";
 import type { Categoria } from "@/mock/types";
 
@@ -14,7 +15,7 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await verificarAcesso(req);
+  const auth = await exigirPapel(req, MATRIZ["categorias/[id]:PATCH"]);
   if (auth) return auth;
 
   try {
@@ -49,7 +50,7 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await verificarAcesso(req);
+  const auth = await exigirPapel(req, MATRIZ["categorias/[id]:DELETE"]);
   if (auth) return auth;
 
   try {

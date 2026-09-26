@@ -8,7 +8,8 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import { getSiteSlug } from "@/lib/fs";
-import { verificarAcesso } from "@/lib/auth";
+import { exigirPapel } from "@/lib/auth";
+import { MATRIZ } from "@/lib/permissoes";
 
 const FORMATOS_IMAGEM = ["jpg", "jpeg", "png", "webp", "gif", "svg", "avif"];
 
@@ -50,7 +51,7 @@ function getImageDimensions(filePath: string): { largura: number; altura: number
 // ─── GET ──────────────────────────────────────────────────────────────────────
 
 export async function GET(req: NextRequest) {
-  const auth = await verificarAcesso(req);
+  const auth = await exigirPapel(req, MATRIZ["midia:GET"]);
   if (auth) return auth;
 
   try {
@@ -132,7 +133,7 @@ export async function GET(req: NextRequest) {
 // ─── POST — upload ────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
-  const auth = await verificarAcesso(req);
+  const auth = await exigirPapel(req, MATRIZ["midia:POST"]);
   if (auth) return auth;
 
   try {

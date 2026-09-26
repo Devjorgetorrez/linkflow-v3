@@ -10,11 +10,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import path from "path";
 import { getLinkflowDir } from "@/lib/fs";
-import { verificarAcesso } from "@/lib/auth";
+import { exigirPapel } from "@/lib/auth";
+import { MATRIZ } from "@/lib/permissoes";
 import { lerGrafoLinks } from "@/lib/links-internos";
 
 export async function GET(req: NextRequest) {
-  const auth = await verificarAcesso(req);
+  const auth = await exigirPapel(req, MATRIZ["links-internos:GET"]);
   if (auth) return auth;
 
   try {

@@ -8,7 +8,8 @@ import fs from "fs";
 import path from "path";
 import { lerDados, salvarDados } from "@/lib/dados";
 import { getSiteSlug } from "@/lib/fs";
-import { verificarAcesso } from "@/lib/auth";
+import { exigirPapel } from "@/lib/auth";
+import { MATRIZ } from "@/lib/permissoes";
 import type { Redirect } from "@/mock/types";
 
 function gerarArquivoRedirects(redirects: Redirect[]): void {
@@ -27,7 +28,7 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await verificarAcesso(req);
+  const auth = await exigirPapel(req, MATRIZ["redirects/[id]:DELETE"]);
   if (auth) return auth;
 
   try {

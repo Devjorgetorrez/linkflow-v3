@@ -11,16 +11,18 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { lerUsuarios } from "@/lib/usuarios";
-import { verificarAcesso } from "@/lib/auth";
+import { exigirPapel } from "@/lib/auth";
+import { MATRIZ } from "@/lib/permissoes";
+import { ehAutorPublicavel } from "@/lib/sync-autores";
 
 export async function GET(req: NextRequest) {
-  const auth = await verificarAcesso(req);
+  const auth = await exigirPapel(req, MATRIZ["autores:GET"]);
   if (auth) return auth;
 
   const usuarios = lerUsuarios();
 
   const autores = usuarios
-    .filter((u) => u.podeAssinar && u.autoria)
+    .filter(ehAutorPublicavel) // mesmo filtro do site: rascunho sem slug/nome não vira autor
     .map((u) => ({
       id: u.id,
       nome: u.autoria!.nomePublico,

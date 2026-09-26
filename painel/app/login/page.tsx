@@ -39,7 +39,7 @@ function LoginForm() {
     });
 
     if (resultado?.error) {
-      setErroLocal("E-mail ou senha incorretos.");
+      setErroLocal(/Muitas tentativas/i.test(String(resultado.error)) ? "Muitas tentativas. Tente em alguns minutos." : "E-mail ou senha incorretos.");
       setEnviando(false);
     } else {
       router.push("/");

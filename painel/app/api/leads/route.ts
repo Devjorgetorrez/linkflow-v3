@@ -6,11 +6,12 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { lerDados, salvarDados } from "@/lib/dados";
-import { verificarAcesso } from "@/lib/auth";
+import { exigirPapel } from "@/lib/auth";
+import { MATRIZ } from "@/lib/permissoes";
 import type { Lead } from "@/mock/types";
 
 export async function GET(req: NextRequest) {
-  const auth = await verificarAcesso(req);
+  const auth = await exigirPapel(req, MATRIZ["leads:GET"]);
   if (auth) return auth;
 
   const leads = lerDados<Lead[]>("leads.json", []);
@@ -18,7 +19,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const auth = await verificarAcesso(req);
+  const auth = await exigirPapel(req, MATRIZ["leads:POST"]);
   if (auth) return auth;
 
   try {

@@ -15,7 +15,8 @@ import { execFile } from "child_process";
 import fs from "fs";
 import path from "path";
 import { getLinkflowDir, getSiteSlug } from "@/lib/fs";
-import { verificarAcesso, validarSlug } from "@/lib/auth";
+import { exigirPapel, validarSlug } from "@/lib/auth";
+import { MATRIZ } from "@/lib/permissoes";
 
 // Mapa de builds em andamento (memória — reseta com reinício do PM2)
 const builds: Map<string, { status: "rodando" | "sucesso" | "erro"; log: string; fim?: number }> = new Map();
@@ -95,7 +96,7 @@ function runBuild(buildId: string, slug: string) {
 // ─── POST — iniciar build ──────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
-  const auth = await verificarAcesso(req);
+  const auth = await exigirPapel(req, MATRIZ["build:POST"]);
   if (auth) return auth;
 
   try {
@@ -123,7 +124,7 @@ export async function POST(req: NextRequest) {
 // ─── GET — status do build ────────────────────────────────────────────────────
 
 export async function GET(req: NextRequest) {
-  const auth = await verificarAcesso(req);
+  const auth = await exigirPapel(req, MATRIZ["build:GET"]);
   if (auth) return auth;
 
   const buildId = new URL(req.url).searchParams.get("id");

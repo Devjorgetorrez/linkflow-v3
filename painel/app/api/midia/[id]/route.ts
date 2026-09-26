@@ -12,7 +12,8 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import { getSiteSlug } from "@/lib/fs";
-import { verificarAcesso } from "@/lib/auth";
+import { exigirPapel } from "@/lib/auth";
+import { MATRIZ } from "@/lib/permissoes";
 
 function idParaPath(id: string): string {
   const slug = getSiteSlug();
@@ -30,7 +31,7 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await verificarAcesso(req);
+  const auth = await exigirPapel(req, MATRIZ["midia/[id]:GET"]);
   if (auth) return auth;
 
   try {
@@ -57,7 +58,7 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await verificarAcesso(req);
+  const auth = await exigirPapel(req, MATRIZ["midia/[id]:PATCH"]);
   if (auth) return auth;
 
   try {
@@ -92,7 +93,7 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await verificarAcesso(req);
+  const auth = await exigirPapel(req, MATRIZ["midia/[id]:DELETE"]);
   if (auth) return auth;
 
   try {

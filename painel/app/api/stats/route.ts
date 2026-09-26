@@ -4,7 +4,8 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { verificarAcesso } from "@/lib/auth";
+import { exigirPapel } from "@/lib/auth";
+import { MATRIZ } from "@/lib/permissoes";
 import path from "path";
 import fs from "fs";
 import { getContentDir, getConfigPath, getLinkflowDir, listarArquivos, lerArquivo, parseMd, getSiteSlug } from "@/lib/fs";
@@ -13,7 +14,7 @@ import { lerStatusPost } from "@/lib/status-post";
 import type { ItemSaude } from "@/mock/types";
 
 export async function GET(req: NextRequest) {
-  const auth = await verificarAcesso(req);
+  const auth = await exigirPapel(req, MATRIZ["stats:GET"]);
   if (auth) return auth;
 
   try {

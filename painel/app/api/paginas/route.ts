@@ -12,7 +12,8 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import { getContentDir, getLinkflowDir, getRotaPilar } from "@/lib/fs";
-import { verificarAcesso } from "@/lib/auth";
+import { exigirPapel } from "@/lib/auth";
+import { MATRIZ } from "@/lib/permissoes";
 import { lerGrafoLinks, contarRecebidos } from "@/lib/links-internos";
 import { normalizarUrl } from "@/lib/urls-publicas";
 import type { Pagina, TipoPagina, Intencao } from "@/mock/types";
@@ -101,7 +102,7 @@ function varrerDist(dir: string, base: string): PaginaRaw[] {
 }
 
 export async function GET(req: NextRequest) {
-  const auth = await verificarAcesso(req);
+  const auth = await exigirPapel(req, MATRIZ["paginas:GET"]);
   if (auth) return auth;
 
   try {

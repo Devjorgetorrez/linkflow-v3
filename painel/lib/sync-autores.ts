@@ -31,12 +31,18 @@ function naoVazios(lista: unknown): string[] {
   return Array.isArray(lista) ? lista.map((s) => String(s).trim()).filter(Boolean) : [];
 }
 
-function montarArquivo(u: Usuario): { slug: string; conteudo: string } | null {
+/** Autor que existe de verdade no site: assina, slug válido e nome com 2+ letras (rascunho não conta). */
+export function ehAutorPublicavel(u: Usuario): boolean {
   const a = u.autoria;
-  if (!u.podeAssinar || !a) return null;
+  if (!u.podeAssinar || !a) return false;
+  return SLUG_VALIDO.test((a.slug ?? "").trim()) && (a.nomePublico ?? "").trim().length >= 2;
+}
+
+function montarArquivo(u: Usuario): { slug: string; conteudo: string } | null {
+  if (!ehAutorPublicavel(u)) return null;
+  const a = u.autoria!;
   const slug = (a.slug ?? "").trim();
   const nome = (a.nomePublico ?? "").trim();
-  if (!SLUG_VALIDO.test(slug) || nome.length < 2) return null;
 
   const redes = Object.fromEntries(
     Object.entries(a.redes ?? {}).filter(([, v]) => typeof v === "string" && v.trim() !== ""),

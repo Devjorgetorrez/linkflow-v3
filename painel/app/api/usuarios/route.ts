@@ -5,43 +5,44 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
-import { lerUsuarios, salvarUsuarios, hashSenha, toPublico, type PapelUsuario } from "@/lib/usuarios";
-import { verificarApiKey } from "@/lib/auth";
+import { lerUsuarios, salvarUsuarios, hashSenha, novoIdUsuario, toPublico, UsuariosIlegiveisError, type PapelUsuario, type Usuario } from "@/lib/usuarios";
+import { exigirPapel, verificarApiKey } from "@/lib/auth";
+import { MATRIZ } from "@/lib/permissoes";
+import { PAPEIS_VALIDOS, validarNovoUsuario } from "@/lib/usuarios-regras";
 
-const PAPEIS: PapelUsuario[] = ["administrador", "editor", "autor"];
-const SENHA_MIN = 8;
+const PAPEIS: PapelUsuario[] = [...PAPEIS_VALIDOS];
+
+function erroCadastro(err: unknown): NextResponse | null {
+  return err instanceof UsuariosIlegiveisError
+    ? NextResponse.json({ ok: false, erro: err.message }, { status: 503 })
+    : null;
+}
 
 export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) {
-    return NextResponse.json({ ok: false, erro: "Não autorizado" }, { status: 401 });
-  }
-  if ((session.user as { papel?: string }).papel !== "administrador") {
-    return NextResponse.json({ ok: false, erro: "Acesso restrito a administradores" }, { status: 403 });
-  }
+  const auth = await exigirPapel(req, MATRIZ["usuarios:GET"]);
+  if (auth) return auth;
 
-  const usuarios = lerUsuarios().map(toPublico);
-  return NextResponse.json({ ok: true, usuarios });
+  try {
+    const usuarios = lerUsuarios().map(toPublico);
+    return NextResponse.json({ ok: true, usuarios });
+  } catch (err) {
+    return erroCadastro(err) ?? NextResponse.json({ ok: false, erro: String(err) }, { status: 500 });
+  }
 }
 
 export async function POST(req: NextRequest) {
-  const usuarios = lerUsuarios();
+  let usuarios: Usuario[];
+  try {
+    usuarios = lerUsuarios();
+  } catch (err) {
+    // Cadastro corrompido NÃO reabre o bootstrap: erro claro e nada é gravado.
+    return erroCadastro(err) ?? NextResponse.json({ ok: false, erro: String(err) }, { status: 500 });
+  }
+  const bootstrap = usuarios.length === 0;
 
   // Bootstrap: sem usuários → aceita API key para criar o primeiro admin
-  if (usuarios.length === 0) {
-    const auth = verificarApiKey(req);
-    if (auth) return auth;
-  } else {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ ok: false, erro: "Não autorizado" }, { status: 401 });
-    }
-    if ((session.user as { papel?: string }).papel !== "administrador") {
-      return NextResponse.json({ ok: false, erro: "Acesso restrito a administradores" }, { status: 403 });
-    }
-  }
+  const auth = bootstrap ? verificarApiKey(req) : await exigirPapel(req, MATRIZ["usuarios:POST"]);
+  if (auth) return auth;
 
   try {
     const body = await req.json();
@@ -75,34 +76,28 @@ export async function POST(req: NextRequest) {
       nomePublico = body.nome ?? "";
     }
 
-    // E-mail de login só é obrigatório para quem acessa o painel — um autor
-    // que só assina (podeAcessar: false) não loga, então não precisa dele.
-    if (podeAcessar && !emailLogin) {
-      return NextResponse.json({ ok: false, erro: "E-mail obrigatório" }, { status: 400 });
+    const ativo = podeAcessar ? (body.acesso?.ativo ?? true) !== false : false;
+    if (!podeAcessar && !podeAssinar) {
+      return NextResponse.json({ ok: false, erro: "Marque pelo menos uma faceta (acessar ou assinar)." }, { status: 400 });
     }
-
-    // Senha obrigatória só se podeAcessar
-    if (podeAcessar && senha) {
-      if (typeof senha !== "string" || senha.length < SENHA_MIN) {
-        return NextResponse.json(
-          { ok: false, erro: `Senha deve ter pelo menos ${SENHA_MIN} caracteres` },
-          { status: 400 }
-        );
-      }
+    // E-mail (formato + único, sem diferenciar maiúsculas), senha e nome: mesma regra da tela.
+    const invalido = validarNovoUsuario(
+      { podeAcessar, emailLogin: typeof emailLogin === "string" ? emailLogin.trim() : "", senha, ativo, nome: nomePublico },
+      usuarios,
+    );
+    if (invalido) return NextResponse.json({ ok: false, erro: invalido.erro }, { status: invalido.status });
+    if (bootstrap && !(podeAcessar && ativo && papel === "administrador")) {
+      return NextResponse.json({ ok: false, erro: "O primeiro usuário precisa ser um administrador ativo." }, { status: 400 });
     }
-
-    // E-mail duplicado
-    if (usuarios.some((u) => u.acesso?.emailLogin.toLowerCase() === emailLogin.toLowerCase())) {
-      return NextResponse.json({ ok: false, erro: "E-mail já cadastrado" }, { status: 409 });
-    }
+    emailLogin = typeof emailLogin === "string" ? emailLogin.trim() : "";
 
     const senhaHash = senha ? await hashSenha(senha) : undefined;
-    const novoId = `u${Date.now()}`;
+    const novoId = novoIdUsuario();
 
-    const novoUsuario = {
+    const novoUsuario: Usuario = {
       id: novoId,
       podeAcessar,
-      acesso: podeAcessar ? { emailLogin, papel, ativo: body.acesso?.ativo ?? true } : undefined,
+      acesso: podeAcessar ? { emailLogin, papel, ativo } : undefined,
       podeAssinar,
       autoria: body.autoria ?? {
         nomePublico,
@@ -130,6 +125,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, usuario: toPublico(novoUsuario) });
   } catch (err) {
     console.error("[api/usuarios POST]", err);
-    return NextResponse.json({ ok: false, erro: String(err) }, { status: 500 });
+    return erroCadastro(err) ?? NextResponse.json({ ok: false, erro: String(err) }, { status: 500 });
   }
 }

@@ -28,10 +28,14 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 
+import { SeletorMidia } from "@/components/SeletorMidia";
 import { Alternador, AreaTexto, Campo, Contador, Entrada, Rotulo } from "@/components/ui";
+import { caminhoDaMidia } from "@/lib/site-config-cliente";
 import { useStore } from "@/lib/store";
+import { SENHA_MIN, ehUltimoAdminAtivo, emailValido, gerarSenhaSegura, type UsuarioMin } from "@/lib/usuarios-regras";
 import type { PapelUsuario, Usuario } from "@/mock/types";
 import { cn, slugify } from "@/lib/utils";
 
@@ -252,11 +256,6 @@ const TABELA_PERMISSOES = [
   { acao: "Gerenciar usuários", admin: true, editor: false, autor: false },
 ];
 
-function gerarSenha(): string {
-  const chars = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789!@#$%&*";
-  return Array.from({ length: 16 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
-}
-
 function forcaSenha(s: string): { nivel: number; label: string; cor: string } {
   let pts = 0;
   if (s.length >= 8) pts++;
@@ -284,7 +283,8 @@ const STATUS_LABEL: Record<string, string> = {
 export default function EditorUsuarioPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { usuarios, posts, criarUsuario, atualizarUsuario } = useStore();
+  const { usuarios, posts, atualizarUsuario } = useStore();
+  const { data: sessao } = useSession();
 
   const usuarioMock = usuarios?.find((u) => u.id === id);
   const NOVO = id === "novo";
@@ -299,7 +299,7 @@ export default function EditorUsuarioPage() {
 
   /* -- Acesso -- */
   const [emailLogin, setEmailLogin] = useState(usuario?.acesso?.emailLogin ?? "");
-  const [papel, setPapel] = useState<PapelUsuario>(usuario?.acesso?.papel ?? "administrador");
+  const [papel, setPapel] = useState<PapelUsuario>(usuario?.acesso?.papel ?? "autor");
   const [contaAtiva, setContaAtiva] = useState(usuario?.acesso?.ativo !== false);
 
   /* -- Senha -- */
@@ -341,75 +341,24 @@ export default function EditorUsuarioPage() {
 
   const [salvo, setSalvo] = useState(false);
   const [sessaoEncerrada, setSessaoEncerrada] = useState(false);
+  const [erroSalvar, setErroSalvar] = useState<string | null>(null);
+  const [salvando, setSalvando] = useState(false);
+  const [seletorFotoAberto, setSeletorFotoAberto] = useState(false);
+  // Lista FRESCA do servidor (o store guarda uma cópia velha, com rascunhos): base da trava de "único admin".
+  const [listaFresca, setListaFresca] = useState<UsuarioMin[] | null>(null);
 
-  /* Criação de novo usuário — persiste via API e redireciona para o id real */
+  /* "novo" tem tela própria (usuarios/novo, formulário local que só cria ao salvar). */
   useEffect(() => {
-    if (!NOVO || usuario) return;
-
-    const novoId = `u${Date.now()}`;
-
-    // Criar no store local para a tela funcionar imediatamente
-    criarUsuario?.({
-      id: novoId,
-      podeAcessar: true,
-      acesso: { emailLogin: "", papel: "administrador", ativo: true },
-      podeAssinar: true,
-      autoria: {
-        nomePublico: "",
-        slug: "",
-        foto: "",
-        cargo: "",
-        bioCurta: "",
-        bioLonga: "",
-        conselho: "Nenhum",
-        registro: "",
-        especialidades: [],
-        formacao: [],
-        emailPublico: "",
-        redes: { instagram: "", linkedin: "", facebook: "" },
-        urlExterna: "",
-        destaque: false,
-      },
-    });
-
-    // Persistir via API — email rascunho, ativo: false até o admin preencher e salvar
-    fetch("/api/usuarios", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        podeAcessar: true,
-        acesso: { emailLogin: `rascunho-${novoId}@pendente`, papel: "administrador", ativo: false },
-        podeAssinar: true,
-        autoria: {
-          nomePublico: "",
-          slug: "",
-          foto: "",
-          cargo: "",
-          bioCurta: "",
-          bioLonga: "",
-          conselho: "Nenhum",
-          registro: "",
-          especialidades: [],
-          formacao: [],
-          emailPublico: "",
-          redes: { instagram: "", linkedin: "", facebook: "" },
-          urlExterna: "",
-          destaque: false,
-        },
-      }),
-    })
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.ok && data.usuario?.id) {
-          router.replace(`/usuarios/${data.usuario.id}`);
-        }
-      })
-      .catch(console.error);
+    if (NOVO) router.replace("/usuarios/novo");
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* Carregar dados reais do usuário da API ao editar */
   useEffect(() => {
     if (NOVO || !id || id === "novo") return;
+    fetch("/api/usuarios")
+      .then((r) => r.json())
+      .then((d) => { if (d.ok && Array.isArray(d.usuarios)) setListaFresca(d.usuarios); })
+      .catch(() => {});
     fetch(`/api/usuarios/${id}`)
       .then((r) => r.json())
       .then((data) => {
@@ -454,7 +403,7 @@ export default function EditorUsuarioPage() {
       .finally(() => setCarregandoUsuario(false));
   }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (NOVO && !usuario) return <div className="flex h-full items-center justify-center p-8"><p className="text-[13px] text-ink-muted">Criando usuário…</p></div>;
+  if (NOVO) return <div className="flex h-full items-center justify-center p-8"><p className="text-[13px] text-ink-muted">Abrindo…</p></div>;
   if (!NOVO && carregandoUsuario) return <div className="flex h-full items-center justify-center p-8"><p className="text-[13px] text-ink-muted">Carregando…</p></div>;
   if (!NOVO && !usuarioEncontrado) {
     return (
@@ -470,14 +419,9 @@ export default function EditorUsuarioPage() {
   const postsDoAutor = posts.filter((p) => p.autorId === id);
   const slugAlterado = slug !== slugOriginal && !!slugOriginal;
 
-  /* Trava: nunca ficar sem Administrador */
-  const adminCount = (usuarios ?? []).filter(
-    (u) => u.podeAcessar && u.acesso?.papel === "administrador" && u.acesso?.ativo !== false,
-  ).length;
-  const eUltimoAdmin =
-    adminCount === 1 &&
-    podeAcessar &&
-    papel === "administrador";
+  /* Trava: nunca ficar sem Administrador (o servidor recusa com 409; aqui é só o aviso).
+     Só avisa se ESTE usuário está entre os admins ativos e é o único, pela lista fresca. */
+  const eUltimoAdmin = listaFresca ? ehUltimoAdminAtivo(listaFresca, id) : false;
   const sameAs = [instagram, linkedin, facebook, xUrl, youtube, tiktok, siteUrl, lattes].filter(Boolean);
 
   /* Avisos E-E-A-T */
@@ -505,61 +449,28 @@ export default function EditorUsuarioPage() {
 
   const nomeExibicao = nomePublico || emailLogin || "Usuário";
 
-  const isOwnAccount = id === "u1"; // protótipo: usuário logado é sempre u1
+  const isOwnAccount = !!sessao?.user && (sessao.user as { id?: string }).id === id; // id da SESSÃO
 
-  const salvar = () => {
-    if (!podeAcessar && !podeAssinar) return;
+  const salvar = async () => {
+    if (salvando || (!podeAcessar && !podeAssinar)) return;
 
-    // Persistir via API real
-    const payload: Record<string, unknown> = {
-      nome: nomePublico || emailLogin,
-      papel,
-      ativo: contaAtiva,
-    };
-
-    if (alterandoSenha && novaSenha) {
-      payload.senha = novaSenha;
-      setSenhaRevealed(novaSenha);
-      setAlterandoSenha(false);
-      setNovaSenha("");
-      setSenhaAtual("");
+    // Validação no cliente (o servidor valida de novo)
+    if (podeAcessar && (contaAtiva || emailLogin) && !emailValido(emailLogin.trim())) {
+      setErroSalvar("Informe um e-mail de login válido.");
+      return;
+    }
+    const trocandoSenha = alterandoSenha && !!novaSenha;
+    if (trocandoSenha && novaSenha.length < SENHA_MIN) {
+      setErroSalvar(`A nova senha deve ter pelo menos ${SENHA_MIN} caracteres.`);
+      return;
+    }
+    if (trocandoSenha && isOwnAccount && !senhaAtual) {
+      setErroSalvar("Informe a senha atual para trocar a sua senha.");
+      return;
     }
 
-    // Atualizar store local
-    atualizarUsuario?.(id, {
-      podeAcessar,
-      acesso: podeAcessar ? { emailLogin, papel, ativo: contaAtiva } : undefined,
-      podeAssinar,
-      autoria: podeAssinar
-        ? {
-            nomePublico,
-            slug,
-            foto: fotoAtual,
-            fotoAlt: fotoAlt || undefined,
-            cargo,
-            bioCurta,
-            bioLonga,
-            conselho,
-            registro,
-            especialidades,
-            formacao: formacao.map(formatFormacao),
-            emailPublico,
-            redes: { instagram, linkedin, facebook, x: xUrl || undefined, youtube: youtube || undefined, tiktok: tiktok || undefined, site: siteUrl || undefined, lattes: lattes || undefined },
-            urlExterna,
-            destaque,
-          }
-        : undefined,
-    });
-
-    // Persistir na API — modelo completo (acesso + autoria)
-    fetch(`/api/usuarios/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        podeAcessar,
-        podeAssinar,
-        acesso: podeAcessar ? { emailLogin, papel, ativo: contaAtiva } : undefined,
-        autoria: podeAssinar ? {
+    const autoriaPayload = podeAssinar
+      ? {
           nomePublico,
           slug,
           foto: fotoAtual,
@@ -575,14 +486,50 @@ export default function EditorUsuarioPage() {
           redes: { instagram, linkedin, facebook, x: xUrl || undefined, youtube: youtube || undefined, tiktok: tiktok || undefined, site: siteUrl || undefined, lattes: lattes || undefined },
           urlExterna,
           destaque,
-        } : undefined,
-        ...(payload.senha ? { senha: payload.senha } : {}),
-      }),
-    }).catch(console.error);
+        }
+      : undefined;
 
-    if (!payload.senha) {
-      setSalvo(true);
-      setTimeout(() => setSalvo(false), 2000);
+    setErroSalvar(null);
+    setSalvando(true);
+    try {
+      // Persistir na API — modelo completo (acesso + autoria) — e ler a resposta de verdade
+      const r = await fetch(`/api/usuarios/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          podeAcessar,
+          podeAssinar,
+          acesso: podeAcessar ? { emailLogin: emailLogin.trim(), papel, ativo: contaAtiva } : undefined,
+          autoria: autoriaPayload,
+          ...(trocandoSenha ? { senha: novaSenha, ...(isOwnAccount ? { senhaAtual } : {}) } : {}),
+        }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok || !data.ok) {
+        setErroSalvar(data.erro ?? `Não foi possível salvar (erro ${r.status}).`);
+        return;
+      }
+
+      // Servidor aceitou: agora sim atualiza o store local e a tela
+      atualizarUsuario?.(id, {
+        podeAcessar,
+        acesso: podeAcessar ? { emailLogin: emailLogin.trim(), papel, ativo: contaAtiva } : undefined,
+        podeAssinar,
+        autoria: autoriaPayload,
+      });
+      if (trocandoSenha) {
+        setSenhaRevealed(novaSenha);
+        setAlterandoSenha(false);
+        setNovaSenha("");
+        setSenhaAtual("");
+      } else {
+        setSalvo(true);
+        setTimeout(() => setSalvo(false), 2000);
+      }
+    } catch {
+      setErroSalvar("Não foi possível falar com o servidor. Tente de novo.");
+    } finally {
+      setSalvando(false);
     }
   };
 
@@ -607,7 +554,7 @@ export default function EditorUsuarioPage() {
         <button
           type="button"
           onClick={salvar}
-          disabled={!podeAcessar && !podeAssinar}
+          disabled={salvando || (!podeAcessar && !podeAssinar)}
           className={cn(
             "inline-flex shrink-0 items-center gap-2 rounded-lg px-4 py-2 text-[13px] font-medium transition-colors",
             salvo ? "bg-success text-white" : "bg-primary text-primary-ink hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-40",
@@ -617,6 +564,13 @@ export default function EditorUsuarioPage() {
           {salvo ? "Salvo" : "Salvar"}
         </button>
       </div>
+
+      {erroSalvar && (
+        <div role="alert" className="mb-4 flex items-center gap-2 rounded-[var(--radius)] border border-[color-mix(in_srgb,var(--danger)_40%,transparent)] bg-[color-mix(in_srgb,var(--danger)_6%,transparent)] px-4 py-3">
+          <AlertTriangle size={13} className="shrink-0 text-[var(--danger)]" />
+          <p className="text-[12.5px] text-[var(--danger)]">{erroSalvar}</p>
+        </div>
+      )}
 
       {/* Seletores de faceta */}
       <div className="mb-2 flex gap-3">
@@ -727,7 +681,7 @@ export default function EditorUsuarioPage() {
                           </div>
                           <button
                             type="button"
-                            onClick={() => setNovaSenha(gerarSenha())}
+                            onClick={() => setNovaSenha(gerarSenhaSegura())}
                             className="inline-flex shrink-0 items-center gap-1.5 rounded-[var(--radius)] border border-line px-3 py-1.5 text-[12px] text-ink-muted hover:text-ink"
                           >
                             <RefreshCw size={12} />
@@ -864,13 +818,24 @@ export default function EditorUsuarioPage() {
               {/* Identidade */}
               <Secao titulo="Identidade de autor">
                 <div className="mb-4 flex items-start gap-4">
-                  <div className="flex h-20 w-20 flex-none items-center justify-center rounded-xl bg-gradient-to-br from-violet-400 to-pink-400 text-xl font-bold text-white">
-                    {nomePublico.split(" ").slice(0, 2).map((n) => n[0]).join("").toUpperCase() || "?"}
+                  <div className="flex h-20 w-20 flex-none items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-violet-400 to-pink-400 text-xl font-bold text-white">
+                    {fotoAtual ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={fotoAtual} alt={fotoAlt || nomePublico} className="h-full w-full object-cover" />
+                    ) : (
+                      nomePublico.split(" ").slice(0, 2).map((n) => n[0]).join("").toUpperCase() || "?"
+                    )}
                   </div>
                   <div className="flex-1 space-y-2">
-                    <button type="button" className="text-[12.5px] text-primary hover:underline">
+                    <button type="button" onClick={() => setSeletorFotoAberto(true)} className="text-[12.5px] text-primary hover:underline">
                       Alterar foto
                     </button>
+                    <SeletorMidia
+                      aberto={seletorFotoAberto}
+                      aoFechar={() => setSeletorFotoAberto(false)}
+                      aoEscolher={(m) => setFotoAtual(caminhoDaMidia(m.url))}
+                      selecionada={undefined}
+                    />
                     <Campo label="Texto alternativo da foto">
                       <Entrada value={fotoAlt} onChange={(e) => setFotoAlt(e.target.value)} placeholder="Ex.: Foto de João Silva" />
                     </Campo>

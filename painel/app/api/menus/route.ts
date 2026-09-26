@@ -13,7 +13,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import { getConfigPath } from "@/lib/fs";
-import { verificarAcesso } from "@/lib/auth";
+import { exigirPapel } from "@/lib/auth";
+import { MATRIZ } from "@/lib/permissoes";
 
 interface ItemNav {
   label: string;
@@ -201,7 +202,7 @@ function substituirArrayBalanceado(raw: string, chave: string, novoBloco: string
 // ─── GET ──────────────────────────────────────────────────────────────────────
 
 export async function GET(req: NextRequest) {
-  const auth = await verificarAcesso(req);
+  const auth = await exigirPapel(req, MATRIZ["menus:GET"]);
   if (auth) return auth;
 
   try {
@@ -223,7 +224,7 @@ export async function GET(req: NextRequest) {
 // ─── PATCH ────────────────────────────────────────────────────────────────────
 
 export async function PATCH(req: NextRequest) {
-  const auth = await verificarAcesso(req);
+  const auth = await exigirPapel(req, MATRIZ["menus:PATCH"]);
   if (auth) return auth;
 
   try {

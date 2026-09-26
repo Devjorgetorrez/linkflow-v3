@@ -6,12 +6,13 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { lerDados, salvarDados } from "@/lib/dados";
-import { verificarAcesso } from "@/lib/auth";
+import { exigirPapel } from "@/lib/auth";
+import { MATRIZ } from "@/lib/permissoes";
 import { sincronizarCategorias, avisoColisaoSlug } from "@/lib/sync-categorias";
 import type { Categoria } from "@/mock/types";
 
 export async function GET(req: NextRequest) {
-  const auth = await verificarAcesso(req);
+  const auth = await exigirPapel(req, MATRIZ["categorias:GET"]);
   if (auth) return auth;
 
   const categorias = lerDados<Categoria[]>("categorias.json", []);
@@ -19,7 +20,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const auth = await verificarAcesso(req);
+  const auth = await exigirPapel(req, MATRIZ["categorias:POST"]);
   if (auth) return auth;
 
   try {

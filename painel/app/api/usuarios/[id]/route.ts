@@ -1,32 +1,52 @@
 /**
  * app/api/usuarios/[id]/route.ts
+ * GET    /api/usuarios/:id   → lê usuário (admin, ou o próprio)
  * PATCH  /api/usuarios/:id   → atualiza usuário (acesso + autoria)
  * DELETE /api/usuarios/:id   → desativa usuário
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
-import { lerUsuarios, salvarUsuarios, hashSenha, toPublico, type PapelUsuario } from "@/lib/usuarios";
+import { lerUsuarios, salvarUsuarios, hashSenha, verificarSenha, toPublico, UsuariosIlegiveisError, type PapelUsuario, type Usuario } from "@/lib/usuarios";
+import { exigirPapel, obterAtor, type Ator } from "@/lib/auth";
+import { MATRIZ } from "@/lib/permissoes";
+import { PAPEIS_VALIDOS, SENHA_MIN, alteracaoRemoveUltimoAdmin, ehUltimoAdminAtivo, emailValido, mesmoEmail } from "@/lib/usuarios-regras";
 
-const PAPEIS: PapelUsuario[] = ["administrador", "editor", "autor"];
-const SENHA_MIN = 8;
+const PAPEIS: PapelUsuario[] = [...PAPEIS_VALIDOS];
+const MSG_ULTIMO_ADMIN =
+  "Este é o único Administrador ativo. Não é possível rebaixar, desativar, remover o acesso ou trocar o e-mail dele.";
+
+/** Quem chama (API key ou sessão revalidada no arquivo) ou a resposta de erro. */
+async function identificar(req: NextRequest): Promise<{ ator: Ator } | { resp: NextResponse }> {
+  try {
+    const ator = await obterAtor(req);
+    if (!ator) return { resp: NextResponse.json({ ok: false, erro: "Não autorizado" }, { status: 401 }) };
+    return { ator };
+  } catch (err) {
+    if (err instanceof UsuariosIlegiveisError) {
+      return { resp: NextResponse.json({ ok: false, erro: err.message }, { status: 503 }) };
+    }
+    throw err;
+  }
+}
+
+function respostaErro(err: unknown): NextResponse {
+  if (err instanceof UsuariosIlegiveisError) {
+    return NextResponse.json({ ok: false, erro: err.message }, { status: 503 });
+  }
+  return NextResponse.json({ ok: false, erro: String(err) }, { status: 500 });
+}
 
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) {
-    return NextResponse.json({ ok: false, erro: "Não autorizado" }, { status: 401 });
-  }
+  const quem = await identificar(req);
+  if ("resp" in quem) return quem.resp;
 
   try {
     const { id } = await params;
-    const sessionUserId = (session.user as { id?: string }).id;
-    const sessionPapel = (session.user as { papel?: string }).papel;
-    const isAdmin = sessionPapel === "administrador";
-    const isProprioUsuario = sessionUserId === id;
+    const isAdmin = quem.ator.via === "apikey" || quem.ator.papel === "administrador";
+    const isProprioUsuario = quem.ator.via === "sessao" && quem.ator.id === id;
 
     if (!isAdmin && !isProprioUsuario) {
       return NextResponse.json({ ok: false, erro: "Acesso negado" }, { status: 403 });
@@ -40,7 +60,7 @@ export async function GET(
 
     return NextResponse.json({ ok: true, usuario: toPublico(usuario) });
   } catch (err) {
-    return NextResponse.json({ ok: false, erro: String(err) }, { status: 500 });
+    return respostaErro(err);
   }
 }
 
@@ -48,17 +68,14 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) {
-    return NextResponse.json({ ok: false, erro: "Não autorizado" }, { status: 401 });
-  }
+  const quem = await identificar(req);
+  if ("resp" in quem) return quem.resp;
+  const ator = quem.ator;
 
   try {
     const { id } = await params;
-    const sessionUserId = (session.user as { id?: string }).id;
-    const sessionPapel = (session.user as { papel?: string }).papel;
-    const isAdmin = sessionPapel === "administrador";
-    const isProprioUsuario = sessionUserId === id;
+    const isAdmin = ator.via === "apikey" || ator.papel === "administrador";
+    const isProprioUsuario = ator.via === "sessao" && ator.id === id; // id da SESSÃO, não um id fixo
 
     if (!isAdmin && !isProprioUsuario) {
       return NextResponse.json({ ok: false, erro: "Acesso negado" }, { status: 403 });
@@ -72,7 +89,9 @@ export async function PATCH(
       return NextResponse.json({ ok: false, erro: "Usuário não encontrado" }, { status: 404 });
     }
 
-    const u = { ...usuarios[idx] };
+    // Retrato do estado anterior (para a trava de "último admin") e cópia de trabalho.
+    const antes: Usuario[] = JSON.parse(JSON.stringify(usuarios));
+    const u: Usuario = JSON.parse(JSON.stringify(usuarios[idx]));
 
     // ── Campos de acesso ───────────────────────────────────────────────────────
 
@@ -90,7 +109,7 @@ export async function PATCH(
         return NextResponse.json({ ok: false, erro: "Apenas administradores podem alterar dados de acesso" }, { status: 403 });
       }
       u.acesso = {
-        emailLogin: body.acesso.emailLogin ?? u.acesso?.emailLogin ?? "",
+        emailLogin: typeof body.acesso.emailLogin === "string" ? body.acesso.emailLogin.trim() : (u.acesso?.emailLogin ?? ""),
         papel: PAPEIS.includes(body.acesso.papel) ? body.acesso.papel : (u.acesso?.papel ?? "autor"),
         ativo: body.acesso.ativo !== undefined ? Boolean(body.acesso.ativo) : (u.acesso?.ativo ?? true),
       };
@@ -131,6 +150,15 @@ export async function PATCH(
           { status: 400 }
         );
       }
+      // A PRÓPRIA senha exige a senha atual; admin trocando a de OUTRO usuário (ou API key) não.
+      if (isProprioUsuario) {
+        if (typeof body.senhaAtual !== "string" || !body.senhaAtual) {
+          return NextResponse.json({ ok: false, erro: "Informe a senha atual para trocar a sua senha" }, { status: 400 });
+        }
+        if (!u.senhaHash || !(await verificarSenha(body.senhaAtual, u.senhaHash))) {
+          return NextResponse.json({ ok: false, erro: "Senha atual incorreta" }, { status: 403 });
+        }
+      }
       u.senhaHash = await hashSenha(body.senha);
     }
 
@@ -168,13 +196,42 @@ export async function PATCH(
       }
     }
 
+    // ── Validações finais (e-mail, senha de conta ativa, último admin) ─────────
+
+    const emailAntes = antes[idx].acesso?.emailLogin ?? "";
+    const emailDepois = u.acesso?.emailLogin ?? "";
+    const ativoAntes = antes[idx].podeAcessar !== false && antes[idx].acesso?.ativo === true;
+    const ativoDepois = u.podeAcessar !== false && u.acesso?.ativo === true;
+
+    // E-mail: válido e único quando a conta acessa o painel e (mudou ou está ativa).
+    if (u.podeAcessar !== false && u.acesso && (!mesmoEmail(emailAntes, emailDepois) || ativoDepois)) {
+      if (!emailValido(emailDepois)) {
+        return NextResponse.json({ ok: false, erro: "Informe um e-mail de login válido." }, { status: 400 });
+      }
+      if (usuarios.some((o, i) => i !== idx && mesmoEmail(o.acesso?.emailLogin, emailDepois))) {
+        return NextResponse.json({ ok: false, erro: "E-mail já cadastrado." }, { status: 409 });
+      }
+    }
+    if (ativoDepois && !ativoAntes && !u.senhaHash) {
+      return NextResponse.json({ ok: false, erro: "Defina uma senha antes de ativar a conta." }, { status: 400 });
+    }
+
+    // Trava de "último admin" no SERVIDOR (a tela só avisa).
+    const depois = antes.map((o, i) => (i === idx ? u : o));
+    if (
+      ehUltimoAdminAtivo(antes, id) &&
+      (alteracaoRemoveUltimoAdmin(antes, depois, id) || !mesmoEmail(emailAntes, emailDepois))
+    ) {
+      return NextResponse.json({ ok: false, erro: MSG_ULTIMO_ADMIN }, { status: 409 });
+    }
+
     usuarios[idx] = u;
     salvarUsuarios(usuarios);
 
     return NextResponse.json({ ok: true, usuario: toPublico(u) });
   } catch (err) {
     console.error("[api/usuarios PATCH]", err);
-    return NextResponse.json({ ok: false, erro: String(err) }, { status: 500 });
+    return respostaErro(err);
   }
 }
 
@@ -182,19 +239,14 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) {
-    return NextResponse.json({ ok: false, erro: "Não autorizado" }, { status: 401 });
-  }
-  if ((session.user as { papel?: string }).papel !== "administrador") {
-    return NextResponse.json({ ok: false, erro: "Apenas administradores podem desativar contas" }, { status: 403 });
-  }
+  const negado = await exigirPapel(req, MATRIZ["usuarios/[id]:DELETE"]);
+  if (negado) return negado;
 
   try {
     const { id } = await params;
 
-    const sessionUserId = (session.user as { id?: string }).id;
-    if (sessionUserId === id) {
+    const ator = await obterAtor(req);
+    if (ator?.via === "sessao" && ator.id === id) {
       return NextResponse.json({ ok: false, erro: "Você não pode desativar sua própria conta" }, { status: 400 });
     }
 
@@ -205,6 +257,10 @@ export async function DELETE(
       return NextResponse.json({ ok: false, erro: "Usuário não encontrado" }, { status: 404 });
     }
 
+    if (ehUltimoAdminAtivo(usuarios, id)) {
+      return NextResponse.json({ ok: false, erro: MSG_ULTIMO_ADMIN }, { status: 409 });
+    }
+
     if (usuarios[idx].acesso) {
       usuarios[idx].acesso!.ativo = false;
     }
@@ -212,7 +268,7 @@ export async function DELETE(
 
     return NextResponse.json({ ok: true });
   } catch (err) {
-    return NextResponse.json({ ok: false, erro: String(err) }, { status: 500 });
+    return respostaErro(err);
   }
 }
 
