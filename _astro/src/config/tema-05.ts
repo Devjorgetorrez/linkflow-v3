@@ -58,7 +58,7 @@ export const site = {
     { label: 'O escritório',    href: '/tema-05/sobre' },
     { label: 'Atuação',         href: '/tema-05/servicos' },
     { label: 'Direito do INSS', href: '/tema-05/direito-previdenciario' },
-    { label: 'Blog',            href: '/tema-05/blog' },
+    { label: 'Publicações',    href: '/tema-05/blog' },
     { label: 'Contato',         href: '/tema-05/contato' },
   ],
 
@@ -66,12 +66,12 @@ export const site = {
     {
       titulo: 'Áreas de atuação',
       itens: [
-        { label: 'Aposentadoria por Idade',        href: '/tema-05/servicos/aposentadoria-por-idade' },
-        { label: 'Aposentadoria por Tempo',        href: '/tema-05/servicos/aposentadoria-por-tempo-de-contribuicao' },
-        { label: 'BPC / LOAS',                     href: '/tema-05/servicos/bpc-loas' },
-        { label: 'Auxílio por Incapacidade',       href: '/tema-05/servicos/auxilio-por-incapacidade' },
-        { label: 'Pensão por Morte',               href: '/tema-05/servicos/pensao-por-morte' },
-        { label: 'Servidores Públicos',            href: '/tema-05/servicos/servidores-publicos' },
+        { label: 'Aposentadoria por Idade',        href: '/tema-05/aposentadoria-por-idade' },
+        { label: 'Aposentadoria por Tempo',        href: '/tema-05/aposentadoria-por-tempo-de-contribuicao' },
+        { label: 'BPC / LOAS',                     href: '/tema-05/bpc-loas' },
+        { label: 'Auxílio por Incapacidade',       href: '/tema-05/auxilio-por-incapacidade' },
+        { label: 'Pensão por Morte',               href: '/tema-05/pensao-por-morte' },
+        { label: 'Servidores Públicos',            href: '/tema-05/servidores-publicos' },
       ],
     },
     {
@@ -130,25 +130,25 @@ export const site = {
 
   tags: [
     { label: '#DireitoPrevidenciário',  href: '/tema-05/direito-previdenciario' },
-    { label: '#BPCLOAS',                href: '/tema-05/servicos/bpc-loas' },
-    { label: '#AposentadoriaPorIdade',  href: '/tema-05/servicos/aposentadoria-por-idade' },
-    { label: '#AuxílioPorIncapacidade', href: '/tema-05/servicos/auxilio-por-incapacidade' },
-    { label: '#PensãoPorMorte',         href: '/tema-05/servicos/pensao-por-morte' },
-    { label: '#ServidorPúblico',        href: '/tema-05/servicos/servidores-publicos' },
-    { label: '#RevisãoDeBenefício',     href: '/tema-05/blog/revisao-de-beneficio-quando-cabe' },
+    { label: '#BPCLOAS',                href: '/tema-05/bpc-loas' },
+    { label: '#AposentadoriaPorIdade',  href: '/tema-05/aposentadoria-por-idade' },
+    { label: '#AuxílioPorIncapacidade', href: '/tema-05/auxilio-por-incapacidade' },
+    { label: '#PensãoPorMorte',         href: '/tema-05/pensao-por-morte' },
+    { label: '#ServidorPúblico',        href: '/tema-05/servidores-publicos' },
+    { label: '#RevisãoDeBenefício',     href: '/tema-05/revisao-de-beneficio-quando-cabe' },
     { label: '#BeloHorizonte',          href: '/tema-05/contato' },
   ],
 
   buscasFrequentes: [
     { label: 'advogado previdenciário belo horizonte', href: '/tema-05/servicos' },
-    { label: 'bpc loas quem tem direito',              href: '/tema-05/servicos/bpc-loas' },
+    { label: 'bpc loas quem tem direito',              href: '/tema-05/bpc-loas' },
     { label: 'inss negou meu benefício o que fazer',   href: '/tema-05/direito-previdenciario' },
-    { label: 'aposentadoria por idade regra 2026',     href: '/tema-05/servicos/aposentadoria-por-idade' },
-    { label: 'auxílio doença perícia negada',          href: '/tema-05/servicos/auxilio-por-incapacidade' },
-    { label: 'pensão por morte quanto tempo dura',     href: '/tema-05/servicos/pensao-por-morte' },
-    { label: 'revisão da vida toda advogado',          href: '/tema-05/blog/revisao-de-beneficio-quando-cabe' },
-    { label: 'aposentadoria servidor público mg',      href: '/tema-05/servicos/servidores-publicos' },
-    { label: 'tempo especial insalubridade inss',      href: '/tema-05/blog/tempo-especial-e-insalubridade' },
+    { label: 'aposentadoria por idade regra 2026',     href: '/tema-05/aposentadoria-por-idade' },
+    { label: 'auxílio doença perícia negada',          href: '/tema-05/auxilio-por-incapacidade' },
+    { label: 'pensão por morte quanto tempo dura',     href: '/tema-05/pensao-por-morte' },
+    { label: 'revisão da vida toda advogado',          href: '/tema-05/revisao-de-beneficio-quando-cabe' },
+    { label: 'aposentadoria servidor público mg',      href: '/tema-05/servidores-publicos' },
+    { label: 'tempo especial insalubridade inss',      href: '/tema-05/tempo-especial-e-insalubridade' },
     { label: 'escritório previdenciário funcionários bh', href: '/tema-05/contato' },
   ],
 
@@ -239,5 +239,13 @@ export const site = {
     medicao: [
       { ferramenta: 'Medição de audiência do site', dado: 'Páginas visitadas, origem do acesso e tipo de dispositivo. Sem coleta de IP completo.' },
     ],
+
+    /* Termos de Uso (obrigatório) — lido por <ConteudoLegal documento="termos">.
+       Campo vazio bloqueia a publicação, igual aos campos da política. */
+    termos: {
+      naoSubstitui:  'O conteúdo deste site tem finalidade informativa e não substitui consulta, parecer jurídico ou orientação profissional sobre um caso concreto. A prestação de serviços advocatícios é regida pelo contrato de honorários firmado com cada cliente, que prevalece em caso de divergência com estes termos.',
+      foro:          { cidade: 'Belo Horizonte', uf: 'MG' },
+      vigenciaDesde: '2026-08-28',
+    },
   },
 }

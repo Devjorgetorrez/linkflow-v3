@@ -2,15 +2,10 @@
 titulo: "O INSS negou seu pedido: o que fazer agora"
 metaDescription: "Como ler a carta de indeferimento do INSS, os prazos de recurso administrativo e quando a via judicial é o caminho mais curto em vez do recurso."
 publicadoEm: "2026-08-26"
-categoria: "Procedimento"
+categoria: procedimento
 imagemCapa: "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=1200&h=630&fit=crop&auto=format"
 imagemCapaAlt: "Documentos e carta de decisão sobre uma mesa"
-autor: "Vanessa Antunes"
-autorFoto: "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=200&h=200&fit=crop&auto=format"
-autorCargo: "Sócia · OAB/MG 98.630"
-autorBio: "Advogada dedicada a benefícios por incapacidade e BPC/LOAS. Responsável pela preparação de clientes para perícia médica no escritório Amparo Advocacia."
-autorLinkedin: "https://linkedin.com/in/vanessaantunes"
-autorEmail: "vanessa@amparoadvocacia.adv.br"
+autor: vanessa-antunes
 ---
 
 A carta de indeferimento assusta mais pelo tom do que pelo conteúdo. Lida com calma, ela costuma dizer exatamente o que faltou — e é isso que define o próximo passo.

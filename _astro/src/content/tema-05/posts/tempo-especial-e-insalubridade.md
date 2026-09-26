@@ -2,15 +2,10 @@
 titulo: "Tempo especial: o que conta e como se prova"
 metaDescription: "Quais atividades geram tempo especial, por que o PPP é o documento decisivo e o que fazer quando a empresa fechou ou preencheu o formulário errado."
 publicadoEm: "2026-08-12"
-categoria: "Aposentadoria"
+categoria: aposentadoria
 imagemCapa: "https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=1200&h=630&fit=crop&auto=format"
 imagemCapaAlt: "Trabalhador industrial em ambiente fabril"
-autor: "Gustavo Peixoto"
-autorFoto: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&auto=format"
-autorCargo: "Sócio-fundador · OAB/MG 92.417"
-autorBio: "Advogado com atuação exclusiva em direito previdenciário desde 2011. Conduz as simulações de regra de transição e a estratégia dos casos de tempo especial."
-autorLinkedin: "https://linkedin.com/in/gustavopeixoto"
-autorEmail: "gustavo@amparoadvocacia.adv.br"
+autor: gustavo-peixoto
 ---
 
 Tempo especial é o assunto que mais gera expectativa equivocada. Muita gente acredita que basta ter trabalhado em fábrica ou em hospital. Não basta — e entender por quê evita frustração.

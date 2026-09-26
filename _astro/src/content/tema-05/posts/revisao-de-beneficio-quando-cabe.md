@@ -2,15 +2,10 @@
 titulo: "Revisão de benefício: quando realmente cabe"
 metaDescription: "As hipóteses de revisão que continuam viáveis, o prazo decadencial de dez anos e por que a maioria dos pedidos de revisão é indeferida por falta de fundamento."
 publicadoEm: "2026-07-29"
-categoria: "Revisão"
+categoria: revisao
 imagemCapa: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=1200&h=630&fit=crop&auto=format"
 imagemCapaAlt: "Documentos de cálculo e extrato previdenciário"
-autor: "Renato Sobral"
-autorFoto: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&auto=format"
-autorCargo: "Advogado associado · OAB/MG 121.845"
-autorBio: "Advogado dedicado ao regime próprio de previdência e à contagem recíproca entre regimes. Atende servidores municipais e estaduais de Minas Gerais."
-autorLinkedin: "https://linkedin.com/in/renatosobral"
-autorEmail: "renato@amparoadvocacia.adv.br"
+autor: renato-sobral
 ---
 
 "Revisão" virou palavra de propaganda. Aparece em anúncio prometendo dinheiro atrasado para qualquer aposentado, e o resultado é uma enxurrada de pedidos sem fundamento — que são indeferidos e às vezes deixam o segurado pior do que estava.

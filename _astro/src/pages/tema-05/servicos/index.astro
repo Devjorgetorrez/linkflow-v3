@@ -17,7 +17,7 @@ const servicos = (await getCollection('servicosT5'))
   .map(s => ({
     titulo: s.data.titulo, descricao: s.data.resumo, icone: s.data.icone ?? '',
     imagem: s.data.imagem, imagemAlt: s.data.imagemAlt,
-    href: `/tema-05/servicos/${s.id}`, categoria: s.data.categoria,
+    href: `/tema-05/${s.id}`, categoria: s.data.categoria,
   }))
 
 const canonical = `${site.dominio}/servicos`

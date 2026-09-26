@@ -1,0 +1,139 @@
+---
+/**
+ * Página de autor — /autor/<slug> (tema-05).
+ * Corpo em components/blocos/PerfilAutor.astro (compartilhado pelos 3 temas).
+ * Uma página por autor ATIVO de content/autores; sem artigo publicado ela
+ * sai noindex (página rala) mas continua acessível pelo link do artigo.
+ */
+import Tema05Base   from '../../../layouts/Tema05Base.astro'
+import Header       from '../../../components/blocos/Header.astro'
+import Footer       from '../../../components/blocos/Footer.astro'
+import PerfilAutor  from '../../../components/blocos/PerfilAutor.astro'
+import { site }     from '../../../config/tema-05.ts'
+import { getCollection } from 'astro:content'
+import { ehPublicado } from '../../../lib/publicacao.ts'
+import { separarArtigosDoAutor, hrefAutor } from '../../../lib/autores.ts'
+import { nomeCategoria } from '../../../lib/categorias.ts'
+
+export async function getStaticPaths() {
+  const autores = await getCollection('autoresT5')
+  return autores
+    .filter((a) => a.data.ativo !== false)
+    .map((a) => ({ params: { slug: a.id }, props: { autor: a } }))
+}
+
+const { autor } = Astro.props
+const d = autor.data
+const autores = await getCollection('autoresT5')
+const categorias = await getCollection('categoriasT5')
+const posts = await getCollection('postsT5', ehPublicado)
+const { selecao, ultimos, total } = separarArtigosDoAutor(posts, autor.id, autores)
+
+const card = (p: (typeof posts)[number]) => ({
+  titulo:        p.data.titulo,
+  publicadoEm:   p.data.publicadoEm,
+  categoria:     nomeCategoria(p.data.categoria, categorias),
+  imagemCapa:    p.data.imagemCapa,
+  imagemCapaAlt: p.data.imagemCapaAlt,
+  autor:         d.nome,
+  href:          `/tema-05/${p.id}`,
+})
+
+const caminho   = hrefAutor(autor.id)
+const canonical = `${site.dominio}${caminho}`
+const credencial = [d.conselho, d.registro].filter(Boolean).join(' ').trim()
+const sameAs = Object.values(d.redes ?? {}).filter((v): v is string => Boolean(v))
+
+const metaDescription = (d.bioCurta && d.bioCurta.length >= 50
+  ? d.bioCurta
+  : `Artigos de ${d.nome}${d.cargo ? `, ${d.cargo},` : ''} nas publicações da ${site.nome}.`
+).slice(0, 160)
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'ProfilePage',
+      '@id': `${canonical}#webpage`,
+      url: canonical,
+      name: `${d.nome} — ${site.nome}`,
+      inLanguage: 'pt-BR',
+      isPartOf: { '@id': `${site.dominio}/#website` },
+      mainEntity: { '@id': `${canonical}#person` },
+    },
+    {
+      '@type': 'Person',
+      '@id': `${canonical}#person`,
+      url: canonical,
+      name: d.nome,
+      ...(d.cargo ? { jobTitle: d.cargo } : {}),
+      ...(d.foto ? { image: d.foto } : {}),
+      ...(d.bioCurta ? { description: d.bioCurta } : {}),
+      ...(credencial ? { hasCredential: { '@type': 'EducationalOccupationalCredential', name: credencial } } : {}),
+      ...(d.especialidades.length ? { knowsAbout: d.especialidades } : {}),
+      ...(sameAs.length ? { sameAs } : {}),
+      worksFor: { '@id': `${site.dominio}/#organization` },
+    },
+    {
+      '@type': 'BreadcrumbList',
+      '@id': `${canonical}#breadcrumb`,
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home', item: `${site.dominio}/` },
+        { '@type': 'ListItem', position: 2, name: 'Publicações', item: `${site.dominio}/blog` },
+        { '@type': 'ListItem', position: 3, name: d.nome, item: canonical },
+      ],
+    },
+  ],
+}
+---
+
+<Tema05Base
+  titulo={`${d.nome} — ${site.nome}`}
+  metaDescription={metaDescription}
+  canonical={canonical}
+  jsonLd={jsonLd}
+  nodeId="autor"
+  noindex={total === 0}
+>
+  <Header
+    variante="padrao"
+    nomeSite={site.nome}
+    telefone={site.nap.telefone}
+    whatsapp={site.nap.whatsapp}
+    nav={site.nav}
+    ctaTexto="Agendar atendimento"
+    ctaHref="/tema-05/contato"
+  />
+
+  <PerfilAutor
+    nome={d.nome}
+    cargo={d.cargo}
+    credencial={credencial}
+    foto={d.foto}
+    fotoAlt={d.fotoAlt}
+    bioCurta={d.bioCurta}
+    bioLonga={d.bioLonga}
+    formacao={d.formacao}
+    especialidades={d.especialidades}
+    naMidia={d.naMidia}
+    redes={d.redes}
+    email={d.email}
+    selecao={selecao.map(card)}
+    ultimos={ultimos.map(card)}
+  />
+
+  <Footer
+    variante="colunas"
+    nomeSite={site.nome}
+    slogan={site.slogan}
+    telefone={site.nap.telefone}
+    email={site.nap.email}
+    endereco={`${site.nap.logradouro}, ${site.nap.complemento}`}
+    cidade={`${site.nap.bairro}, ${site.nap.cidade} — ${site.nap.uf}`}
+    cnpj={site.cnpj}
+    anoFundacao={site.anoFundacao}
+    redes={site.redes}
+    nav={site.nav}
+    colunas={site.navFooterColunas}
+  />
+</Tema05Base>
