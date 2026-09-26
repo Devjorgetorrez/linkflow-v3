@@ -18,7 +18,7 @@ const servicos = (await getCollection('servicosT6'))
   .map(s => ({
     titulo: s.data.titulo, descricao: s.data.resumo, icone: s.data.icone ?? '',
     imagem: s.data.imagem, imagemAlt: s.data.imagemAlt,
-    href: `/tema-06/servicos/${s.id}`, categoria: s.data.categoria,
+    href: `/tema-06/${s.id}`, categoria: s.data.categoria,
   }))
 
 const wa        = `https://wa.me/${site.nap.whatsapp}`
@@ -103,7 +103,7 @@ const jsonLd = {
     ctaPrimTexto="Chamar no WhatsApp"
     ctaPrimHref={wa}
     ctaSecTexto="Entender a detecção"
-    ctaSecHref="/tema-06/servicos/caca-vazamento"
+    ctaSecHref="/tema-06/caca-vazamento"
   />
 
   <Footer

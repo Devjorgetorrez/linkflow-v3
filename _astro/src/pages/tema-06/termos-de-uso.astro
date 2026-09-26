@@ -1,7 +1,9 @@
 ---
 /**
- * Termos de Uso — EXEMPLO OPCIONAL (§6.3 do MD).
- * Opcional e desligado por padrão. Existe como modelo e sai com noindex.
+ * Termos de Uso — página OBRIGATÓRIA em todo site (uma das 4 institucionais
+ * da lista fechada do fase3-conteudo). Indexável, sem aviso de página
+ * opcional. O corpo vem de `site.legal.termos` (+ razão social/CNPJ de
+ * `site.legal.controlador`) via <ConteudoLegal documento="termos">.
  */
 import Tema06Base    from '../../layouts/Tema06Base.astro'
 import Header        from '../../components/blocos/Header.astro'
@@ -30,11 +32,10 @@ const jsonLd = {
 
 <Tema06Base
   titulo={`Termos de Uso — ${site.nome}`}
-  metaDescription="Termos de uso do site da Hidroponto: finalidade do conteúdo publicado, relação com o serviço contratado e tratamento de dados pessoais."
+  metaDescription={`Termos de uso do site da ${site.nome}: finalidade do conteúdo publicado, relação com o serviço contratado e tratamento de dados pessoais.`}
   canonical={canonical}
   jsonLd={jsonLd}
   nodeId="termos-de-uso"
-  noindex={true}
 >
   <Header
     variante="padrao"
@@ -52,17 +53,6 @@ const jsonLd = {
     titulo="Termos de Uso"
     descricao="Regras de navegação neste site e relação entre o conteúdo publicado e o serviço contratado."
   />
-
-  <div class="container-prose pt-10">
-    <div class="rounded-[var(--radius-card)] border-l-4 border-accent bg-accent/8 p-5">
-      <p class="text-sm font-bold text-secondary">Página opcional — desligada por padrão</p>
-      <p class="mt-2 text-sm leading-relaxed text-ink-muted">
-        Termos de uso não são exigência da LGPD. Pelo §6.3 da especificação, esta página só deve ser
-        ligada quando o site tiver área restrita, venda on-line ou envio de conteúdo por visitante.
-        Existe neste tema apenas como modelo, e sai com <code>noindex</code>.
-      </p>
-    </div>
-  </div>
 
   <ConteudoLegal legal={site.legal} nomeSite={site.nome} documento="termos" />
 

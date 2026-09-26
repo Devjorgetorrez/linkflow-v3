@@ -2,15 +2,10 @@
 titulo: "Vazamento em condomínio: de quem é a conta"
 metaDescription: "Como se define a responsabilidade entre unidade e condomínio em vazamento e infiltração, por que o laudo técnico resolve a disputa e o que fazer primeiro."
 publicadoEm: "2026-08-05"
-categoria: "Condomínio"
+categoria: condominio
 imagemCapa: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=1200&h=630&fit=crop&auto=format"
 imagemCapaAlt: "Fachada de prédio residencial"
-autor: "Sérgio Vilanova"
-autorFoto: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&auto=format"
-autorCargo: "Sócio-fundador · 13 anos de campo"
-autorBio: "Trabalha com detecção de vazamento oculto desde 2012. Responsável técnico da Hidroponto e pelos laudos que vão para seguradora e condomínio."
-autorInstagram: "https://instagram.com/hidroponto"
-autorEmail: "sergio@hidroponto.com.br"
+autor: sergio-vilanova
 ---
 
 O teto do 302 aparece manchado. O morador do 402 diz que não tem vazamento nenhum. A administração pede paciência. Meses depois, ninguém consertou nada e a mancha dobrou de tamanho.

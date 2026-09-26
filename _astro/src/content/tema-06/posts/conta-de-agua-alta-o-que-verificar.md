@@ -2,15 +2,10 @@
 titulo: "Conta de água alta: o que verificar antes de chamar"
 metaDescription: "Como usar o hidrômetro para confirmar vazamento oculto, quais perdas silenciosas mais aparecem na fatura e quando o problema não é vazamento."
 publicadoEm: "2026-09-02"
-categoria: "Diagnóstico"
+categoria: diagnostico
 imagemCapa: "https://images.unsplash.com/photo-1585704032915-c3400ca199e7?w=1200&h=630&fit=crop&auto=format"
 imagemCapaAlt: "Torneira aberta com água corrente"
-autor: "Sérgio Vilanova"
-autorFoto: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&auto=format"
-autorCargo: "Sócio-fundador · 13 anos de campo"
-autorBio: "Trabalha com detecção de vazamento oculto desde 2012. Responsável técnico da Hidroponto e pelos laudos que vão para seguradora e condomínio."
-autorInstagram: "https://instagram.com/hidroponto"
-autorEmail: "sergio@hidroponto.com.br"
+autor: sergio-vilanova
 ---
 
 A fatura veio o dobro e nada mudou em casa. Antes de chamar alguém, dá para confirmar sozinho se existe vazamento — e o teste leva vinte minutos.

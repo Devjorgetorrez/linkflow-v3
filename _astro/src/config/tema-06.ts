@@ -59,19 +59,19 @@ export const site = {
     {
       titulo: 'Serviços',
       itens: [
-        { label: 'Caça Vazamento',        href: '/tema-06/servicos/caca-vazamento' },
-        { label: 'Detecção de Infiltração', href: '/tema-06/servicos/deteccao-de-infiltracao' },
-        { label: 'Vazamento em Piscina',  href: '/tema-06/servicos/vazamento-em-piscina' },
-        { label: 'Desentupimento',        href: '/tema-06/servicos/desentupimento' },
-        { label: 'Reparo Hidráulico',     href: '/tema-06/servicos/reparo-hidraulico' },
-        { label: 'Videoinspeção',         href: '/tema-06/servicos/videoinspecao' },
+        { label: 'Caça Vazamento',        href: '/tema-06/caca-vazamento' },
+        { label: 'Detecção de Infiltração', href: '/tema-06/deteccao-de-infiltracao' },
+        { label: 'Vazamento em Piscina',  href: '/tema-06/vazamento-em-piscina' },
+        { label: 'Desentupimento',        href: '/tema-06/desentupimento' },
+        { label: 'Reparo Hidráulico',     href: '/tema-06/reparo-hidraulico' },
+        { label: 'Videoinspeção',         href: '/tema-06/videoinspecao' },
       ],
     },
     {
       titulo: 'A empresa',
       itens: [
         { label: 'Quem somos',        href: '/tema-06/sobre' },
-        { label: 'Como funciona',     href: '/tema-06/servicos/caca-vazamento' },
+        { label: 'Como funciona',     href: '/tema-06/caca-vazamento' },
         { label: 'Blog',              href: '/tema-06/blog' },
         { label: 'Onde atendemos',    href: '/tema-06/contato' },
       ],
@@ -184,27 +184,27 @@ export const site = {
   avaliacao: { nota: '4,9', total: '+210', fonte: 'avaliações no Google' },
 
   tags: [
-    { label: '#CaçaVazamento',     href: '/tema-06/servicos/caca-vazamento' },
-    { label: '#Infiltração',       href: '/tema-06/servicos/deteccao-de-infiltracao' },
-    { label: '#VazamentoEmPiscina', href: '/tema-06/servicos/vazamento-em-piscina' },
-    { label: '#Desentupimento',    href: '/tema-06/servicos/desentupimento' },
-    { label: '#Videoinspeção',     href: '/tema-06/servicos/videoinspecao' },
-    { label: '#ContaDeÁguaAlta',   href: '/tema-06/blog/conta-de-agua-alta-o-que-verificar' },
+    { label: '#CaçaVazamento',     href: '/tema-06/caca-vazamento' },
+    { label: '#Infiltração',       href: '/tema-06/deteccao-de-infiltracao' },
+    { label: '#VazamentoEmPiscina', href: '/tema-06/vazamento-em-piscina' },
+    { label: '#Desentupimento',    href: '/tema-06/desentupimento' },
+    { label: '#Videoinspeção',     href: '/tema-06/videoinspecao' },
+    { label: '#ContaDeÁguaAlta',   href: '/tema-06/conta-de-agua-alta-o-que-verificar' },
     { label: '#Goiânia',           href: '/tema-06/contato' },
-    { label: '#SemQuebrar',        href: '/tema-06/servicos/caca-vazamento' },
+    { label: '#SemQuebrar',        href: '/tema-06/caca-vazamento' },
   ],
 
   buscasFrequentes: [
-    { label: 'caça vazamento goiânia',              href: '/tema-06/servicos/caca-vazamento' },
+    { label: 'caça vazamento goiânia',              href: '/tema-06/caca-vazamento' },
     { label: 'encanador 24 horas goiânia',          href: '/tema-06/contato' },
-    { label: 'detectar vazamento sem quebrar piso', href: '/tema-06/servicos/caca-vazamento' },
-    { label: 'conta de água veio muito alta',       href: '/tema-06/blog/conta-de-agua-alta-o-que-verificar' },
-    { label: 'infiltração na parede do vizinho',    href: '/tema-06/servicos/deteccao-de-infiltracao' },
-    { label: 'vazamento em piscina de alvenaria',   href: '/tema-06/servicos/vazamento-em-piscina' },
-    { label: 'desentupimento de esgoto goiânia',    href: '/tema-06/servicos/desentupimento' },
-    { label: 'laudo de vazamento para seguro',      href: '/tema-06/servicos/videoinspecao' },
+    { label: 'detectar vazamento sem quebrar piso', href: '/tema-06/caca-vazamento' },
+    { label: 'conta de água veio muito alta',       href: '/tema-06/conta-de-agua-alta-o-que-verificar' },
+    { label: 'infiltração na parede do vizinho',    href: '/tema-06/deteccao-de-infiltracao' },
+    { label: 'vazamento em piscina de alvenaria',   href: '/tema-06/vazamento-em-piscina' },
+    { label: 'desentupimento de esgoto goiânia',    href: '/tema-06/desentupimento' },
+    { label: 'laudo de vazamento para seguro',      href: '/tema-06/videoinspecao' },
     { label: 'caça vazamento aparecida de goiânia', href: '/tema-06/contato' },
-    { label: 'mancha de umidade no teto',           href: '/tema-06/blog/mancha-de-umidade-o-que-significa' },
+    { label: 'mancha de umidade no teto',           href: '/tema-06/mancha-de-umidade-o-que-significa' },
   ],
 
   faq: [
@@ -294,5 +294,13 @@ export const site = {
     medicao: [
       { ferramenta: 'Medição de audiência do site', dado: 'Páginas visitadas, origem do acesso e tipo de dispositivo. Sem coleta de IP completo.' },
     ],
+
+    /* Termos de Uso (obrigatório) — lido por <ConteudoLegal documento="termos">.
+       Campo vazio bloqueia a publicação, igual aos campos da política. */
+    termos: {
+      naoSubstitui:  'O conteúdo deste site tem finalidade informativa e não substitui vistoria técnica, laudo ou orçamento sobre um caso concreto. A prestação de serviços é regida pelo orçamento e pelo contrato aceitos por cada cliente, que prevalecem em caso de divergência com estes termos.',
+      foro:          { cidade: 'Goiânia', uf: 'GO' },
+      vigenciaDesde: '2026-09-01',
+    },
   },
 }

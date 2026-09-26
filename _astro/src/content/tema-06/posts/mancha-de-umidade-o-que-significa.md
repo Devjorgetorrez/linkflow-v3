@@ -2,15 +2,10 @@
 titulo: "Mancha de umidade: o que cada tipo indica"
 metaDescription: "Como diferenciar vazamento, infiltração, umidade ascendente e condensação pelo formato da mancha, pelo comportamento com a chuva e pelo local onde aparece."
 publicadoEm: "2026-08-19"
-categoria: "Diagnóstico"
+categoria: diagnostico
 imagemCapa: "https://images.unsplash.com/photo-1595079676339-1534801ad6cf?w=1200&h=630&fit=crop&auto=format"
 imagemCapaAlt: "Parede com mancha de umidade e pintura descascada"
-autor: "Wesley Tavares"
-autorFoto: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&auto=format"
-autorCargo: "Técnico de detecção · 9 anos de campo"
-autorBio: "Atua com geofone, gás traçador e videoinspeção na Hidroponto. Especializado em vazamento em piscina e rede de esgoto."
-autorInstagram: "https://instagram.com/hidroponto"
-autorEmail: "wesley@hidroponto.com.br"
+autor: wesley-tavares
 ---
 
 A mancha na parede diz mais do que parece. Antes de qualquer equipamento, o formato, o local e o comportamento dela já apontam a origem provável.

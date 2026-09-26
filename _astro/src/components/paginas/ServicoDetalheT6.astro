@@ -1,34 +1,34 @@
 ---
 /**
- * Página de serviço do Tema 06.
+ * Página de serviço do Tema 06 — renderizada pela rota unificada
+ * pages/tema-06/[slug].astro (URL plana /tema-06/<slug>).
  *
  * Estrutura da referência: hero, corpo com barra lateral de contato (o NAP
  * fica ali, não só no rodapé), faixa de CTA, diferenciais, galeria de
  * trabalhos e dúvidas. Depoimentos e mapa entram pelo padrão do catálogo.
  */
-import Tema06Base    from '../../../layouts/Tema06Base.astro'
-import Header        from '../../../components/blocos/Header.astro'
-import Hero          from '../../../components/blocos/Hero.astro'
-import Prova         from '../../../components/blocos/Prova.astro'
-import Infraestrutura from '../../../components/blocos/Infraestrutura.astro'
-import Passos        from '../../../components/blocos/Passos.astro'
-import Depoimentos   from '../../../components/blocos/Depoimentos.astro'
-import Faq           from '../../../components/blocos/Faq.astro'
-import Localizacao   from '../../../components/blocos/Localizacao.astro'
-import Servicos      from '../../../components/blocos/Servicos.astro'
-import Cta           from '../../../components/blocos/Cta.astro'
-import Footer        from '../../../components/blocos/Footer.astro'
-import { site }      from '../../../config/tema-06.ts'
+import Tema06Base    from '../../layouts/Tema06Base.astro'
+import Header        from '../../components/blocos/Header.astro'
+import Hero          from '../../components/blocos/Hero.astro'
+import Prova         from '../../components/blocos/Prova.astro'
+import Infraestrutura from '../../components/blocos/Infraestrutura.astro'
+import Passos        from '../../components/blocos/Passos.astro'
+import Depoimentos   from '../../components/blocos/Depoimentos.astro'
+import Faq           from '../../components/blocos/Faq.astro'
+import Localizacao   from '../../components/blocos/Localizacao.astro'
+import Servicos      from '../../components/blocos/Servicos.astro'
+import Cta           from '../../components/blocos/Cta.astro'
+import Footer        from '../../components/blocos/Footer.astro'
+import { site }      from '../../config/tema-06.ts'
 import { getCollection, render } from 'astro:content'
 
-export async function getStaticPaths() {
-  const servicos = await getCollection('servicosT6')
-  return servicos.map(s => ({ params: { id: s.id }, props: { entry: s } }))
+interface Props {
+  entry: Awaited<ReturnType<typeof getCollection<'servicosT6'>>>[number]
 }
 
 const { entry }   = Astro.props
 const { Content } = await render(entry)
-const canonical   = `${site.dominio}/servicos/${entry.id}`
+const canonical   = `${site.dominio}/${entry.id}`
 const wa          = `https://wa.me/${site.nap.whatsapp}`
 
 const outros = (await getCollection('servicosT6'))
@@ -37,7 +37,7 @@ const outros = (await getCollection('servicosT6'))
   .map(s => ({
     titulo: s.data.titulo, descricao: s.data.resumo, icone: s.data.icone ?? '',
     imagem: s.data.imagem, imagemAlt: s.data.imagemAlt,
-    href: `/tema-06/servicos/${s.id}`, categoria: s.data.categoria,
+    href: `/tema-06/${s.id}`, categoria: s.data.categoria,
   }))
 
 const depoimentos = (await getCollection('depoimentosT6'))
@@ -83,6 +83,7 @@ const jsonLd = {
   canonical={canonical}
   jsonLd={jsonLd}
   nodeId="servico"
+  noindex={entry.data.noindex ?? false}
 >
   <Header
     variante="padrao"
@@ -257,7 +258,7 @@ const jsonLd = {
     ctaPrimTexto="Chamar no WhatsApp"
     ctaPrimHref={wa}
     ctaSecTexto="Ver como funciona"
-    ctaSecHref="/tema-06/servicos/caca-vazamento"
+    ctaSecHref="/tema-06/caca-vazamento"
   />
 
   {/* Sinais que indicam o problema */}
