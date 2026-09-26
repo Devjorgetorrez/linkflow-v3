@@ -14,310 +14,11 @@ import {
   TOKENS_ESCURO,
   type ChaveToken,
 } from "@/lib/store";
-import { AreaTexto, Botao, Campo, Entrada, Thumb } from "@/components/ui";
+import Link from "next/link";
+import { Botao, Campo, Entrada } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { URL_BLOG, urlAutor, urlCategoria } from "@/lib/urls-publicas";
 import { avaliarToken } from "@/motor/contraste";
-import type { Midia } from "@/mock/types";
-
-/* ------------------------------------------------------------------ */
-/* Seletor de mídia                                                    */
-/* ------------------------------------------------------------------ */
-
-function MediaPickerModal({
-  titulo,
-  itens,
-  onSelect,
-  onClose,
-}: {
-  titulo: string;
-  itens: Midia[];
-  onSelect: (m: Midia) => void;
-  onClose: () => void;
-}) {
-  const [busca, setBusca] = useState("");
-  const [selecionado, setSelecionado] = useState<Midia | null>(null);
-
-  const filtrados = busca.trim()
-    ? itens.filter(
-        (m) =>
-          m.titulo.toLowerCase().includes(busca.toLowerCase()) ||
-          m.arquivo.toLowerCase().includes(busca.toLowerCase()) ||
-          m.alt.toLowerCase().includes(busca.toLowerCase()),
-      )
-    : itens;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="flex w-[640px] max-h-[80vh] flex-col rounded-xl border border-line bg-surface shadow-xl">
-        {/* header */}
-        <div className="flex items-center justify-between border-b border-line px-5 py-3.5">
-          <p className="text-[13px] font-semibold text-ink">{titulo}</p>
-          <button onClick={onClose} className="rounded p-1 text-ink-muted hover:text-ink">
-            <X size={15} />
-          </button>
-        </div>
-
-        {/* busca */}
-        <div className="border-b border-line px-4 py-2.5">
-          <input
-            type="text"
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-            placeholder="Buscar por nome, arquivo ou alt…"
-            className="w-full rounded-[var(--radius)] border border-line bg-surface-2 px-3 py-1.5 text-[12px] text-ink placeholder:text-ink-muted/50 focus:border-primary focus:outline-none"
-            autoFocus
-          />
-        </div>
-
-        {/* grade */}
-        <div className="flex-1 overflow-y-auto p-4">
-          {filtrados.length === 0 ? (
-            <p className="py-8 text-center text-[12px] text-ink-muted">Nenhuma imagem encontrada.</p>
-          ) : (
-            <div className="grid grid-cols-4 gap-2">
-              {filtrados.map((m) => (
-                <button
-                  key={m.id}
-                  onClick={() => setSelecionado(selecionado?.id === m.id ? null : m)}
-                  className={cn(
-                    "group flex flex-col overflow-hidden rounded-[var(--radius)] border-2 text-left transition-all",
-                    selecionado?.id === m.id
-                      ? "border-primary ring-2 ring-primary/20"
-                      : "border-line hover:border-ink-muted",
-                  )}
-                >
-                  <Thumb
-                    gradiente={m.gradiente}
-                    className="h-[72px] w-full rounded-none border-0"
-                  />
-                  <div className="px-2 py-1.5">
-                    <p className="truncate text-[10.5px] font-medium text-ink">{m.titulo || m.arquivo}</p>
-                    <p className="truncate text-[9.5px] text-ink-muted">
-                      {m.largura}×{m.altura} · {m.formato}
-                    </p>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* footer */}
-        <div className="flex items-center justify-between border-t border-line px-5 py-3">
-          <p className="text-[11px] text-ink-muted">
-            {selecionado ? selecionado.arquivo : "Nenhum arquivo selecionado"}
-          </p>
-          <div className="flex gap-2">
-            <Botao variante="secundario" tamanho="sm" onClick={onClose}>
-              Cancelar
-            </Botao>
-            <Botao
-              variante="primario"
-              tamanho="sm"
-              onClick={() => selecionado && onSelect(selecionado)}
-              disabled={!selecionado}
-            >
-              Usar selecionada
-            </Botao>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ── logo row ── */
-
-function LogoRow({
-  label,
-  valor,
-  alt,
-  itens,
-  onEscolher,
-  onRemover,
-  onAltChange,
-}: {
-  label: string;
-  valor: string;
-  alt: string;
-  itens: Midia[];
-  onEscolher: (m: Midia) => void;
-  onRemover: () => void;
-  onAltChange: (v: string) => void;
-}) {
-  const [abrirPicker, setAbrirPicker] = useState(false);
-  const midiaItem = itens.find((m) => m.url === valor);
-
-  return (
-    <>
-      <div className="rounded-[var(--radius)] border border-line bg-surface-2 p-3 space-y-2.5">
-        <p className="text-[11.5px] font-medium text-ink">{label}</p>
-
-        <div className="flex items-center gap-3">
-          {/* prévia */}
-          {midiaItem ? (
-            <Thumb
-              gradiente={midiaItem.gradiente}
-              className="h-10 w-[80px] shrink-0"
-            />
-          ) : (
-            <div className="flex h-10 w-[80px] shrink-0 items-center justify-center rounded-[var(--radius)] border border-dashed border-line bg-surface text-[9px] text-ink-muted">
-              {valor ? valor.split("/").pop() : "Sem logo"}
-            </div>
-          )}
-
-          <div className="min-w-0 flex-1 text-[11px] text-ink-muted truncate font-mono">
-            {valor ? valor.split("/").pop() : "—"}
-          </div>
-
-          <div className="flex shrink-0 gap-1.5">
-            <Botao variante="secundario" tamanho="sm" onClick={() => setAbrirPicker(true)}>
-              Escolher
-            </Botao>
-            {valor && (
-              <Botao variante="perigo" tamanho="sm" onClick={onRemover}>
-                Remover
-              </Botao>
-            )}
-          </div>
-        </div>
-
-        <Campo label="Texto alternativo">
-          <Entrada
-            value={alt}
-            onChange={(e) => onAltChange(e.target.value)}
-            placeholder="Ex: Nome do seu negócio"
-          />
-        </Campo>
-      </div>
-
-      {abrirPicker && (
-        <MediaPickerModal
-          titulo={`Escolher — ${label}`}
-          itens={itens}
-          onSelect={(m) => { onEscolher(m); setAbrirPicker(false); }}
-          onClose={() => setAbrirPicker(false)}
-        />
-      )}
-    </>
-  );
-}
-
-/* ── favicon row ── */
-
-function FaviconRow({
-  valor,
-  itens,
-  onEscolher,
-  onRemover,
-}: {
-  valor: string;
-  itens: Midia[];
-  onEscolher: (m: Midia) => void;
-  onRemover: () => void;
-}) {
-  const [abrirPicker, setAbrirPicker] = useState(false);
-  const midiaItem = itens.find((m) => m.url === valor);
-
-  const gradiente = midiaItem?.gradiente ?? "135deg, hsl(215 20% 60%), hsl(215 20% 75%)";
-
-  return (
-    <>
-      <div className="rounded-[var(--radius)] border border-line bg-surface-2 p-3 space-y-3">
-        <p className="text-[11.5px] font-medium text-ink">Favicon</p>
-
-        <div className="flex items-center gap-3">
-          <div
-            className="h-10 w-10 shrink-0 rounded border border-line"
-            style={{ backgroundImage: `linear-gradient(${gradiente})` }}
-          />
-          <div className="min-w-0 flex-1 text-[11px] text-ink-muted truncate font-mono">
-            {valor ? valor.split("/").pop() : "—"}
-          </div>
-          <div className="flex shrink-0 gap-1.5">
-            <Botao variante="secundario" tamanho="sm" onClick={() => setAbrirPicker(true)}>
-              Escolher
-            </Botao>
-            {valor && (
-              <Botao variante="perigo" tamanho="sm" onClick={onRemover}>
-                Remover
-              </Botao>
-            )}
-          </div>
-        </div>
-
-        {/* previews em tamanho real */}
-        <div>
-          <p className="mb-2 text-[10.5px] text-ink-muted">Prévia de tamanho</p>
-          <div className="flex items-end gap-4">
-            {/* 32px claro */}
-            <div className="flex flex-col items-center gap-1">
-              <div className="flex h-[52px] w-[52px] items-center justify-center rounded border border-line bg-white">
-                <div
-                  className="rounded-sm"
-                  style={{
-                    width: 32, height: 32,
-                    backgroundImage: `linear-gradient(${gradiente})`,
-                  }}
-                />
-              </div>
-              <span className="text-[9.5px] text-ink-muted">32 px · claro</span>
-            </div>
-            {/* 32px escuro */}
-            <div className="flex flex-col items-center gap-1">
-              <div className="flex h-[52px] w-[52px] items-center justify-center rounded border border-line bg-[#1a1a2e]">
-                <div
-                  className="rounded-sm"
-                  style={{
-                    width: 32, height: 32,
-                    backgroundImage: `linear-gradient(${gradiente})`,
-                  }}
-                />
-              </div>
-              <span className="text-[9.5px] text-ink-muted">32 px · escuro</span>
-            </div>
-            {/* 16px claro */}
-            <div className="flex flex-col items-center gap-1">
-              <div className="flex h-[52px] w-[52px] items-center justify-center rounded border border-line bg-white">
-                <div
-                  className="rounded-sm"
-                  style={{
-                    width: 16, height: 16,
-                    backgroundImage: `linear-gradient(${gradiente})`,
-                  }}
-                />
-              </div>
-              <span className="text-[9.5px] text-ink-muted">16 px · claro</span>
-            </div>
-            {/* 16px escuro */}
-            <div className="flex flex-col items-center gap-1">
-              <div className="flex h-[52px] w-[52px] items-center justify-center rounded border border-line bg-[#1a1a2e]">
-                <div
-                  className="rounded-sm"
-                  style={{
-                    width: 16, height: 16,
-                    backgroundImage: `linear-gradient(${gradiente})`,
-                  }}
-                />
-              </div>
-              <span className="text-[9.5px] text-ink-muted">16 px · escuro</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {abrirPicker && (
-        <MediaPickerModal
-          titulo="Escolher — Favicon"
-          itens={itens}
-          onSelect={(m) => { onEscolher(m); setAbrirPicker(false); }}
-          onClose={() => setAbrirPicker(false)}
-        />
-      )}
-    </>
-  );
-}
 
 /* ------------------------------------------------------------------ */
 /* Preview do site                                                     */
@@ -504,7 +205,7 @@ const TOKEN_LABELS: Record<string, string> = {
 /* ------------------------------------------------------------------ */
 
 export default function PersonalizarPage() {
-  const { aparencia, setAparencia, setToken, tokensAtivos, midia, tema } = useStore();
+  const { aparencia, setAparencia, setToken, tokensAtivos, tema } = useStore();
 
   const [abaAtiva, setAbaAtiva] = useState<Aba>("identidade");
   const [salvando, setSalvando] = useState(false);
@@ -516,8 +217,6 @@ export default function PersonalizarPage() {
 
   const tokensDefault = tema === "escuro" ? TOKENS_ESCURO : TOKENS_CLARO;
 
-  const [logoAlt, setLogoAlt] = useState(aparencia.logoAlt);
-  const [logoEscuraAlt, setLogoEscuraAlt] = useState(aparencia.logoEscuraAlt);
 
   const handleColorPicker = useCallback(
     (chave: ChaveToken, valor: string) => {
@@ -545,9 +244,20 @@ export default function PersonalizarPage() {
   );
 
   /* local state — espelha aparencia */
-  const [nomeSite, setNomeSite] = useState(aparencia.nomeSite);
-  const [tagline, setTagline] = useState(aparencia.tagline);
-  const [descricaoSite, setDescricaoSite] = useState(aparencia.descricaoSite);
+  // Nome e slogan vêm do site real (config/site.ts) e só se editam em Configurações › Identidade.
+  const [nomeSite, setNomeSite] = useState("");
+  const [tagline, setTagline] = useState("");
+  const [erroSite, setErroSite] = useState(false);
+  useEffect(() => {
+    fetch("/api/config")
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data.ok || !data.config) { setErroSite(true); return; }
+        setNomeSite(String(data.config.nome ?? ""));
+        setTagline(String(data.config.slogan ?? ""));
+      })
+      .catch(() => setErroSite(true));
+  }, []);
   const [fonteDisplay, setFonteDisplay] = useState(aparencia.fonteDisplay);
   const [fonteCorpo, setFonteCorpo] = useState(aparencia.fonteCorpo);
   const [raio, setRaio] = useState(aparencia.raio);
@@ -557,7 +267,7 @@ export default function PersonalizarPage() {
 
   function salvar() {
     setSalvando(true);
-    setAparencia({ nomeSite, tagline, descricaoSite, logoAlt, logoEscuraAlt, fonteDisplay, fonteCorpo, raio, densidade });
+    setAparencia({ fonteDisplay, fonteCorpo, raio, densidade });
     setTimeout(() => setSalvando(false), 800);
   }
 
@@ -609,38 +319,17 @@ export default function PersonalizarPage() {
             {abaAtiva === "identidade" && (
               <div className="space-y-4">
                 <Campo label="Nome do site">
-                  <Entrada value={nomeSite} onChange={(e) => setNomeSite(e.target.value)} placeholder="" />
+                  <Entrada value={nomeSite} readOnly className="cursor-not-allowed opacity-60" placeholder={erroSite ? "Não foi possível ler o site" : ""} />
                 </Campo>
-                <Campo label="Tagline">
-                  <Entrada value={tagline} onChange={(e) => setTagline(e.target.value)} placeholder="" />
+                <Campo label="Slogan">
+                  <Entrada value={tagline} readOnly className="cursor-not-allowed opacity-60" placeholder={erroSite ? "Não foi possível ler o site" : ""} />
                 </Campo>
-                <Campo label="Descrição do site">
-                  <AreaTexto value={descricaoSite} onChange={(e) => setDescricaoSite(e.target.value)} rows={3} />
-                </Campo>
-                <LogoRow
-                  label="Logo (modo claro)"
-                  valor={aparencia.logo}
-                  alt={logoAlt}
-                  itens={midia.filter((m) => ["jpg", "jpeg", "png", "svg", "webp", "avif"].includes((m.formato ?? "").toLowerCase()))}
-                  onEscolher={(m) => setAparencia({ logo: m.url })}
-                  onRemover={() => setAparencia({ logo: "" })}
-                  onAltChange={setLogoAlt}
-                />
-                <LogoRow
-                  label="Logo (modo escuro)"
-                  valor={aparencia.logoEscura}
-                  alt={logoEscuraAlt}
-                  itens={midia.filter((m) => ["jpg", "jpeg", "png", "svg", "webp", "avif"].includes((m.formato ?? "").toLowerCase()))}
-                  onEscolher={(m) => setAparencia({ logoEscura: m.url })}
-                  onRemover={() => setAparencia({ logoEscura: "" })}
-                  onAltChange={setLogoEscuraAlt}
-                />
-                <FaviconRow
-                  valor={aparencia.favicon}
-                  itens={midia.filter((m) => ["jpg", "jpeg", "png", "svg", "webp", "avif", "ico"].includes((m.formato ?? "").toLowerCase()))}
-                  onEscolher={(m) => setAparencia({ favicon: m.url })}
-                  onRemover={() => setAparencia({ favicon: "" })}
-                />
+                <p className="text-[11px] text-ink-muted">
+                  Somente leitura, espelha o site.{" "}
+                  <Link href="/configuracoes/identidade" className="text-primary underline">
+                    Editar em Configurações › Identidade
+                  </Link>
+                </p>
 
                 {/* Estrutura do site — somente-leitura */}
                 <div className="rounded-[var(--radius)] border border-line bg-surface-2 p-3">

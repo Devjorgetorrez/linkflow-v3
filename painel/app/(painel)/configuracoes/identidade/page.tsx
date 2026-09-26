@@ -1,131 +1,12 @@
 "use client";
 
-import { AlertTriangle, Building2, Globe, Image as Img, Info, Lock } from "lucide-react";
-import { useMemo, useState, useEffect } from "react";
+import { AlertTriangle, Building2, Globe, Lock } from "lucide-react";
+import { useState, useEffect } from "react";
 
-import { Campo, Entrada, Rotulo, Selecao, AreaTexto } from "@/components/ui";
-import { useStore } from "@/lib/store";
+import { Campo, Entrada, Rotulo } from "@/components/ui";
+import { cnpjValido, semCnpj } from "@/lib/site-config";
+import { diffCampos, enviarConfig } from "@/lib/site-config-cliente";
 import { useDominio } from "@/lib/useDominio";
-import { cn } from "@/lib/utils";
-
-/* ------------------------------------------------------------------ */
-/* Tipos de negócio schema.org agrupados                              */
-/* ------------------------------------------------------------------ */
-
-const GRUPOS_NEGOCIO = [
-  {
-    grupo: "Saúde",
-    tipos: [
-      { value: "MedicalBusiness", label: "Estabelecimento de saúde (genérico)" },
-      { value: "MedicalClinic", label: "Clínica médica" },
-      { value: "Physician", label: "Médico / Especialista" },
-      { value: "Dentist", label: "Dentista" },
-      { value: "Optician", label: "Óptica" },
-      { value: "Pharmacy", label: "Farmácia" },
-      { value: "PhysicalTherapist", label: "Fisioterapeuta" },
-      { value: "Hospital", label: "Hospital / UPA" },
-    ],
-  },
-  {
-    grupo: "Profissional liberal",
-    tipos: [
-      { value: "LegalService", label: "Advocacia / Jurídico" },
-      { value: "AccountingService", label: "Contabilidade" },
-      { value: "FinancialPlanningService", label: "Finanças / Planejamento" },
-      { value: "ProfessionalService", label: "Serviço profissional (genérico)" },
-    ],
-  },
-  {
-    grupo: "Serviço a domicílio",
-    tipos: [
-      { value: "HomeAndConstructionBusiness", label: "Construção e reforma (genérico)" },
-      { value: "Plumber", label: "Encanador" },
-      { value: "Electrician", label: "Eletricista" },
-      { value: "HousePainter", label: "Pintor" },
-    ],
-  },
-  {
-    grupo: "Intermediação",
-    tipos: [
-      { value: "RealEstateAgent", label: "Imobiliária / Corretora" },
-      { value: "TravelAgency", label: "Agência de viagem" },
-      { value: "InsuranceAgency", label: "Corretora de seguros" },
-    ],
-  },
-  {
-    grupo: "Genérico",
-    tipos: [
-      { value: "LocalBusiness", label: "Negócio local (genérico)" },
-      { value: "Store", label: "Loja / Varejo" },
-      { value: "FoodEstablishment", label: "Restaurante / Alimentação" },
-      { value: "Organization", label: "Organização (sem endereço físico)" },
-    ],
-  },
-];
-
-const TIPOS_SAUDE = new Set(GRUPOS_NEGOCIO[0].tipos.map((t) => t.value));
-
-const ESPECIALIDADES = [
-  { value: "Anesthesia", label: "Anestesiologia" },
-  { value: "Cardiovascular", label: "Cardiologia" },
-  { value: "Dentistry", label: "Odontologia" },
-  { value: "Dermatology", label: "Dermatologia" },
-  { value: "Emergency", label: "Emergência" },
-  { value: "Gastroenterologic", label: "Gastroenterologia" },
-  { value: "Geriatric", label: "Geriatria" },
-  { value: "Gynecologic", label: "Ginecologia" },
-  { value: "Neurologic", label: "Neurologia" },
-  { value: "Obstetric", label: "Obstetrícia" },
-  { value: "Oncologic", label: "Oncologia" },
-  { value: "Optometric", label: "Optometria" },
-  { value: "Pediatric", label: "Pediatria" },
-  { value: "Physiotherapy", label: "Fisioterapia" },
-  { value: "PrimaryCare", label: "Clínica geral" },
-  { value: "Psychiatric", label: "Psicologia / Psiquiatria" },
-  { value: "Radiography", label: "Radiologia" },
-  { value: "Renal", label: "Nefrologia" },
-  { value: "Rheumatologic", label: "Reumatologia" },
-  { value: "SpeechPathology", label: "Fonoaudiologia" },
-  { value: "Surgical", label: "Cirurgia" },
-];
-
-/* ------------------------------------------------------------------ */
-/* JSON-LD preview                                                     */
-/* ------------------------------------------------------------------ */
-
-function gerarJsonLd(params: {
-  tipo: string;
-  nome: string;
-  descricao: string;
-  logo: string;
-  medicalSpecialty: string;
-  availableService: string;
-  priceRange: string;
-  endereco: string;
-  dominio: string;
-}) {
-  const { tipo, nome, descricao, logo, medicalSpecialty, availableService, priceRange, endereco, dominio } =
-    params;
-  const eSaude = TIPOS_SAUDE.has(tipo);
-  const eOrganization = tipo === "Organization";
-
-  const obj: Record<string, unknown> = {
-    "@context": "https://schema.org",
-    "@type": tipo,
-    name: nome || "—",
-    url: dominio ? `https://${dominio}` : "",
-  };
-
-  if (logo) obj.logo = dominio ? `https://${dominio}/marca/${logo}` : logo;
-  if (descricao) obj.description = descricao;
-  if (eSaude && medicalSpecialty)
-    obj.medicalSpecialty = `https://schema.org/${medicalSpecialty}`;
-  if (eSaude && availableService) obj.availableService = availableService;
-  if (!eOrganization && endereco) obj.address = endereco;
-  if (priceRange) obj.priceRange = priceRange;
-
-  return JSON.stringify(obj, null, 2);
-}
 
 /* ------------------------------------------------------------------ */
 /* Bloco de seção                                                      */
@@ -151,74 +32,13 @@ function Secao({
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* Preview de mídia                                                    */
-/* ------------------------------------------------------------------ */
-
-function PreviewMidia({
-  src,
-  alt,
-  tipo,
-}: {
-  src: string;
-  alt?: string;
-  tipo: "logo" | "favicon" | "og";
-}) {
-  const cls =
-    tipo === "favicon"
-      ? "h-8 w-8"
-      : tipo === "og"
-        ? "h-16 w-28"
-        : "h-10 w-24";
-  if (!src) {
-    return (
-      <div
-        className={cn(
-          "flex items-center justify-center rounded border border-dashed border-[var(--line)] bg-[var(--surface)] text-[10px] text-[var(--ink-muted)]",
-          cls,
-        )}
-      >
-        vazio
-      </div>
-    );
-  }
-  // eslint-disable-next-line @next/next/no-img-element
-  return (
-    <img
-      src={`/marca/${src}`}
-      alt={alt ?? ""}
-      className={cn(
-        "rounded border border-[var(--line)] bg-[var(--surface)] object-contain",
-        cls,
-      )}
-    />
-  );
+function MsgErro({ texto }: { texto?: string }) {
+  if (!texto) return null;
+  return <p className="mt-1 text-[11px] text-[var(--danger)]">{texto}</p>;
 }
 
-/* ------------------------------------------------------------------ */
-/* Botões de biblioteca / upload                                       */
-/* ------------------------------------------------------------------ */
-
-function BotoesArquivo({ onRemover }: { onRemover?: () => void }) {
-  return (
-    <div className="flex gap-2">
-      <button className="rounded-[var(--radius)] border border-[var(--line)] px-3 py-1 text-xs text-[var(--ink)] hover:bg-[var(--secondary)]">
-        Escolher da biblioteca
-      </button>
-      <button className="rounded-[var(--radius)] border border-[var(--line)] px-3 py-1 text-xs text-[var(--ink)] hover:bg-[var(--secondary)]">
-        Fazer upload
-      </button>
-      {onRemover && (
-        <button
-          onClick={onRemover}
-          className="rounded-[var(--radius)] px-3 py-1 text-xs text-[var(--ink-muted)] hover:text-[var(--danger)]"
-        >
-          Remover
-        </button>
-      )}
-    </div>
-  );
-}
+type Valores = { nome: string; slogan: string; anoFundacao: string; cnpj: string };
+const VAZIO: Valores = { nome: "", slogan: "", anoFundacao: "", cnpj: "" };
 
 /* ------------------------------------------------------------------ */
 /* Página                                                              */
@@ -226,18 +46,16 @@ function BotoesArquivo({ onRemover }: { onRemover?: () => void }) {
 
 export default function IdentidadePage() {
   const dominio = useDominio();
-  const { aparencia, setAparencia, configIdentidade, setConfigIdentidade, privacidadeConfig } =
-    useStore();
 
-  const [nomeSite, setNomeSite] = useState(aparencia.nomeSite);
-  const [tagline, setTagline] = useState(aparencia.tagline);
-  const [descricao, setDescricao] = useState(aparencia.descricaoSite);
-  const [logoAlt, setLogoAlt] = useState(aparencia.logoAlt);
-  const [logoEscuraAlt, setLogoEscuraAlt] = useState(aparencia.logoEscuraAlt);
-  const [ogAlt, setOgAlt] = useState(configIdentidade.ogImagemPadraoAlt);
+  const [v, setV] = useState<Valores>({ ...VAZIO });
+  // Valores como vieram do servidor: o Salvar envia só o que difere deles.
+  const [original, setOriginal] = useState<Valores>({ ...VAZIO });
+  const [carregado, setCarregado] = useState(false);
   const [gateAviso, setGateAviso] = useState(false);
+  const [erros, setErros] = useState<Record<string, string>>({});
   const [salvando, setSalvando] = useState(false);
   const [feedbackSalvar, setFeedbackSalvar] = useState<"ok" | "erro" | null>(null);
+  const [mensagem, setMensagem] = useState("");
 
   // Carregar config real do servidor ao montar
   useEffect(() => {
@@ -246,55 +64,72 @@ export default function IdentidadePage() {
       .then((data) => {
         if (data.ok && data.config) {
           const c = data.config;
-          if (c.nome) setNomeSite(c.nome);
-          if (c.tagline) setTagline(c.tagline);
+          const lido: Valores = {
+            nome: String(c.nome ?? ""),
+            slogan: String(c.slogan ?? ""),
+            anoFundacao: c.anoFundacao == null ? "" : String(c.anoFundacao),
+            cnpj: String(c.cnpj ?? ""),
+          };
+          setV(lido);
+          setOriginal(lido);
+          setCarregado(true);
         }
       })
       .catch(console.error);
   }, []);
 
-  const eSaude = TIPOS_SAUDE.has(configIdentidade.tipoNegocio);
-  const eVarejo = configIdentidade.tipoNegocio === "Store";
-
-  const jsonLd = useMemo(
-    () =>
-      gerarJsonLd({
-        tipo: configIdentidade.tipoNegocio,
-        nome: aparencia.nomeSite,
-        descricao: aparencia.descricaoSite,
-        logo: aparencia.logo,
-        medicalSpecialty: configIdentidade.medicalSpecialty,
-        availableService: configIdentidade.availableService,
-        priceRange: configIdentidade.priceRange,
-        endereco: privacidadeConfig.endereco,
-        dominio,
-      }),
-    [configIdentidade, aparencia, privacidadeConfig.endereco, dominio],
-  );
+  const set = (k: keyof Valores) => (valor: string) => setV((x) => ({ ...x, [k]: valor }));
 
   async function salvar() {
-    setSalvando(true);
+    setMensagem("");
     setFeedbackSalvar(null);
-
-    // Atualizar store local
-    setAparencia({ nomeSite, tagline, descricaoSite: descricao, logoAlt, logoEscuraAlt });
-    setConfigIdentidade({ ogImagemPadraoAlt: ogAlt });
-    setGateAviso(false);
-
-    // Persistir via API
-    try {
-      const res = await fetch("/api/config", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nome: nomeSite, tagline }),
-      });
-      setFeedbackSalvar(res.ok ? "ok" : "erro");
-    } catch {
+    if (!carregado) {
       setFeedbackSalvar("erro");
-    } finally {
-      setSalvando(false);
-      setTimeout(() => setFeedbackSalvar(null), 3000);
+      setMensagem("Os dados do site ainda não foram carregados — nada foi enviado.");
+      return;
     }
+
+    const { alterados } = diffCampos(original, v, "");
+
+    // Validação inline (mesmos validadores do servidor)
+    const e: Record<string, string> = {};
+    if (alterados.nome !== undefined && alterados.nome.length < 2) e.nome = "Informe o nome do negócio (mínimo 2 caracteres).";
+    if (alterados.cnpj && !semCnpj(alterados.cnpj) && !cnpjValido(alterados.cnpj)) {
+      e.cnpj = "CNPJ inválido — confira os 14 dígitos (ou escreva \"não possui\").";
+    }
+    if (alterados.anoFundacao) {
+      const a = Number(alterados.anoFundacao);
+      if (!Number.isInteger(a) || a < 1800 || a > new Date().getFullYear()) e.anoFundacao = "Ano de fundação inválido.";
+    }
+    if (Object.keys(e).length) {
+      setErros(e);
+      setFeedbackSalvar("erro");
+      setMensagem("Corrija os campos destacados. Nada foi enviado.");
+      return;
+    }
+    setErros({});
+
+    if (Object.keys(alterados).length === 0) {
+      setFeedbackSalvar("ok");
+      setMensagem("Nada foi alterado.");
+      setTimeout(() => setFeedbackSalvar(null), 3000);
+      return;
+    }
+
+    setSalvando(true);
+    const r = await enviarConfig(alterados);
+    setSalvando(false);
+    if (!r.ok) {
+      setErros(r.erros);
+      setFeedbackSalvar("erro");
+      setMensagem(r.erro);
+      return;
+    }
+    setOriginal({ ...v, ...alterados });
+    setGateAviso(false);
+    setFeedbackSalvar("ok");
+    setMensagem(r.aviso);
+    setTimeout(() => setFeedbackSalvar(null), r.aviso ? 8000 : 3000);
   }
 
   return (
@@ -303,15 +138,24 @@ export default function IdentidadePage() {
         <div>
           <h1 className="text-lg font-semibold text-[var(--ink)]">Identidade</h1>
           <p className="mt-0.5 text-xs text-[var(--ink-muted)]">
-            Nome, descrição, tipo de negócio, mídia e estrutura do site.
+            Nome, slogan e dados legais do site.
           </p>
         </div>
-        <button
-          onClick={salvar}
-          className="rounded-[var(--radius)] bg-[var(--primary)] px-4 py-1.5 text-sm font-medium text-[var(--primary-ink)] transition-opacity hover:opacity-90"
-        >
-          Salvar alterações
-        </button>
+        <div className="flex flex-col items-end gap-1">
+          <button
+            onClick={salvar}
+            disabled={salvando}
+            className="rounded-[var(--radius)] bg-[var(--primary)] px-4 py-1.5 text-sm font-medium text-[var(--primary-ink)] transition-opacity hover:opacity-90 disabled:opacity-60"
+          >
+            {salvando ? "Salvando…" : "Salvar alterações"}
+          </button>
+          {feedbackSalvar === "ok" && (
+            <span className="text-[11px] text-[var(--success)]">Salvo{mensagem ? ` — ${mensagem}` : ""}</span>
+          )}
+          {feedbackSalvar === "erro" && (
+            <span className="max-w-xs text-right text-[11px] text-[var(--danger)]">{mensagem || "Erro ao salvar."}</span>
+          )}
+        </div>
       </div>
 
       {/* ── Identidade do site ─────────────────────────── */}
@@ -326,14 +170,16 @@ export default function IdentidadePage() {
               </span>
             </div>
             <Entrada
-              value={nomeSite}
+              value={v.nome}
               onChange={(e) => {
-                setNomeSite(e.target.value);
+                set("nome")(e.target.value);
                 setGateAviso(true);
               }}
               aviso={gateAviso}
+              invalido={!!erros.nome}
               placeholder="Nome do site"
             />
+            <MsgErro texto={erros.nome} />
             {gateAviso && (
               <p className="mt-1 flex items-center gap-1.5 text-[11px] text-[var(--accent)]">
                 <AlertTriangle size={11} />
@@ -342,31 +188,17 @@ export default function IdentidadePage() {
             )}
           </div>
 
-          {/* Tagline */}
+          {/* Slogan */}
           <div>
             <div className="mb-1 flex items-center gap-1.5">
-              <Rotulo>Tagline</Rotulo>
-              <span className="text-[10px] text-[var(--ink-muted)]">LinkFlow editável</span>
+              <Rotulo>Slogan</Rotulo>
             </div>
             <Entrada
-              value={tagline}
-              onChange={(e) => setTagline(e.target.value)}
+              value={v.slogan}
+              onChange={(e) => set("slogan")(e.target.value)}
               placeholder="Frase curta de posicionamento"
             />
-          </div>
-
-          {/* Descrição */}
-          <div>
-            <div className="mb-1 flex items-center gap-1.5">
-              <Rotulo>Descrição do site</Rotulo>
-              <span className="text-[10px] text-[var(--ink-muted)]">LinkFlow editável</span>
-            </div>
-            <AreaTexto
-              value={descricao}
-              onChange={(e) => setDescricao(e.target.value)}
-              rows={3}
-              placeholder="Descrição para meta description e og:description"
-            />
+            <MsgErro texto={erros.slogan} />
           </div>
         </div>
 
@@ -397,252 +229,29 @@ export default function IdentidadePage() {
       {/* ── Dados legais ─────────────────────────────── */}
       <Secao titulo="Dados legais" icone={Building2}>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="sm:col-span-2">
-            <Campo label="Razão social">
-              <Entrada
-                value={configIdentidade.razaoSocial}
-                onChange={(e) => setConfigIdentidade({ razaoSocial: e.target.value })}
-                placeholder="Nome jurídico da empresa"
-              />
-            </Campo>
-          </div>
-
           <Campo label="CNPJ">
             <Entrada
-              value={privacidadeConfig.cnpj}
-              readOnly
-              className="cursor-not-allowed opacity-60"
+              value={v.cnpj}
+              onChange={(e) => set("cnpj")(e.target.value)}
+              invalido={!!erros.cnpj}
               placeholder="00.000.000/0000-00"
             />
+            <MsgErro texto={erros.cnpj} />
             <p className="mt-1 text-[10px] text-[var(--ink-muted)]">
-              Editável em Privacidade → Política
+              Se o negócio não tem CNPJ, escreva &quot;não possui&quot;.
             </p>
           </Campo>
 
           <Campo label="Fundado em">
             <Entrada
-              value={configIdentidade.fundadoEm}
-              onChange={(e) => setConfigIdentidade({ fundadoEm: e.target.value })}
+              value={v.anoFundacao}
+              onChange={(e) => set("anoFundacao")(e.target.value)}
+              invalido={!!erros.anoFundacao}
               placeholder="Ano"
               maxLength={4}
             />
+            <MsgErro texto={erros.anoFundacao} />
           </Campo>
-
-          <Campo label="Conselho profissional">
-            <Entrada
-              value={configIdentidade.conselho}
-              onChange={(e) => setConfigIdentidade({ conselho: e.target.value })}
-              placeholder="CRP, CRM, OAB…"
-            />
-          </Campo>
-
-          <Campo label="Registro profissional">
-            <Entrada
-              value={configIdentidade.registroProfissional}
-              onChange={(e) =>
-                setConfigIdentidade({ registroProfissional: e.target.value })
-              }
-              placeholder="Ex: 06/128455"
-            />
-          </Campo>
-
-          <div className="sm:col-span-2">
-            <Campo label="Responsável técnico">
-              <Entrada
-                value={configIdentidade.responsavelTecnico}
-                onChange={(e) =>
-                  setConfigIdentidade({ responsavelTecnico: e.target.value })
-                }
-                placeholder="Nome completo"
-              />
-            </Campo>
-          </div>
-        </div>
-      </Secao>
-
-      {/* ── Tipo de negócio + JSON-LD preview ─────────── */}
-      <Secao titulo="Tipo de negócio (schema.org)" icone={Info}>
-        <div className="space-y-4">
-          <Campo label="Tipo schema.org">
-            <Selecao
-              value={configIdentidade.tipoNegocio}
-              onChange={(e) => setConfigIdentidade({ tipoNegocio: e.target.value })}
-            >
-              {GRUPOS_NEGOCIO.map((g) => (
-                <optgroup key={g.grupo} label={g.grupo}>
-                  {g.tipos.map((t) => (
-                    <option key={t.value} value={t.value}>
-                      {t.label} — {t.value}
-                    </option>
-                  ))}
-                </optgroup>
-              ))}
-            </Selecao>
-          </Campo>
-
-          {eSaude && (
-            <>
-              <Campo label="Especialidade médica (medicalSpecialty)">
-                <Selecao
-                  value={configIdentidade.medicalSpecialty}
-                  onChange={(e) =>
-                    setConfigIdentidade({ medicalSpecialty: e.target.value })
-                  }
-                >
-                  <option value="">— não informar —</option>
-                  {ESPECIALIDADES.map((esp) => (
-                    <option key={esp.value} value={esp.value}>
-                      {esp.label} — {esp.value}
-                    </option>
-                  ))}
-                </Selecao>
-              </Campo>
-
-              <Campo label="Serviços oferecidos (availableService)">
-                <Entrada
-                  value={configIdentidade.availableService}
-                  onChange={(e) =>
-                    setConfigIdentidade({ availableService: e.target.value })
-                  }
-                  placeholder="Ex: desentupimento de pia, limpeza de caixa de gordura…"
-                />
-              </Campo>
-            </>
-          )}
-
-          {eVarejo && (
-            <Campo label="Faixa de preço (priceRange)">
-              <Entrada
-                value={configIdentidade.priceRange}
-                onChange={(e) => setConfigIdentidade({ priceRange: e.target.value })}
-                placeholder="$$ ou R$50–R$200"
-              />
-            </Campo>
-          )}
-
-          <div>
-            <p className="mb-2 text-[11px] font-medium text-[var(--ink-muted)]">
-              Prévia JSON-LD gerada
-            </p>
-            <pre className="overflow-x-auto rounded-[var(--radius)] border border-[var(--line)] bg-[var(--surface)] p-4 font-mono text-[11px] leading-relaxed text-[var(--ink)]">
-              {jsonLd}
-            </pre>
-            {privacidadeConfig.endereco === "" &&
-              configIdentidade.tipoNegocio !== "Organization" && (
-                <p className="mt-1.5 flex items-center gap-1.5 text-[11px] text-[var(--ink-muted)]">
-                  <Info size={11} />O endereço será adicionado em Configurações → Contato e NAP.
-                </p>
-              )}
-          </div>
-        </div>
-      </Secao>
-
-      {/* ── Mídia ─────────────────────────────────────── */}
-      <Secao titulo="Mídia" icone={Img}>
-        <div className="space-y-5">
-          {/* Logo claro */}
-          <div className="flex items-start gap-5">
-            <div className="shrink-0">
-              <p className="mb-1.5 text-[10px] font-medium uppercase tracking-wider text-[var(--ink-muted)]">
-                Logo claro
-              </p>
-              <PreviewMidia src={aparencia.logo} alt={aparencia.logoAlt} tipo="logo" />
-            </div>
-            <div className="flex-1 space-y-3">
-              <Campo label="Texto alternativo">
-                <Entrada
-                  value={logoAlt}
-                  onChange={(e) => setLogoAlt(e.target.value)}
-                  placeholder="Descrição acessível"
-                />
-              </Campo>
-              <BotoesArquivo
-                onRemover={aparencia.logo ? () => setAparencia({ logo: "", logoAlt: "" }) : undefined}
-              />
-            </div>
-          </div>
-
-          <hr className="border-[var(--line)]" />
-
-          {/* Logo escuro */}
-          <div className="flex items-start gap-5">
-            <div className="shrink-0">
-              <p className="mb-1.5 text-[10px] font-medium uppercase tracking-wider text-[var(--ink-muted)]">
-                Logo escuro
-              </p>
-              <div className="rounded border border-[var(--line)] bg-[var(--ink)] p-1">
-                <PreviewMidia
-                  src={aparencia.logoEscura}
-                  alt={aparencia.logoEscuraAlt}
-                  tipo="logo"
-                />
-              </div>
-            </div>
-            <div className="flex-1 space-y-3">
-              <Campo label="Texto alternativo">
-                <Entrada
-                  value={logoEscuraAlt}
-                  onChange={(e) => setLogoEscuraAlt(e.target.value)}
-                  placeholder="Descrição acessível"
-                />
-              </Campo>
-              <BotoesArquivo />
-            </div>
-          </div>
-
-          <hr className="border-[var(--line)]" />
-
-          {/* Favicon */}
-          <div className="flex items-start gap-5">
-            <div className="shrink-0">
-              <p className="mb-1.5 text-[10px] font-medium uppercase tracking-wider text-[var(--ink-muted)]">
-                Favicon
-              </p>
-              <PreviewMidia src={aparencia.favicon} tipo="favicon" />
-            </div>
-            <div className="flex-1 space-y-3">
-              <p className="text-[11px] text-[var(--ink-muted)]">
-                PNG 32×32 ou SVG. Exibido na aba do navegador e em favoritos.
-              </p>
-              <BotoesArquivo />
-            </div>
-          </div>
-
-          <hr className="border-[var(--line)]" />
-
-          {/* OG imagem padrão */}
-          <div className="flex items-start gap-5">
-            <div className="shrink-0">
-              <p className="mb-1.5 text-[10px] font-medium uppercase tracking-wider text-[var(--ink-muted)]">
-                og:image padrão
-              </p>
-              <PreviewMidia
-                src={configIdentidade.ogImagemPadrao}
-                alt={configIdentidade.ogImagemPadraoAlt}
-                tipo="og"
-              />
-            </div>
-            <div className="flex-1 space-y-3">
-              <p className="text-[11px] text-[var(--ink-muted)]">
-                Usada quando o post não tem imagem destacada. Recomendado 1200×630 px.
-              </p>
-              <Campo label="Texto alternativo">
-                <Entrada
-                  value={ogAlt}
-                  onChange={(e) => setOgAlt(e.target.value)}
-                  placeholder="Descrição acessível"
-                />
-              </Campo>
-              <BotoesArquivo
-                onRemover={
-                  configIdentidade.ogImagemPadrao
-                    ? () =>
-                        setConfigIdentidade({ ogImagemPadrao: "", ogImagemPadraoAlt: "" })
-                    : undefined
-                }
-              />
-            </div>
-          </div>
         </div>
       </Secao>
 

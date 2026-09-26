@@ -3,26 +3,14 @@
 import { Globe, MapPin, Phone, Plus, Trash2 } from "lucide-react";
 import { useMemo, useState, useEffect } from "react";
 
-import { Campo, Entrada, Rotulo, Selecao } from "@/components/ui";
-import { useStore, type HorarioFuncionamento } from "@/lib/store";
-import { cn } from "@/lib/utils";
+import { Campo, Entrada, Selecao } from "@/components/ui";
+import { cepValido, emailValido, telefoneValido, ufValida, whatsappValido } from "@/lib/site-config";
+import { diffCampos, enviarConfig } from "@/lib/site-config-cliente";
+import { useStore } from "@/lib/store";
 
 /* ------------------------------------------------------------------ */
-/* Opções de dias                                                       */
+/* Modelo                                                              */
 /* ------------------------------------------------------------------ */
-
-const OPCOES_DIAS = [
-  { value: "Mo-Fr", label: "Segunda a sexta" },
-  { value: "Mo-Sa", label: "Segunda a sábado" },
-  { value: "Mo-Su", label: "Segunda a domingo" },
-  { value: "Mo", label: "Segunda" },
-  { value: "Tu", label: "Terça" },
-  { value: "We", label: "Quarta" },
-  { value: "Th", label: "Quinta" },
-  { value: "Fr", label: "Sexta" },
-  { value: "Sa", label: "Sábado" },
-  { value: "Su", label: "Domingo" },
-];
 
 const ESTADOS_BR = [
   "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS",
@@ -30,35 +18,46 @@ const ESTADOS_BR = [
   "SP","SE","TO",
 ];
 
+/** Horário como o site guarda: texto livre ("Segunda a Sexta" / "8h às 18h"). */
+interface LinhaHorario { dia: string; hora: string }
+
+const CAMPOS = [
+  "telefone", "telefone2", "whatsapp", "email",
+  "logradouro", "complemento", "bairro", "cidade", "uf", "cep",
+] as const;
+type CampoContato = (typeof CAMPOS)[number];
+type ValoresContato = Record<CampoContato, string>;
+
+const VAZIO: ValoresContato = {
+  telefone: "", telefone2: "", whatsapp: "", email: "",
+  logradouro: "", complemento: "", bairro: "", cidade: "", uf: "", cep: "",
+};
+
+/** Validação inline (mesmos validadores do servidor). Campo vazio é válido. */
+function validarCampos(alt: Partial<ValoresContato>): Record<string, string> {
+  const e: Record<string, string> = {};
+  const tem = (v?: string) => !!v && v.trim() !== "";
+  if (tem(alt.telefone) && !telefoneValido(alt.telefone!)) e["nap.telefone"] = "Telefone inválido — use DDD + número.";
+  if (tem(alt.telefone2) && !telefoneValido(alt.telefone2!)) e["nap.telefone2"] = "Telefone secundário inválido — use DDD + número.";
+  if (tem(alt.whatsapp) && !whatsappValido(alt.whatsapp!)) e["nap.whatsapp"] = "WhatsApp inválido — use DDD + número (com 55, se preferir).";
+  if (tem(alt.email) && !emailValido(alt.email!)) e["nap.email"] = "E-mail inválido.";
+  if (tem(alt.uf) && !ufValida(alt.uf!)) e["nap.uf"] = "UF inválida — use 2 letras (ex.: SP).";
+  if (tem(alt.cep) && !cepValido(alt.cep!)) e["nap.cep"] = "CEP inválido — use 8 dígitos (ex.: 13201-000).";
+  if (tem(alt.cidade) && alt.cidade!.trim().length < 2) e["nap.cidade"] = "Cidade inválida.";
+  return e;
+}
+
 /* ------------------------------------------------------------------ */
 /* JSON-LD LocalBusiness preview                                       */
 /* ------------------------------------------------------------------ */
 
-function formatarHorarioSchema(h: HorarioFuncionamento): string {
-  if (h.fechado) return `${h.dias} Closed`;
-  return `${h.dias} ${h.abertura}-${h.fechamento}`;
-}
-
 function gerarJsonLd(params: {
   tipo: string;
   nome: string;
-  telefone: string;
-  whatsapp: string;
-  logradouro: string;
-  numero: string;
-  complemento: string;
-  bairro: string;
-  cidade: string;
-  estado: string;
-  cep: string;
-  horarios: HorarioFuncionamento[];
-  areaAtendimento: string;
-  atendimentoOnline: boolean;
+  v: ValoresContato;
+  horarios: LinhaHorario[];
 }) {
-  const {
-    tipo, nome, telefone, whatsapp, logradouro, numero, complemento,
-    bairro, cidade, estado, cep, horarios, areaAtendimento, atendimentoOnline,
-  } = params;
+  const { tipo, nome, v, horarios } = params;
 
   const obj: Record<string, unknown> = {
     "@context": "https://schema.org",
@@ -67,34 +66,32 @@ function gerarJsonLd(params: {
     url: "",  // preenchido via config real
   };
 
-  if (telefone) obj.telephone = telefone;
-  if (whatsapp && whatsapp !== telefone) obj.contactPoint = {
+  if (v.telefone) obj.telephone = v.telefone;
+  if (v.email) obj.email = v.email;
+  if (v.whatsapp && v.whatsapp !== v.telefone) obj.contactPoint = {
     "@type": "ContactPoint",
-    telephone: whatsapp,
+    telephone: v.whatsapp,
     contactType: "customer support",
     availableLanguage: "Portuguese",
   };
 
-  if (logradouro) {
+  if (v.logradouro) {
     const end: Record<string, string> = {
       "@type": "PostalAddress",
-      streetAddress: [logradouro, numero, complemento].filter(Boolean).join(", "),
-      addressLocality: cidade,
-      addressRegion: estado,
-      postalCode: cep,
+      streetAddress: [v.logradouro, v.complemento].filter(Boolean).join(", "),
+      addressLocality: v.cidade,
+      addressRegion: v.uf,
+      postalCode: v.cep,
       addressCountry: "BR",
     };
-    if (bairro) end.addressLocality = `${cidade} — ${bairro}`;
+    if (v.bairro) end.addressLocality = `${v.cidade} — ${v.bairro}`;
     obj.address = end;
   }
 
-  const horariosAtivos = horarios.filter((h) => !h.fechado && h.abertura && h.fechamento);
-  if (horariosAtivos.length > 0) {
-    obj.openingHours = horariosAtivos.map(formatarHorarioSchema);
+  const ativos = horarios.filter((h) => h.dia.trim() && h.hora.trim());
+  if (ativos.length > 0) {
+    obj.openingHours = ativos.map((h) => `${h.dia.trim()} ${h.hora.trim()}`);
   }
-
-  if (areaAtendimento) obj.areaServed = areaAtendimento;
-  if (atendimentoOnline) obj.hasOfferCatalog = { "@type": "OfferCatalog", name: "Atendimento on-line disponível" };
 
   return JSON.stringify(obj, null, 2);
 }
@@ -119,68 +116,9 @@ function Secao({ titulo, icone: Icone, children }: {
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* Linha de horário                                                    */
-/* ------------------------------------------------------------------ */
-
-function LinhaHorario({
-  horario,
-  onChange,
-  onRemover,
-}: {
-  horario: HorarioFuncionamento;
-  onChange: (patch: Partial<HorarioFuncionamento>) => void;
-  onRemover: () => void;
-}) {
-  return (
-    <div className="flex items-center gap-2">
-      <Selecao
-        value={horario.dias}
-        onChange={(e) => onChange({ dias: e.target.value })}
-        className="w-48 shrink-0"
-      >
-        {OPCOES_DIAS.map((o) => (
-          <option key={o.value} value={o.value}>{o.label}</option>
-        ))}
-      </Selecao>
-
-      <label className="flex items-center gap-1.5 text-xs text-[var(--ink-muted)]">
-        <input
-          type="checkbox"
-          checked={horario.fechado}
-          onChange={(e) => onChange({ fechado: e.target.checked })}
-          className="h-3.5 w-3.5 accent-[var(--primary)]"
-        />
-        Fechado
-      </label>
-
-      {!horario.fechado && (
-        <>
-          <Entrada
-            type="time"
-            value={horario.abertura}
-            onChange={(e) => onChange({ abertura: e.target.value })}
-            className="w-28"
-          />
-          <span className="text-xs text-[var(--ink-muted)]">às</span>
-          <Entrada
-            type="time"
-            value={horario.fechamento}
-            onChange={(e) => onChange({ fechamento: e.target.value })}
-            className="w-28"
-          />
-        </>
-      )}
-
-      <button
-        onClick={onRemover}
-        className="ml-auto shrink-0 p-1 text-[var(--ink-muted)] hover:text-[var(--danger)]"
-        title="Remover linha"
-      >
-        <Trash2 size={13} />
-      </button>
-    </div>
-  );
+function MsgErro({ texto }: { texto?: string }) {
+  if (!texto) return null;
+  return <p className="mt-1 text-[11px] text-[var(--danger)]">{texto}</p>;
 }
 
 /* ------------------------------------------------------------------ */
@@ -188,81 +126,125 @@ function LinhaHorario({
 /* ------------------------------------------------------------------ */
 
 export default function ContatoPage() {
-  const { aparencia, configIdentidade, configContato, setConfigContato } = useStore();
+  const { configIdentidade } = useStore();
 
-  const [telefone, setTelefone] = useState(configContato.telefone);
-  const [telefone2, setTelefone2] = useState(configContato.telefone2);
-  const [whatsapp, setWhatsapp] = useState(configContato.whatsapp);
-  const [logradouro, setLogradouro] = useState(configContato.logradouro);
-  const [numero, setNumero] = useState(configContato.numero);
-  const [complemento, setComplemento] = useState(configContato.complemento);
-  const [bairro, setBairro] = useState(configContato.bairro);
-  const [cidade, setCidade] = useState(configContato.cidade);
-  const [estado, setEstado] = useState(configContato.estado);
-  const [cep, setCep] = useState(configContato.cep);
-  const [horarios, setHorarios] = useState<HorarioFuncionamento[]>(configContato.horarios);
-  const [areaAtendimento, setAreaAtendimento] = useState(configContato.areaAtendimento);
-  const [atendimentoOnline, setAtendimentoOnline] = useState(configContato.atendimentoOnline);
+  const [nomeSite, setNomeSite] = useState("");
+  const [v, setV] = useState<ValoresContato>({ ...VAZIO });
+  const [horarios, setHorarios] = useState<LinhaHorario[]>([]);
+  // Valores como vieram do servidor: o Salvar envia só o que difere deles.
+  const [original, setOriginal] = useState<ValoresContato>({ ...VAZIO });
+  const [horariosOriginais, setHorariosOriginais] = useState<LinhaHorario[]>([]);
+  const [carregado, setCarregado] = useState(false);
+  const [erros, setErros] = useState<Record<string, string>>({});
+  const [salvando, setSalvando] = useState(false);
+  const [feedbackSalvar, setFeedbackSalvar] = useState<"ok" | "erro" | null>(null);
+  const [mensagem, setMensagem] = useState("");
 
-  // Carregar dados reais ao montar
+  // Carregar dados reais ao montar (TODOS os campos da tela)
   useEffect(() => {
     fetch("/api/config")
       .then((r) => r.json())
       .then((data) => {
         if (!data.ok || !data.config) return;
         const c = data.config;
-        if (c.telefone) setTelefone(c.telefone);
-        if (c.telefone2) setTelefone2(c.telefone2);
-        if (c.whatsapp) setWhatsapp(c.whatsapp);
-        if (c.logradouro) setLogradouro(c.logradouro);
-        if (c.cidade) setCidade(c.cidade);
-        if (c.uf) setEstado(c.uf);
-        if (c.cep) setCep(c.cep);
-        if (c.email) {} // email não tem campo na tela, mas está no config
+        const lido = {} as ValoresContato;
+        for (const k of CAMPOS) lido[k] = String(c[k] ?? "");
+        setV(lido);
+        setOriginal(lido);
+        const hs: LinhaHorario[] = Array.isArray(c.horarios)
+          ? c.horarios.map((h: LinhaHorario) => ({ dia: String(h.dia ?? ""), hora: String(h.hora ?? "") }))
+          : [];
+        setHorarios(hs);
+        setHorariosOriginais(hs);
+        setNomeSite(String(c.nome ?? ""));
+        setCarregado(true);
       })
       .catch(console.error);
   }, []);
 
-  function atualizarHorario(id: string, patch: Partial<HorarioFuncionamento>) {
-    setHorarios((lista) => lista.map((h) => (h.id === id ? { ...h, ...patch } : h)));
+  const set = (k: CampoContato) => (valor: string) => setV((x) => ({ ...x, [k]: valor }));
+
+  function atualizarHorario(i: number, patch: Partial<LinhaHorario>) {
+    setHorarios((lista) => lista.map((h, j) => (j === i ? { ...h, ...patch } : h)));
   }
 
   function adicionarHorario() {
-    const novoId = `h${Date.now()}`;
-    setHorarios((lista) => [
-      ...lista,
-      { id: novoId, dias: "Mo-Fr", abertura: "09:00", fechamento: "18:00", fechado: false },
-    ]);
+    setHorarios((lista) => [...lista, { dia: "", hora: "" }]);
   }
 
-  function removerHorario(id: string) {
-    setHorarios((lista) => lista.filter((h) => h.id !== id));
+  function removerHorario(i: number) {
+    setHorarios((lista) => lista.filter((_, j) => j !== i));
   }
 
-  function salvar() {
-    setConfigContato({
-      telefone, telefone2, whatsapp,
-      logradouro, numero, complemento, bairro, cidade, estado, cep,
-      horarios, areaAtendimento, atendimentoOnline,
+  async function salvar() {
+    setMensagem("");
+    setFeedbackSalvar(null);
+    if (!carregado) {
+      setFeedbackSalvar("erro");
+      setMensagem("Os dados do site ainda não foram carregados — nada foi enviado.");
+      return;
+    }
+
+    // Só o que mudou; o que ficou vazio sobre valor existente vai em `limpar`.
+    const { alterados, limpar } = diffCampos(original, v, "nap.");
+    const errosLocais = validarCampos(alterados);
+
+    const linhas = horarios
+      .map((h) => ({ dia: h.dia.trim(), hora: h.hora.trim() }))
+      .filter((h) => h.dia !== "" || h.hora !== "");
+    horarios.forEach((h, i) => {
+      const dia = h.dia.trim();
+      const hora = h.hora.trim();
+      if ((dia !== "" || hora !== "") && (dia === "" || hora === "")) {
+        errosLocais[`horarios.${i}`] = "Preencha o dia e o horário.";
+      }
     });
-    // Persistir via API
-    fetch("/api/config", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ telefone, telefone2, whatsapp, logradouro, complemento, bairro, cidade, uf: estado, cep }),
-    }).catch(console.error);
+
+    if (Object.keys(errosLocais).length) {
+      setErros(errosLocais);
+      setFeedbackSalvar("erro");
+      setMensagem("Corrija os campos destacados. Nada foi enviado.");
+      return;
+    }
+    setErros({});
+
+    const body: Record<string, unknown> = { ...alterados };
+    const horariosMudaram = JSON.stringify(linhas) !== JSON.stringify(horariosOriginais);
+    if (horariosMudaram) {
+      body.horarios = linhas;
+      if (linhas.length === 0 && horariosOriginais.length > 0) limpar.push("horarios");
+    }
+    if (limpar.length) body.limpar = limpar;
+
+    if (Object.keys(body).length === 0) {
+      setFeedbackSalvar("ok");
+      setMensagem("Nada foi alterado.");
+      setTimeout(() => setFeedbackSalvar(null), 3000);
+      return;
+    }
+
+    setSalvando(true);
+    const r = await enviarConfig(body);
+    setSalvando(false);
+    if (!r.ok) {
+      setErros(r.erros);
+      setFeedbackSalvar("erro");
+      setMensagem(r.erro);
+      return;
+    }
+    // CEP é normalizado pelo servidor (00000-000): reflete na tela.
+    const novo = { ...v };
+    for (const k of Object.keys(alterados)) novo[k as CampoContato] = alterados[k];
+    setOriginal(novo);
+    setHorariosOriginais(linhas);
+    setFeedbackSalvar("ok");
+    setMensagem(r.aviso);
+    setTimeout(() => setFeedbackSalvar(null), r.aviso ? 8000 : 3000);
   }
 
   const jsonLd = useMemo(
-    () =>
-      gerarJsonLd({
-        tipo: configIdentidade.tipoNegocio,
-        nome: aparencia.nomeSite,
-        telefone, whatsapp, logradouro, numero, complemento,
-        bairro, cidade, estado, cep, horarios, areaAtendimento, atendimentoOnline,
-      }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [telefone, whatsapp, logradouro, numero, complemento, bairro, cidade, estado, cep, horarios, areaAtendimento, atendimentoOnline, configIdentidade.tipoNegocio, aparencia.nomeSite],
+    () => gerarJsonLd({ tipo: configIdentidade.tipoNegocio, nome: nomeSite, v, horarios }),
+    [v, horarios, configIdentidade.tipoNegocio, nomeSite],
   );
 
   return (
@@ -271,40 +253,65 @@ export default function ContatoPage() {
         <div>
           <h1 className="text-lg font-semibold text-[var(--ink)]">Contato e NAP</h1>
           <p className="mt-0.5 text-xs text-[var(--ink-muted)]">
-            Telefone, endereço, horários e área de atendimento.
+            Telefone, e-mail, endereço e horários de funcionamento.
           </p>
         </div>
-        <button
-          onClick={salvar}
-          className="rounded-[var(--radius)] bg-[var(--primary)] px-4 py-1.5 text-sm font-medium text-[var(--primary-ink)] transition-opacity hover:opacity-90"
-        >
-          Salvar alterações
-        </button>
+        <div className="flex flex-col items-end gap-1">
+          <button
+            onClick={salvar}
+            disabled={salvando}
+            className="rounded-[var(--radius)] bg-[var(--primary)] px-4 py-1.5 text-sm font-medium text-[var(--primary-ink)] transition-opacity hover:opacity-90 disabled:opacity-60"
+          >
+            {salvando ? "Salvando…" : "Salvar alterações"}
+          </button>
+          {feedbackSalvar === "ok" && (
+            <span className="text-[11px] text-[var(--success)]">Salvo{mensagem ? ` — ${mensagem}` : ""}</span>
+          )}
+          {feedbackSalvar === "erro" && (
+            <span className="max-w-xs text-right text-[11px] text-[var(--danger)]">{mensagem || "Erro ao salvar."}</span>
+          )}
+        </div>
       </div>
 
-      {/* ── Telefone / WhatsApp ───────────────────────── */}
-      <Secao titulo="Telefone e WhatsApp" icone={Phone}>
+      {/* ── Telefone / WhatsApp / E-mail ──────────────── */}
+      <Secao titulo="Telefone, WhatsApp e e-mail" icone={Phone}>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Campo label="Telefone principal">
             <Entrada
-              value={telefone}
-              onChange={(e) => setTelefone(e.target.value)}
+              value={v.telefone}
+              onChange={(e) => set("telefone")(e.target.value)}
+              invalido={!!erros["nap.telefone"]}
               placeholder="(11) 00000-0000"
             />
+            <MsgErro texto={erros["nap.telefone"]} />
           </Campo>
           <Campo label="Telefone secundário">
             <Entrada
-              value={telefone2}
-              onChange={(e) => setTelefone2(e.target.value)}
+              value={v.telefone2}
+              onChange={(e) => set("telefone2")(e.target.value)}
+              invalido={!!erros["nap.telefone2"]}
               placeholder="(11) 00000-0000"
             />
+            <MsgErro texto={erros["nap.telefone2"]} />
           </Campo>
           <Campo label="WhatsApp">
             <Entrada
-              value={whatsapp}
-              onChange={(e) => setWhatsapp(e.target.value)}
+              value={v.whatsapp}
+              onChange={(e) => set("whatsapp")(e.target.value)}
+              invalido={!!erros["nap.whatsapp"]}
               placeholder="(11) 00000-0000"
             />
+            <MsgErro texto={erros["nap.whatsapp"]} />
+          </Campo>
+          <Campo label="E-mail de contato">
+            <Entrada
+              type="email"
+              value={v.email}
+              onChange={(e) => set("email")(e.target.value)}
+              invalido={!!erros["nap.email"]}
+              placeholder="contato@seudominio.com.br"
+            />
+            <MsgErro texto={erros["nap.email"]} />
           </Campo>
         </div>
       </Secao>
@@ -312,29 +319,20 @@ export default function ContatoPage() {
       {/* ── Endereço ─────────────────────────────────── */}
       <Secao titulo="Endereço (NAP)" icone={MapPin}>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-6">
-          <div className="sm:col-span-4">
-            <Campo label="Logradouro">
+          <div className="sm:col-span-6">
+            <Campo label="Logradouro (com número)">
               <Entrada
-                value={logradouro}
-                onChange={(e) => setLogradouro(e.target.value)}
-                placeholder="Rua, Avenida…"
-              />
-            </Campo>
-          </div>
-          <div className="sm:col-span-2">
-            <Campo label="Número">
-              <Entrada
-                value={numero}
-                onChange={(e) => setNumero(e.target.value)}
-                placeholder="Nº"
+                value={v.logradouro}
+                onChange={(e) => set("logradouro")(e.target.value)}
+                placeholder="Rua, Avenida… e número"
               />
             </Campo>
           </div>
           <div className="sm:col-span-3">
             <Campo label="Complemento">
               <Entrada
-                value={complemento}
-                onChange={(e) => setComplemento(e.target.value)}
+                value={v.complemento}
+                onChange={(e) => set("complemento")(e.target.value)}
                 placeholder="Sala, andar, apto…"
               />
             </Campo>
@@ -342,8 +340,8 @@ export default function ContatoPage() {
           <div className="sm:col-span-3">
             <Campo label="Bairro">
               <Entrada
-                value={bairro}
-                onChange={(e) => setBairro(e.target.value)}
+                value={v.bairro}
+                onChange={(e) => set("bairro")(e.target.value)}
                 placeholder="Bairro"
               />
             </Campo>
@@ -351,32 +349,38 @@ export default function ContatoPage() {
           <div className="sm:col-span-3">
             <Campo label="Cidade">
               <Entrada
-                value={cidade}
-                onChange={(e) => setCidade(e.target.value)}
+                value={v.cidade}
+                onChange={(e) => set("cidade")(e.target.value)}
+                invalido={!!erros["nap.cidade"]}
                 placeholder="Cidade"
               />
+              <MsgErro texto={erros["nap.cidade"]} />
             </Campo>
           </div>
           <div className="sm:col-span-1">
             <Campo label="UF">
               <Selecao
-                value={estado}
-                onChange={(e) => setEstado(e.target.value)}
+                value={v.uf}
+                onChange={(e) => set("uf")(e.target.value)}
               >
+                <option value="">—</option>
                 {ESTADOS_BR.map((uf) => (
                   <option key={uf} value={uf}>{uf}</option>
                 ))}
               </Selecao>
+              <MsgErro texto={erros["nap.uf"]} />
             </Campo>
           </div>
           <div className="sm:col-span-2">
             <Campo label="CEP">
               <Entrada
-                value={cep}
-                onChange={(e) => setCep(e.target.value)}
+                value={v.cep}
+                onChange={(e) => set("cep")(e.target.value)}
+                invalido={!!erros["nap.cep"]}
                 placeholder="00000-000"
                 maxLength={9}
               />
+              <MsgErro texto={erros["nap.cep"]} />
             </Campo>
           </div>
         </div>
@@ -385,13 +389,38 @@ export default function ContatoPage() {
       {/* ── Horários de funcionamento ─────────────────── */}
       <Secao titulo="Horários de funcionamento" icone={Globe}>
         <div className="space-y-2.5">
-          {horarios.map((h) => (
-            <LinhaHorario
-              key={h.id}
-              horario={h}
-              onChange={(patch) => atualizarHorario(h.id, patch)}
-              onRemover={() => removerHorario(h.id)}
-            />
+          {horarios.length === 0 && (
+            <p className="text-xs text-[var(--ink-muted)]">Nenhum horário cadastrado.</p>
+          )}
+          {horarios.map((h, i) => (
+            <div key={i}>
+              <div className="flex items-center gap-2">
+                <Entrada
+                  value={h.dia}
+                  onChange={(e) => atualizarHorario(i, { dia: e.target.value })}
+                  invalido={!!erros[`horarios.${i}`]}
+                  placeholder="Dias — ex.: Segunda a Sexta"
+                  aria-label="Dias"
+                  className="flex-1"
+                />
+                <Entrada
+                  value={h.hora}
+                  onChange={(e) => atualizarHorario(i, { hora: e.target.value })}
+                  invalido={!!erros[`horarios.${i}`]}
+                  placeholder="Horário — ex.: 8h às 18h"
+                  aria-label="Horário"
+                  className="flex-1"
+                />
+                <button
+                  onClick={() => removerHorario(i)}
+                  className="shrink-0 p-1 text-[var(--ink-muted)] hover:text-[var(--danger)]"
+                  title="Remover linha"
+                >
+                  <Trash2 size={13} />
+                </button>
+              </div>
+              <MsgErro texto={erros[`horarios.${i}`]} />
+            </div>
           ))}
         </div>
         <button
@@ -403,42 +432,9 @@ export default function ContatoPage() {
         </button>
 
         <p className="mt-3 text-[11px] text-[var(--ink-muted)]">
-          Formato schema.org: <code className="font-mono">Mo-Fr 09:00-18:00</code>
+          Texto livre, exibido como está no site (ex.: <code className="font-mono">Segunda a Sexta</code> ·{" "}
+          <code className="font-mono">8h às 18h</code>).
         </p>
-      </Secao>
-
-      {/* ── Área de atendimento ───────────────────────── */}
-      <Secao titulo="Área de atendimento" icone={Globe}>
-        <div className="space-y-4">
-          <Campo label="Cidades / regiões atendidas">
-            <Entrada
-              value={areaAtendimento}
-              onChange={(e) => setAreaAtendimento(e.target.value)}
-              placeholder="Ex: Sua cidade, região de atendimento"
-            />
-            <p className="mt-1 text-[11px] text-[var(--ink-muted)]">
-              Separadas por vírgula. Usado no campo <code className="font-mono">areaServed</code>.
-            </p>
-          </Campo>
-
-          <label className={cn(
-            "flex cursor-pointer items-center gap-3 rounded-[var(--radius)] border border-[var(--line)] px-4 py-3",
-            atendimentoOnline ? "border-[var(--primary)] bg-[color-mix(in_srgb,var(--primary)_6%,transparent)]" : "bg-[var(--surface)]"
-          )}>
-            <input
-              type="checkbox"
-              checked={atendimentoOnline}
-              onChange={(e) => setAtendimentoOnline(e.target.checked)}
-              className="h-4 w-4 accent-[var(--primary)]"
-            />
-            <div>
-              <p className="text-sm font-medium text-[var(--ink)]">Atendimento on-line disponível</p>
-              <p className="text-[11px] text-[var(--ink-muted)]">
-                Adiciona <code className="font-mono">hasOfferCatalog</code> ao schema
-              </p>
-            </div>
-          </label>
-        </div>
       </Secao>
 
       {/* ── Prévia JSON-LD LocalBusiness ──────────────── */}

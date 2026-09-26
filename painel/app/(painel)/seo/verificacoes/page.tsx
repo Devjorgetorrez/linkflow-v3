@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Check, Copy, RefreshCw } from "lucide-react";
 import { Botao, Entrada } from "@/components/ui";
+import { enviarConfig } from "@/lib/site-config-cliente";
 import { cn } from "@/lib/utils";
 
 /* ------------------------------------------------------------------ */
@@ -132,6 +133,7 @@ function CardGSC() {
 function CardBing() {
   const [token, setToken] = useState("");
   const [salvo, setSalvo] = useState(false);
+  const [erroSalvar, setErroSalvar] = useState("");
 
   useEffect(() => {
     fetch("/api/config").then(r => r.json()).then(data => {
@@ -139,12 +141,13 @@ function CardBing() {
     }).catch(console.error);
   }, []);
 
-  function salvar() {
-    fetch("/api/config", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ bingVerificacao: token }),
-    }).catch(console.error);
+  async function salvar() {
+    setErroSalvar("");
+    const r = await enviarConfig({ bingVerificacao: token });
+    if (!r.ok) {
+      setErroSalvar(r.erros["bingVerificacao"] || r.erro || "Não foi possível salvar.");
+      return;
+    }
     setSalvo(true);
     setTimeout(() => setSalvo(false), 1500);
   }
@@ -165,6 +168,7 @@ function CardBing() {
         <Botao variante="primario" tamanho="sm" onClick={salvar}>
           {salvo ? "Salvo!" : "Salvar"}
         </Botao>
+        {erroSalvar && <p className="mt-1.5 text-[11.5px] text-danger">{erroSalvar}</p>}
       </div>
       <NotaTexto>
         Dica: se o GSC já está verificado, importe o site direto no Bing Webmaster Tools
@@ -267,6 +271,7 @@ function CardIndexNow() {
 function CardGA4() {
   const [id, setId] = useState("");
   const [salvo, setSalvo] = useState(false);
+  const [erroSalvar, setErroSalvar] = useState("");
 
   useEffect(() => {
     fetch("/api/config").then(r => r.json()).then(data => {
@@ -274,12 +279,13 @@ function CardGA4() {
     }).catch(console.error);
   }, []);
 
-  function salvar() {
-    fetch("/api/config", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ googleAnalyticsId: id }),
-    }).catch(console.error);
+  async function salvar() {
+    setErroSalvar("");
+    const r = await enviarConfig({ googleAnalyticsId: id });
+    if (!r.ok) {
+      setErroSalvar(r.erros["googleAnalyticsId"] || r.erro || "Não foi possível salvar.");
+      return;
+    }
     setSalvo(true);
     setTimeout(() => setSalvo(false), 1500);
   }
@@ -301,6 +307,7 @@ function CardGA4() {
         <Botao variante="primario" tamanho="sm" onClick={salvar}>
           {salvo ? "Salvo!" : "Salvar"}
         </Botao>
+        {erroSalvar && <p className="mt-1.5 text-[11.5px] text-danger">{erroSalvar}</p>}
       </div>
     </CardShell>
   );
@@ -309,6 +316,7 @@ function CardGA4() {
 function CardGTM() {
   const [id, setId] = useState("");
   const [salvo, setSalvo] = useState(false);
+  const [erroSalvar, setErroSalvar] = useState("");
 
   useEffect(() => {
     fetch("/api/config").then(r => r.json()).then(data => {
@@ -316,12 +324,13 @@ function CardGTM() {
     }).catch(console.error);
   }, []);
 
-  function salvar() {
-    fetch("/api/config", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ googleTagManagerId: id }),
-    }).catch(console.error);
+  async function salvar() {
+    setErroSalvar("");
+    const r = await enviarConfig({ googleTagManagerId: id });
+    if (!r.ok) {
+      setErroSalvar(r.erros["googleTagManagerId"] || r.erro || "Não foi possível salvar.");
+      return;
+    }
     setSalvo(true);
     setTimeout(() => setSalvo(false), 1500);
   }
@@ -346,6 +355,7 @@ function CardGTM() {
         <Botao variante="primario" tamanho="sm" onClick={salvar}>
           {salvo ? "Salvo!" : "Salvar"}
         </Botao>
+        {erroSalvar && <p className="mt-1.5 text-[11.5px] text-danger">{erroSalvar}</p>}
       </div>
     </CardShell>
   );
@@ -354,6 +364,7 @@ function CardGTM() {
 function CardMetaPixel() {
   const [id, setId] = useState("");
   const [salvo, setSalvo] = useState(false);
+  const [erroSalvar, setErroSalvar] = useState("");
 
   useEffect(() => {
     fetch("/api/config").then(r => r.json()).then(data => {
@@ -361,12 +372,13 @@ function CardMetaPixel() {
     }).catch(console.error);
   }, []);
 
-  function salvar() {
-    fetch("/api/config", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ metaPixelId: id }),
-    }).catch(console.error);
+  async function salvar() {
+    setErroSalvar("");
+    const r = await enviarConfig({ metaPixelId: id });
+    if (!r.ok) {
+      setErroSalvar(r.erros["metaPixelId"] || r.erro || "Não foi possível salvar.");
+      return;
+    }
     setSalvo(true);
     setTimeout(() => setSalvo(false), 1500);
   }
@@ -386,6 +398,7 @@ function CardMetaPixel() {
         <Botao variante="primario" tamanho="sm" onClick={salvar}>
           {salvo ? "Salvo!" : "Salvar"}
         </Botao>
+        {erroSalvar && <p className="mt-1.5 text-[11.5px] text-danger">{erroSalvar}</p>}
       </div>
     </CardShell>
   );

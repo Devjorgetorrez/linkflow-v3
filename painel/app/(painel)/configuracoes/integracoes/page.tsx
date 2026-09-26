@@ -114,12 +114,18 @@ export default function IntegracoesPage() {
     CATALOGO.map((i) => ({ ...i, conectado: false, conta: "" })),
   );
 
+  const [erroCarga, setErroCarga] = useState("");
+
   // Estado real: conectado = campo preenchido no config do site
   useEffect(() => {
     fetch("/api/config")
-      .then((r) => r.json())
-      .then((data) => {
-        if (!data.ok || !data.config) return;
+      .then(async (r) => {
+        const data = await r.json().catch(() => null);
+        if (!r.ok || !data?.ok || !data.config) {
+          setErroCarga(data?.erro ?? `Não foi possível ler a configuração do site (erro ${r.status}).`);
+          return;
+        }
+        setErroCarga("");
         const c = data.config as Record<string, unknown>;
         setIntegracoes(
           CATALOGO.map((i) => {
@@ -128,7 +134,7 @@ export default function IntegracoesPage() {
           }),
         );
       })
-      .catch(console.error);
+      .catch(() => setErroCarga("Sem conexão com o painel. O estado das integrações não pôde ser lido."));
   }, []);
 
   const conectadas = integracoes.filter((i) => i.conectado);
@@ -142,6 +148,12 @@ export default function IntegracoesPage() {
           Serviços externos configurados no site. O estado vem do cadastro real do site.
         </p>
       </div>
+
+      {erroCarga && (
+        <p className="mb-4 rounded-[var(--radius)] border border-[var(--danger)] px-4 py-2.5 text-xs text-[var(--danger)]">
+          {erroCarga}
+        </p>
+      )}
 
       {/* Resumo */}
       <div className="mb-6 flex items-center gap-4 rounded-[var(--radius)] border border-[var(--line)] bg-[var(--surface-2)] px-5 py-3">

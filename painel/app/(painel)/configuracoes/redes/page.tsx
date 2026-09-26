@@ -4,13 +4,18 @@ import { ExternalLink, Share2 } from "lucide-react";
 import { useState, useEffect } from "react";
 
 import { Campo, Entrada } from "@/components/ui";
-import { useStore, type ConfigRedes } from "@/lib/store";
+import { urlValida } from "@/lib/site-config";
+import { diffCampos, enviarConfig } from "@/lib/site-config-cliente";
+
+type ChaveRede = "instagram" | "facebook" | "linkedin" | "youtube" | "tiktok" | "twitter" | "pinterest";
+type ValoresRedes = Record<ChaveRede, string>;
+const VAZIO: ValoresRedes = { instagram: "", facebook: "", linkedin: "", youtube: "", tiktok: "", twitter: "", pinterest: "" };
 
 /* ------------------------------------------------------------------ */
 /* Rede social config                                                  */
 /* ------------------------------------------------------------------ */
 
-const REDES: { key: keyof ConfigRedes; label: string; placeholder: string; prefixo?: string }[] = [
+const REDES: { key: ChaveRede; label: string; placeholder: string; prefixo?: string }[] = [
   {
     key: "instagram",
     label: "Instagram",
@@ -42,12 +47,6 @@ const REDES: { key: keyof ConfigRedes; label: string; placeholder: string; prefi
     prefixo: "tiktok.com/",
   },
   {
-    key: "threads",
-    label: "Threads",
-    placeholder: "https://threads.net/@usuario",
-    prefixo: "threads.net/",
-  },
-  {
     key: "twitter",
     label: "X / Twitter",
     placeholder: "https://x.com/usuario",
@@ -66,47 +65,70 @@ const REDES: { key: keyof ConfigRedes; label: string; placeholder: string; prefi
 /* ------------------------------------------------------------------ */
 
 export default function RedesPage() {
-  const { configRedes, setConfigRedes } = useStore();
-
-  const [local, setLocal] = useState<ConfigRedes>({ ...configRedes });
+  const [local, setLocal] = useState<ValoresRedes>({ ...VAZIO });
+  // Valores como vieram do servidor: o Salvar envia só o que difere deles.
+  const [original, setOriginal] = useState<ValoresRedes>({ ...VAZIO });
+  const [carregado, setCarregado] = useState(false);
+  const [erros, setErros] = useState<Record<string, string>>({});
+  const [salvando, setSalvando] = useState(false);
+  const [feedbackSalvar, setFeedbackSalvar] = useState<"ok" | "erro" | null>(null);
+  const [mensagem, setMensagem] = useState("");
 
   // Carregar dados reais ao montar
   useEffect(() => {
     fetch("/api/config")
       .then((r) => r.json())
       .then((data) => {
-        if (!data.ok || !data.config?.redes) return;
-        const r = data.config.redes;
-        setLocal((prev) => ({
-          ...prev,
-          instagram: r.instagram ?? prev.instagram,
-          facebook: r.facebook ?? prev.facebook,
-          youtube: r.youtube ?? prev.youtube,
-          linkedin: r.linkedin ?? prev.linkedin,
-          tiktok: r.tiktok ?? prev.tiktok,
-          twitter: r.twitter ?? prev.twitter,
-          pinterest: r.pinterest ?? prev.pinterest,
-        }));
+        if (!data.ok || !data.config) return;
+        const r = data.config.redes ?? {};
+        const lido = { ...VAZIO };
+        for (const k of Object.keys(VAZIO) as ChaveRede[]) lido[k] = String(r[k] ?? "");
+        setLocal(lido);
+        setOriginal(lido);
+        setCarregado(true);
       })
       .catch(console.error);
   }, []);
 
-  function salvar() {
-    setConfigRedes(local);
-    // Persistir via API
-    fetch("/api/config", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        instagram: local.instagram,
-        facebook: local.facebook,
-        youtube: local.youtube,
-        linkedin: local.linkedin,
-        tiktok: local.tiktok,
-        twitter: local.twitter,
-        pinterest: local.pinterest,
-      }),
-    }).catch(console.error);
+  async function salvar() {
+    setMensagem("");
+    setFeedbackSalvar(null);
+    if (!carregado) {
+      setFeedbackSalvar("erro");
+      setMensagem("Os dados do site ainda não foram carregados — nada foi enviado.");
+      return;
+    }
+    const { alterados, limpar } = diffCampos(original, local, "redes.");
+    const e: Record<string, string> = {};
+    for (const [k, val] of Object.entries(alterados)) {
+      if (val && !urlValida(val)) e[`redes.${k}`] = "Endereço inválido — use o link completo (https://...).";
+    }
+    if (Object.keys(e).length) {
+      setErros(e);
+      setFeedbackSalvar("erro");
+      setMensagem("Corrija os campos destacados. Nada foi enviado.");
+      return;
+    }
+    setErros({});
+    if (Object.keys(alterados).length === 0) {
+      setFeedbackSalvar("ok");
+      setMensagem("Nada foi alterado.");
+      setTimeout(() => setFeedbackSalvar(null), 3000);
+      return;
+    }
+    setSalvando(true);
+    const r = await enviarConfig({ ...alterados, ...(limpar.length ? { limpar } : {}) });
+    setSalvando(false);
+    if (!r.ok) {
+      setErros(r.erros);
+      setFeedbackSalvar("erro");
+      setMensagem(r.erro);
+      return;
+    }
+    setOriginal({ ...local, ...alterados });
+    setFeedbackSalvar("ok");
+    setMensagem(r.aviso);
+    setTimeout(() => setFeedbackSalvar(null), r.aviso ? 8000 : 3000);
   }
 
   const redesAtivas = REDES.filter((r) => local[r.key]);
@@ -123,12 +145,21 @@ export default function RedesPage() {
             URLs das redes. Usadas no campo <code className="font-mono">sameAs</code> do schema e nos links do rodapé.
           </p>
         </div>
-        <button
-          onClick={salvar}
-          className="rounded-[var(--radius)] bg-[var(--primary)] px-4 py-1.5 text-sm font-medium text-[var(--primary-ink)] transition-opacity hover:opacity-90"
-        >
-          Salvar alterações
-        </button>
+        <div className="flex flex-col items-end gap-1">
+          <button
+            onClick={salvar}
+            disabled={salvando}
+            className="rounded-[var(--radius)] bg-[var(--primary)] px-4 py-1.5 text-sm font-medium text-[var(--primary-ink)] transition-opacity hover:opacity-90 disabled:opacity-60"
+          >
+            {salvando ? "Salvando…" : "Salvar alterações"}
+          </button>
+          {feedbackSalvar === "ok" && (
+            <span className="text-[11px] text-[var(--success)]">Salvo{mensagem ? ` — ${mensagem}` : ""}</span>
+          )}
+          {feedbackSalvar === "erro" && (
+            <span className="max-w-xs text-right text-[11px] text-[var(--danger)]">{mensagem || "Erro ao salvar."}</span>
+          )}
+        </div>
       </div>
 
       <section className="mb-8 rounded-[var(--radius)] border border-[var(--line)] bg-[var(--surface-2)] p-6">
@@ -145,6 +176,7 @@ export default function RedesPage() {
                   value={local[rede.key]}
                   onChange={(e) => setLocal((l) => ({ ...l, [rede.key]: e.target.value }))}
                   placeholder={rede.placeholder}
+                  invalido={!!erros[`redes.${rede.key}`]}
                   className="flex-1"
                 />
                 {local[rede.key] && (
@@ -159,6 +191,9 @@ export default function RedesPage() {
                   </a>
                 )}
               </div>
+              {erros[`redes.${rede.key}`] && (
+                <p className="mt-1 text-[11px] text-[var(--danger)]">{erros[`redes.${rede.key}`]}</p>
+              )}
             </Campo>
           ))}
         </div>
