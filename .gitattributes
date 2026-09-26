@@ -1,0 +1,2 @@
+# Scripts de shell vao por scp para Linux: CRLF quebra com "bad interpreter".
+*.sh text eol=lf
