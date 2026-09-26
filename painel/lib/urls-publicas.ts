@@ -14,6 +14,17 @@
  *                                       serviço e artigo — nunca /categoria/<slug>)
  */
 
+/** "/servicos/" → "/servicos"; "/" continua "/". Compara URLs sem depender de barra final. */
+export function normalizarUrl(u: string): string {
+  let s = u;
+  try {
+    s = decodeURI(u);
+  } catch {
+    /* mantém como veio */
+  }
+  return s.length > 1 ? s.replace(/\/+$/, "") : s;
+}
+
 export const URL_HOME = "/";
 export const URL_BLOG = "/blog";
 export const URL_SERVICOS = "/servicos";

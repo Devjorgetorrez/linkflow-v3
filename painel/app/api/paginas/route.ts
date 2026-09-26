@@ -5,7 +5,7 @@
  * Campos estruturais (composicao, secoes, paiId, linksRecebidos) usam
  * defaults seguros — esses dados não existem no HTML gerado, só no projeto.md.
  * nivel é derivado da profundidade da URL.
- * linksRecebidos é calculado cruzando links internos entre todas as páginas.
+ * linksRecebidos é calculado a partir dos links reais do HTML (lib/links-internos.ts).
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -13,6 +13,8 @@ import fs from "fs";
 import path from "path";
 import { getContentDir, getLinkflowDir } from "@/lib/fs";
 import { verificarAcesso } from "@/lib/auth";
+import { lerGrafoLinks, contarRecebidos } from "@/lib/links-internos";
+import { normalizarUrl } from "@/lib/urls-publicas";
 import type { Pagina, TipoPagina, Intencao } from "@/mock/types";
 
 // ─── Classificação pelo CONTEÚDO, não pela URL ──────────────────────────────
@@ -112,23 +114,11 @@ export async function GET(req: NextRequest) {
       (p) => !posts.has(p.url.replace(/^\//, "").toLowerCase()),
     );
 
-    const todasUrls = rawTodas.map((p) => p.url);
-
-    // Calcular linksRecebidos cruzando links internos (simplificado) — varre
-    // TODAS as páginas geradas, artigos inclusive: link de artigo para
-    // serviço conta como link recebido pelo serviço.
-    const linksRecebidosMap = new Map<string, number>();
-    for (const p of rawTodas) {
-      const filePath = path.join(distDir, p.url === "/" ? "" : p.url, "index.html");
-      if (!fs.existsSync(filePath)) continue;
-      const html = fs.readFileSync(filePath, "utf-8");
-      const hrefs = [...html.matchAll(/href="([^"#?]+)"/g)].map((m) => m[1]);
-      for (const href of hrefs) {
-        if (href.startsWith("/") && todasUrls.includes(href)) {
-          linksRecebidosMap.set(href, (linksRecebidosMap.get(href) ?? 0) + 1);
-        }
-      }
-    }
+    // linksRecebidos vem do grafo REAL de links do HTML gerado (mesma fonte
+    // da auditoria de SEO — lib/links-internos.ts). Link de artigo para
+    // serviço conta; link da própria página para ela mesma não.
+    const grafo = lerGrafoLinks(distDir);
+    const linksRecebidosMap = grafo ? contarRecebidos(grafo.links) : new Map<string, number>();
 
     const paginas: Pagina[] = rawPaginas.map((p) => {
       const { tipo, paiId, nivel } = classificar(p.url, servicos);
@@ -149,7 +139,7 @@ export async function GET(req: NextRequest) {
         composicao: "",   // não disponível no HTML gerado
         secoes: [],       // não disponível no HTML gerado
         nivel,
-        linksRecebidos: linksRecebidosMap.get(p.url) ?? 0,
+        linksRecebidos: linksRecebidosMap.get(normalizarUrl(p.url)) ?? 0,
         ultimaMod: p.ultimaMod,
       };
     });

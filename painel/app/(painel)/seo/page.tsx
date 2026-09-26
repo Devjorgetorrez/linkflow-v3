@@ -15,6 +15,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useStore } from "@/lib/store";
 import { gerarIndexaveis } from "@/motor/indexaveis";
+import type { GrafoLinks } from "@/lib/links-internos";
 import { auditarTecnica, type Problema, type Severidade } from "@/motor/auditoria-tecnica";
 
 /* ------------------------------------------------------------------ */
@@ -310,8 +311,15 @@ export default function SeoVisaoGeral() {
   const [redirects, setRedirects] = useState(redirectsMock);
   const [robots, setRobots] = useState(robotsMock);
   const [DOMAIN, setDomain] = useState("");
+  // Grafo real de links (HTML do site gerado). null = ainda não carregou ou
+  // não há site gerado: a auditoria não verifica órfãs sem ele.
+  const [linksReais, setLinksReais] = useState<GrafoLinks | null>(null);
 
   useEffect(() => {
+    fetch("/api/links-internos", { cache: "no-store" })
+      .then(r => r.json())
+      .then(data => { if (data.ok && data.disponivel) setLinksReais(data.links); })
+      .catch(console.error);
     fetch("/api/posts")
       .then(r => r.json())
       .then(data => {
@@ -341,8 +349,8 @@ export default function SeoVisaoGeral() {
   }, []);
 
   const { bloqueia, prejudica, verificar, totalProblemas, temGSC } = useMemo(() => {
-    const indexaveis = gerarIndexaveis({ posts, paginas, categorias, autores, dominio: DOMAIN });
-    const lista = auditarTecnica(indexaveis, redirects, robots);
+    const indexaveis = gerarIndexaveis({ posts, paginas, categorias, autores, dominio: DOMAIN, linksReais });
+    const lista = auditarTecnica(indexaveis, redirects, robots, linksReais !== null);
 
     return {
       bloqueia: lista.filter((p) => p.severidade === "bloqueia"),
@@ -351,7 +359,7 @@ export default function SeoVisaoGeral() {
       totalProblemas: lista.length,
       temGSC: lista.some((p) => p.procedencia === "requer_search_console"),
     };
-  }, [posts, paginas, categorias, autores, redirects, robots, DOMAIN]);
+  }, [posts, paginas, categorias, autores, redirects, robots, DOMAIN, linksReais]);
 
   return (
     <div className="min-h-screen bg-[var(--surface)]">

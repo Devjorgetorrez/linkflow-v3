@@ -74,6 +74,12 @@ export function auditarTecnica(
   indexaveis: Indexavel[],
   redirects: Redirect[],
   robots: string,
+  /**
+   * true só quando `indexaveis` foi montado com o grafo REAL de links do HTML
+   * (lib/links-internos.ts). Sem ele, "ninguém linka para cá" é só a ausência
+   * de dado, não um achado — então a regra de órfã não roda.
+   */
+  linksReaisDisponiveis = false,
 ): Problema[] {
   const problemas: Problema[] = [];
   const mapa = new Map(indexaveis.map((ix) => [ix.node_id, ix]));
@@ -150,7 +156,22 @@ export function auditarTecnica(
   // ── 3b. Conteúdo órfão ────────────────────────────────────────────────
   // Dividido em dois: "sem destino previsto" (lacuna de arquitetura) vs
   // o caso com link obrigatório já reportado em 3a.
-  for (const ix of indexaveis) {
+  // Só roda com o grafo real de links: com o plano apenas (pai/filho,
+  // categoria, autor), menu/rodapé/home não contam e toda página sem pai
+  // marcado sairia como órfã (falso alarme, relatório de testes #28).
+  if (!linksReaisDisponiveis) {
+    problemas.push({
+      id: "orfaos-nao-verificados",
+      tipo: "orfaos_nao_verificados",
+      severidade: "verificar",
+      titulo: "Páginas órfãs não verificadas",
+      detalhe: "Não há site gerado para ler os links internos reais. Publique ou gere o site (build) para conferir se alguma página está sem link apontando para ela.",
+      node_ids: [],
+      href_conserto: "",
+      procedencia: "calculado_no_build",
+    });
+  }
+  for (const ix of linksReaisDisponiveis ? indexaveis : []) {
     if (ix.links_entrando.length === 0 && ix.indexavel && !URLS_RAIZ.has(ix.url)) {
       if (todosObrigatorios.has(ix.node_id)) {
         // Já coberto pelo check 3a: alguém deveria linkar mas não linkou.

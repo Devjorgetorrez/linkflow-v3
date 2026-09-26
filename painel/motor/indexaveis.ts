@@ -1,5 +1,6 @@
 import type { Autor, Categoria, Pagina, Post, StatusPost } from "@/mock/types";
-import { urlAutor, urlCategoria, urlPost } from "@/lib/urls-publicas";
+import type { GrafoLinks } from "@/lib/links-internos";
+import { normalizarUrl, urlAutor, urlCategoria, urlPost } from "@/lib/urls-publicas";
 
 export interface ImagemIndexavel {
   src: string;
@@ -40,8 +41,15 @@ export function gerarIndexaveis(dados: {
   autores: Autor[];
   dominio: string; // domínio real do cliente, ex: "torrezdesentupidora.com.br"
   nomeSite?: string; // nome real do negócio, para títulos derivados
+  /**
+   * Grafo REAL de links internos (lido do HTML do site publicado, ver
+   * lib/links-internos.ts). Sem ele, links_entrando só reflete o plano
+   * (pai/filho, categoria, autor) e NÃO serve para achar página órfã:
+   * menu, rodapé, home e cards não existem no plano.
+   */
+  linksReais?: GrafoLinks | null;
 }): Indexavel[] {
-  const { posts, paginas, categorias, autores, dominio, nomeSite } = dados;
+  const { posts, paginas, categorias, autores, dominio, nomeSite, linksReais } = dados;
   const DOMINIO = dominio ? `https://${dominio}` : "";
   const indexaveis: Indexavel[] = [];
 
@@ -171,6 +179,27 @@ export function gerarIndexaveis(dados: {
     for (const alvoid of ix.links_saindo) {
       const no = mapa.get(alvoid);
       if (no) no.links_entrando.push(ix.node_id);
+    }
+  }
+
+  // ── Links reais do HTML → links_entrando ───────────────────────────────
+  // Só entra em links_entrando (que responde "alguém aponta para cá?").
+  // links_saindo continua sendo o plano/corpo: a regra "link obrigatório no
+  // corpo" não pode ser satisfeita por um link de menu ou de rodapé.
+  if (linksReais) {
+    const porUrl = new Map<string, Indexavel>();
+    for (const ix of indexaveis) {
+      if (ix.url) porUrl.set(normalizarUrl(ix.url), ix);
+    }
+    for (const [origemUrl, destinos] of Object.entries(linksReais)) {
+      const origem = porUrl.get(normalizarUrl(origemUrl));
+      if (!origem) continue;
+      for (const destinoUrl of Object.keys(destinos)) {
+        const destino = porUrl.get(normalizarUrl(destinoUrl));
+        if (destino && destino !== origem && !destino.links_entrando.includes(origem.node_id)) {
+          destino.links_entrando.push(origem.node_id);
+        }
+      }
     }
   }
 
