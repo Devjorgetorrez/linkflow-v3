@@ -18,6 +18,7 @@ já cria) — nunca no motor compartilhado que serve de referência para os
 temas lado a lado.
 """
 import argparse
+import json
 import re
 import shutil
 import sys
@@ -88,6 +89,11 @@ def main():
     limpar_public(public_dir)
     limpar_nao_escolhidos(args.tema, pages_dir, config_dir, content_dir, layouts_dir)
     remover_residuos_desconhecidos(pages_dir, content_dir, config_dir, allowlist_final)
+
+    # Marcador do layout em uso. O painel lê este arquivo para mostrar qual
+    # layout o site tem (o config/site.ts nao guarda isso, e depois da promocao
+    # os outros layouts nao existem mais para comparar).
+    gravar_lf(astro_dir / "tema-ativo.json", json.dumps({"tema": args.tema}, ensure_ascii=False) + "\n")
 
     print(f"[promover_tema] OK — tema '{args.tema}' promovido para a raiz, os outros removidos.")
 
