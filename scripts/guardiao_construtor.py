@@ -268,6 +268,51 @@ def verificar_construcao(slug):
     return imprimir_resultado(erros, avisos, "construcao")
 
 
+# ─── DADOS DE DEMONSTRAÇÃO ────────────────────────────────────────────────────
+
+# Campos que identificam a empresa de demonstração de um layout. O config/site.ts
+# que sobra da promocao E o config de demonstracao: se qualquer um destes
+# valores continuar no site do cliente, dado FICTICIO (CNPJ, telefone, e-mail,
+# nome de empresa) iria ao ar como se fosse dele.
+_CAMPOS_DEMO = ("nome", "nomeLongo", "cnpj", "telefone", "whatsapp", "email", "dominio", "logradouro", "enderecoFormatado")
+
+
+def valores_de_demonstracao(astro_dir_cliente):
+    """Retorna {valor: 'campo (arquivo)'} lido dos configs de demonstracao do motor
+    de referencia. Vazio se o motor de referencia nao for encontrado."""
+    candidatos = [
+        _PROJECT_DIR / "_astro",
+        _LINKFLOW_DIR.parent.parent / "_astro",
+        Path("/opt/linkflow/_astro"),
+    ]
+    cliente = astro_dir_cliente.resolve()
+    for ref in candidatos:
+        cfg = ref / "src" / "config"
+        if not cfg.is_dir():
+            continue
+        mesmo_que_cliente = ref.resolve() == cliente
+        valores = {}
+        for arq in sorted(cfg.glob("*.ts")):
+            if arq.name == "site.ts" and mesmo_que_cliente:
+                continue  # aqui site.ts e o config do CLIENTE, nao uma demonstracao
+            texto = arq.read_text(encoding="utf-8", errors="ignore")
+            for campo in _CAMPOS_DEMO:
+                for m in re.finditer(rf"^[ \t]+{campo}\s*:\s*['\"]([^'\"]{{4,}})['\"]", texto, re.MULTILINE):
+                    valores.setdefault(m.group(1).strip(), f"{campo} de {arq.name}")
+        if valores:
+            return valores
+    return {}
+
+
+def demonstracao_que_sobrou(config_conteudo, astro_dir_cliente):
+    ref = valores_de_demonstracao(astro_dir_cliente)
+    achados = []
+    for valor, origem in ref.items():
+        if re.search(r"['\"]" + re.escape(valor) + r"['\"]", config_conteudo):
+            achados.append((valor, origem))
+    return achados, bool(ref)
+
+
 # ─── GATE DE PUBLICAÇÃO ───────────────────────────────────────────────────────
 
 def verificar_publicacao(slug):
@@ -379,6 +424,22 @@ def verificar_saida(slug, fase="saida"):
                 erros.append("Campo 'dominio' vazio no config do cliente — sitemap e canonical ficarao errados")
             elif "seudominio" in match.group(1) or "exemplo" in match.group(1):
                 erros.append(f"Campo 'dominio' com placeholder: '{match.group(1)}'")
+
+        # ── Dado de DEMONSTRACAO do layout que sobrou no config ──────────────
+        achados, tem_referencia = demonstracao_que_sobrou(config_conteudo, astro_dir)
+        if not tem_referencia:
+            avisos.append(
+                "Motor de referencia nao encontrado — nao consegui conferir se sobrou dado de "
+                "demonstracao do layout no config/site.ts"
+            )
+        for valor, origem in achados[:6]:
+            erros.append(
+                f"Dado de DEMONSTRACAO do layout ainda no config/site.ts: '{valor}' ({origem}) — "
+                "substitua pelo dado do projeto.md, ou por [CAMPO] se o cliente ainda nao informou. "
+                "Nunca deixe dado ficticio no site."
+            )
+        if len(achados) > 6:
+            erros.append(f"... e mais {len(achados) - 6} valor(es) de demonstracao no config/site.ts.")
 
         # NAP no config
         match_tel = re.search(r"telefone:\s*['\"]([^'\"]+)['\"]", config_conteudo)
