@@ -237,6 +237,7 @@ function PainelDetalhe({
   onPrev,
   onNext,
   onAtualizar,
+  onExcluir,
 }: {
   midia: Midia;
   indice: number;
@@ -245,6 +246,7 @@ function PainelDetalhe({
   onPrev: () => void;
   onNext: () => void;
   onAtualizar: (patch: Partial<Midia>) => void;
+  onExcluir: () => void;
 }) {
   const [altLocal, setAltLocal] = useState(midia.alt);
   const [tituloLocal, setTituloLocal] = useState(midia.titulo);
@@ -447,7 +449,7 @@ function PainelDetalhe({
           <Botao variante="secundario" tamanho="sm">
             Substituir arquivo
           </Botao>
-          <Botao variante="perigo" tamanho="sm" className="ml-auto">
+          <Botao variante="perigo" tamanho="sm" className="ml-auto" onClick={onExcluir}>
             {midia.usadaEm.length > 0
               ? `Excluir (usado em ${midia.usadaEm.length})`
               : "Excluir"}
@@ -552,6 +554,36 @@ export default function BibliotecaMidiaPage() {
     setIndiceAberto(idx);
   }
 
+  /** Exclui do servidor (arquivo + metadados) e só então tira da tela. */
+  async function excluirMidias(ids: string[]) {
+    if (!podeEnviar || ids.length === 0) return;
+    const usadas = midia.filter((m) => ids.includes(m.id) && m.usadaEm.length > 0).length;
+    const texto =
+      ids.length === 1
+        ? "Excluir este arquivo da biblioteca? Não dá para desfazer."
+        : `Excluir ${ids.length} arquivos da biblioteca? Não dá para desfazer.`;
+    if (!confirm(usadas ? `${texto}
+
+${usadas} deles está em uso em páginas do site.` : texto)) return;
+    const falhas: string[] = [];
+    const removidos: string[] = [];
+    for (const id of ids) {
+      try {
+        const r = await fetch(`/api/midia/${encodeURIComponent(id)}`, { method: "DELETE" });
+        const d = await r.json().catch(() => ({}));
+        if (r.ok && d.ok) removidos.push(id);
+        else falhas.push(d.erro ?? `erro ${r.status}`);
+      } catch {
+        falhas.push("sem resposta do servidor");
+      }
+    }
+    setMidia((lista) => lista.filter((m) => !removidos.includes(m.id)));
+    setSelecionados(new Set());
+    if (midiaAberta && removidos.includes(midiaAberta.id)) fecharPainel();
+    await recarregarMidia();
+    if (falhas.length) alert(`Não foi possível excluir ${falhas.length} arquivo(s): ${falhas[0]}`);
+  }
+
   function fecharPainel() {
     setMidiaAberta(null);
   }
@@ -583,19 +615,29 @@ export default function BibliotecaMidiaPage() {
 
   const [erroEnvio, setErroEnvio] = useState<string | null>(null);
 
-  async function handleDrop(e: React.DragEvent) {
-    const files = Array.from(e.dataTransfer.files);
+  const [avisoEnvio, setAvisoEnvio] = useState<string | null>(null);
+  const inputArquivos = useRef<HTMLInputElement>(null);
+
+  function handleDrop(e: React.DragEvent) {
+    return enviarArquivos(Array.from(e.dataTransfer.files));
+  }
+
+  async function enviarArquivos(files: File[]) {
     if (!files.length) return;
     if (!podeEnviar) {
       setErroEnvio("Seu papel não tem permissão para enviar arquivos à biblioteca.");
       return;
     }
     setErroEnvio(null);
+    setAvisoEnvio(null);
     const falhas: string[] = [];
+    const repetidos: string[] = [];
     for (const file of files) {
       const r = await enviarMidia(file, "geral");
       if (!r.ok) falhas.push(r.erro ?? "Falha no envio.");
+      else if (r.duplicado) repetidos.push(file.name);
     }
+    if (repetidos.length) setAvisoEnvio(`Já estava na biblioteca, não criei cópia: ${repetidos.join(", ")}.`);
     const listagem = await recarregarMidia();
     if (listagem) setMidia(listagem);
     if (falhas.length) setErroEnvio(falhas.join(" "));
@@ -612,13 +654,26 @@ export default function BibliotecaMidiaPage() {
           <p className="mt-0.5 text-[11.5px] text-ink-muted">{midia.length} arquivos</p>
         </div>
         {podeEnviar && (
-          <Link href="/midia/adicionar">
-            <Botao variante="primario" tamanho="sm">
+          <>
+            <input
+              ref={inputArquivos}
+              type="file"
+              multiple
+              accept="image/jpeg,image/png,image/webp,image/gif,image/avif,application/pdf,video/mp4,video/webm"
+              className="hidden"
+              onChange={(e) => { void enviarArquivos(Array.from(e.target.files ?? [])); e.target.value = ""; }}
+            />
+            <Botao variante="primario" tamanho="sm" onClick={() => inputArquivos.current?.click()}>
               Adicionar arquivo
             </Botao>
-          </Link>
+          </>
         )}
       </div>
+      {avisoEnvio && (
+        <p role="status" className="shrink-0 border-b border-line bg-surface-2 px-6 py-2 text-[12px] text-ink-muted">
+          {avisoEnvio}
+        </p>
+      )}
       {erroEnvio && (
         <p role="alert" className="shrink-0 border-b border-danger/40 bg-danger/10 px-6 py-2 text-[12px] text-danger">
           {erroEnvio}
@@ -747,7 +802,7 @@ export default function BibliotecaMidiaPage() {
           <Botao tamanho="sm" variante="secundario">Mover para pasta</Botao>
           <Botao tamanho="sm" variante="secundario">Adicionar tag</Botao>
           {selecionados.size > 0 && (
-            <Botao tamanho="sm" variante="perigo">Excluir selecionados</Botao>
+            <Botao tamanho="sm" variante="perigo" onClick={() => excluirMidias([...selecionados])}>Excluir selecionados</Botao>
           )}
           <button
             type="button"
@@ -793,6 +848,7 @@ export default function BibliotecaMidiaPage() {
           indice={indiceAberto}
           total={visiveis.length}
           onClose={fecharPainel}
+          onExcluir={() => excluirMidias([midiaAberta.id])}
           onPrev={irParaPrev}
           onNext={irParaNext}
           onAtualizar={(patch) => {

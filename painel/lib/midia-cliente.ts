@@ -10,6 +10,8 @@ export const TIPOS_IMAGEM_ACEITOS = "image/jpeg,image/png,image/webp,image/gif";
 
 export interface ResultadoEnvio {
   ok: boolean;
+  /** O servidor já tinha este mesmo arquivo e o reaproveitou (não criou cópia). */
+  duplicado?: boolean;
   erro?: string;
   id?: string;
   url?: string;
@@ -28,13 +30,13 @@ export async function enviarMidia(file: File, finalidade: FinalidadeEnvio): Prom
     fd.append("arquivo", file);
     if (finalidade === "avatar") fd.append("finalidade", "avatar");
     const res = await fetch("/api/midia", { method: "POST", body: fd });
-    let data: { ok?: boolean; erro?: string; id?: string; url?: string } = {};
+    let data: { ok?: boolean; erro?: string; id?: string; url?: string; duplicado?: boolean } = {};
     try {
       data = await res.json();
     } catch {
       /* corpo não-JSON */
     }
-    if (res.ok && data.ok) return { ok: true, id: data.id, url: data.url };
+    if (res.ok && data.ok) return { ok: true, id: data.id, url: data.url, duplicado: data.duplicado };
     if (res.status === 401) return { ok: false, erro: "Sua sessão expirou. Entre de novo e tente outra vez." };
     if (res.status === 403) return { ok: false, erro: data.erro ?? "Seu papel não tem permissão para enviar arquivos." };
     return { ok: false, erro: data.erro ?? `Falha no envio (código ${res.status}).` };

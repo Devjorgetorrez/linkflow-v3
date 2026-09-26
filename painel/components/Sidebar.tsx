@@ -75,7 +75,6 @@ const GRUPOS: NavGroup[] = [
         icone: ImagemIcone,
         subitens: [
           { href: "/midia", label: "Biblioteca" },
-          { href: "/midia/adicionar", label: "Adicionar arquivo" },
         ],
       },
       {

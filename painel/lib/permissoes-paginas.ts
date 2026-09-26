@@ -22,7 +22,6 @@ const REGRAS_PAGINAS: ReadonlyArray<{ prefixo: string; chave: ChaveMatriz }> = [
   { prefixo: "/formularios", chave: "formularios:GET" },
   { prefixo: "/leads", chave: "leads:GET" },
   { prefixo: "/tarefas", chave: "tarefas:GET" },
-  { prefixo: "/midia/adicionar", chave: "midia:POST" },
 ];
 
 function casa(caminho: string, prefixo: string): boolean {

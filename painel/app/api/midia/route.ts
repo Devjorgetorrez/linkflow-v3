@@ -207,6 +207,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, erro: "Pasta inválida." }, { status: 400 });
     }
 
+    // Mesmo conteúdo já na pasta: reaproveita em vez de criar cópia com outro nome.
+    if (fs.existsSync(dir)) {
+      for (const existente of fs.readdirSync(dir)) {
+        const p = path.join(dir, existente);
+        if (existente.endsWith(".meta.json") || !fs.statSync(p).isFile() || fs.statSync(p).size !== buf.length) continue;
+        if (fs.readFileSync(p).equals(buf)) {
+          return NextResponse.json({
+            ok: true,
+            duplicado: true,
+            url: `${getUrlBase()}/midia${pasta ? `/${pasta}` : ""}/${existente}`,
+            arquivo: existente,
+            id: pasta ? `${pasta}/${existente}` : existente,
+            pasta: pasta ? `/${pasta}` : "/",
+            bytes: buf.length,
+            formato: tipo.ext,
+          });
+        }
+      }
+    }
+
     const nome = gravarSemSobrescrever(dir, base, tipo.ext, buf);
     const url = `${getUrlBase()}/midia${pasta ? `/${pasta}` : ""}/${nome}`;
     return NextResponse.json({
