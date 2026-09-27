@@ -13,7 +13,7 @@ import { site }     from '../../config/site.ts'
 import { textoCredencial } from '../../lib/schema.ts'
 import { getCollection } from 'astro:content'
 import { ehPublicado } from '../../lib/publicacao.ts'
-import { separarArtigosDoAutor, hrefAutor } from '../../lib/autores.ts'
+import { separarArtigosDoAutor, hrefAutor, credencialDoAutor } from '../../lib/autores.ts'
 import { nomeCategoria } from '../../lib/categorias.ts'
 
 export async function getStaticPaths() {
@@ -42,7 +42,7 @@ const card = (p: (typeof posts)[number]) => ({
 
 const caminho   = hrefAutor(autor.id)
 const canonical = `${site.dominio}${caminho}`
-const credencial = [d.conselho, d.registro].filter(Boolean).join(' ').trim()
+const credencial = credencialDoAutor(d)
 const sameAs = Object.values(d.redes ?? {}).filter((v): v is string => Boolean(v))
 
 const metaDescription = (d.bioCurta && d.bioCurta.length >= 50

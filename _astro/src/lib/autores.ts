@@ -74,6 +74,12 @@ export function hrefAutor(slug: string, prefixo = ''): string {
   return `${prefixo.replace(/\/+$/, '')}/autor/${slug}`
 }
 
+/** "CRM-SP 154.320". O painel grava "Nenhum" quando não há conselho profissional: isso não é credencial. */
+export function credencialDoAutor(d: { conselho?: string; registro?: string }): string {
+  const conselho = /^(nenhum|nenhuma|n\/a|-|—)?$/i.test((d.conselho ?? '').trim()) ? '' : (d.conselho ?? '').trim()
+  return conselho ? [conselho, d.registro].filter(Boolean).join(' ').trim() : ''
+}
+
 export function acharAutor(valor: string | undefined, autores: EntradaAutor[]): EntradaAutor | undefined {
   if (!valor) return undefined
   const alvo = normalizar(valor)
@@ -94,9 +100,7 @@ export function resolverAutor(
   if (entrada) {
     const d = entrada.data
     const redes = Object.values(d.redes ?? {}).filter((v): v is string => Boolean(v))
-    // O painel grava "Nenhum" quando o autor não tem conselho profissional: isso NÃO é credencial.
-    const conselho = /^(nenhum|nenhuma|n\/a|-|—)?$/i.test((d.conselho ?? '').trim()) ? '' : (d.conselho ?? '').trim()
-    const credencial = conselho ? [conselho, d.registro].filter(Boolean).join(' ').trim() : ''
+    const credencial = credencialDoAutor(d)
     const redesCheias = Object.fromEntries(
       Object.entries(d.redes ?? {}).filter((par): par is [string, string] => Boolean(par[1])),
     )
