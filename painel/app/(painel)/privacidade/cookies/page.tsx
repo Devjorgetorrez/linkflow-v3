@@ -462,14 +462,15 @@ export default function CookiesPage() {
 
           {/* Nota de implementação */}
           <div className="space-y-2 rounded-[var(--radius)] border border-[var(--line)] bg-[var(--surface-2)] px-4 py-3.5">
-            <p className="text-[12px] font-semibold text-[var(--ink)]">Implementação técnica (referência)</p>
+            <p className="text-[12px] font-semibold text-[var(--ink)]">O que já está no ar hoje</p>
             <ul className="space-y-1 text-[11.5px] text-[var(--ink-muted)]">
-              <li>• Biblioteca: <code className="rounded bg-[var(--surface)] px-1 py-0.5 font-mono text-[11px]">vanilla-cookieconsent v3</code> (MIT, ~30 KB, auto-hospedada)</li>
-              <li>• Scripts de terceiros como <code className="rounded bg-[var(--surface)] px-1 py-0.5 font-mono text-[11px]">type="text/plain"</code> até consentimento</li>
-              <li>• Google Consent Mode: padrões negados antes de qualquer tag</li>
-              <li>• <code className="rounded bg-[var(--surface)] px-1 py-0.5 font-mono text-[11px]">autoClear</code> ativo: revogação limpa _ga*, _gid, _gcl*, _fbp, _fbc</li>
-              <li>• Link "Preferências de cookies" fixo no rodapé em todas as páginas</li>
-              <li>• Âncoras <code className="rounded bg-[var(--surface)] px-1 py-0.5 font-mono text-[11px]">#cookies</code> e <code className="rounded bg-[var(--surface)] px-1 py-0.5 font-mono text-[11px]">#direitos</code> obrigatórias na política de privacidade</li>
+              <li>• O banner é real: script próprio do motor (sem biblioteca externa), publicado em todas as páginas do site.</li>
+              <li>• Só aparece quando há algo para consentir — cookie não essencial cadastrado (Analíticos/Marketing/Funcionais) ou Google Analytics/GTM/Meta Pixel configurado em Integrações. Sem isso, não aparece.</li>
+              <li>• "Aceitar" e "Rejeitar" têm o mesmo peso visual e nenhuma categoria vem marcada por padrão.</li>
+              <li>• GA4/GTM/Meta Pixel só carregam depois do "Aceitar" (ou da categoria correspondente em "Personalizar") — nunca antes da escolha, e "Rejeitar" mantém tudo desligado.</li>
+              <li>• A escolha fica salva no navegador do visitante por até 6 meses; passado esse prazo, o banner volta a aparecer.</li>
+              <li>• Link "Preferências de cookies" no rodapé, em todas as páginas, para o visitante rever a escolha.</li>
+              <li>• Ainda não implementado nesta tela: título/descrição do banner, posição e modal de preferências configurados aqui não têm efeito no site publicado — o texto e o formato (faixa no rodapé) são fixos no motor por enquanto. O registro de consentimento (envio para um destino externo) também ainda não existe.</li>
             </ul>
           </div>
 
@@ -572,13 +573,13 @@ export default function CookiesPage() {
                 Travas normativas ativas
               </p>
               {[
-                '"Recusar todos" no banner e no modal',
-                "Peso visual idêntico em todos os botões",
-                "Recusa em 1 clique (sem passar por preferências)",
-                "Nenhuma categoria não necessária marcada",
-                'Link "Como usamos cookies e seus direitos" no banner',
-                'Link "Exercer meus direitos" no modal',
-                'Link "Preferências de cookies" no rodapé',
+                '"Rejeitar" sempre visível, ao lado de "Aceitar"',
+                "Peso visual idêntico entre Aceitar e Rejeitar",
+                "Recusa em 1 clique (sem passar por Personalizar)",
+                "Nenhuma categoria não necessária marcada por padrão",
+                "Rastreadores (GA4/GTM/Pixel) só carregam após aceite",
+                'Link para a Política de Privacidade dentro do banner',
+                'Link "Preferências de cookies" no rodapé, em todas as páginas',
               ].map((item) => (
                 <p key={item} className="flex items-center gap-1.5 text-[11.5px] text-[var(--ink-muted)]">
                   <span className="text-[var(--success)]">✓</span> {item}

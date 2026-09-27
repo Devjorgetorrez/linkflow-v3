@@ -8,6 +8,7 @@ import '../styles/global.css'
 import { site } from '../config/tema-06.ts'
 import { urlAbsoluta } from '../lib/schema.ts'
 import BotaoWhatsApp from '../components/blocos/BotaoWhatsApp.astro'
+import BannerCookies from '../components/blocos/BannerCookies.astro'
 
 interface Props {
   titulo:          string
@@ -75,5 +76,6 @@ const ogDescricao = metaDescription || site.descricao
   </main>
   <script>import '../scripts/utm.ts'</script>
   <BotaoWhatsApp whatsapp={site.nap?.whatsapp} ativo={site.whatsappFlutuante !== false} mensagem={site.whatsappMensagem} />
+  <BannerCookies site={site} />
 </body>
 </html>

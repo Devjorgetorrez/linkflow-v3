@@ -130,6 +130,7 @@ const anoAtual = new Date().getFullYear()
         </p>
         {cnpj && <p>CNPJ {cnpj}</p>}
         {credencial && <p>{credencial}</p>}
+        <button type="button" data-lf-reabrir-cookies class="underline underline-offset-2 hover:text-ink" hidden>Preferências de cookies</button>
       </div>
     </div>
   </footer>
@@ -162,6 +163,7 @@ const anoAtual = new Date().getFullYear()
         © {anoAtual} {nomeSite}
         {cnpj && <> · CNPJ {cnpj}</>}
         {credencial && <> · {credencial}</>}
+        <button type="button" data-lf-reabrir-cookies class="lf-rodape-cookies underline underline-offset-2 hover:text-ink" hidden>Preferências de cookies</button>
       </p>
     </div>
   </footer>
@@ -243,6 +245,7 @@ const anoAtual = new Date().getFullYear()
         </p>
         {cnpj && <p>CNPJ {cnpj}</p>}
         {credencial && <p>{credencial}</p>}
+        <button type="button" data-lf-reabrir-cookies class="underline underline-offset-2 hover:text-ink" hidden>Preferências de cookies</button>
       </div>
     </div>
   </footer>
@@ -334,7 +337,15 @@ const anoAtual = new Date().getFullYear()
         </p>
         {cnpj && <p>CNPJ {cnpj}</p>}
         {credencial && <p>{credencial}</p>}
+        <button type="button" data-lf-reabrir-cookies class="underline underline-offset-2 hover:text-primary-ink" hidden>Preferências de cookies</button>
       </div>
     </div>
   </footer>
 )}
+
+<style>
+  /* variante minimal: o botão fica dentro do mesmo <p> do copyright — o
+     separador só aparece junto com o botão (evita um " · " solto quando o
+     site não tem banner de cookies a reabrir). */
+  .lf-rodape-cookies::before { content: ' · '; }
+</style>
