@@ -25,7 +25,7 @@ const depoimentos = (await getCollection('depoimentosT6'))
   .sort((a, b) => a.data.ordem - b.data.ordem)
   .map(d => ({ nome: d.data.nome, cidade: d.data.cidade, servico: d.data.servico, corpo: d.body.trim() }))
 
-const anos      = new Date().getFullYear() - site.anoFundacao
+const anos      = site.anoFundacao ? new Date().getFullYear() - site.anoFundacao : null
 const wa        = `https://wa.me/${site.nap.whatsapp}`
 const canonical = `${site.dominio}/sobre`
 
@@ -65,7 +65,7 @@ const jsonLd = {
   <PageHero
     variante="destaque"
     eyebrow="Quem somos"
-    titulo={`${anos} anos achando o ponto exato`}
+    titulo={anos ? `${anos} anos achando o ponto exato` : 'Achando o ponto exato'}
     descricao="Equipe própria, uniformizada e com responsável técnico identificado na ordem de serviço. Quem localiza é quem repara."
   />
 
@@ -73,7 +73,7 @@ const jsonLd = {
     eyebrow="Como começou"
     titulo="Um geofone emprestado e um condomínio desesperado"
     paragrafos={[
-      `A Hidroponto abriu em ${site.anoFundacao}. O primeiro cliente foi um condomínio que já tinha aberto trinta metros de piso atrás de um vazamento e não tinha achado nada — o ponto estava a quatro metros do primeiro buraco.`,
+      `A Hidroponto abriu${site.anoFundacao ? ` em ${site.anoFundacao}` : ''}. O primeiro cliente foi um condomínio que já tinha aberto trinta metros de piso atrás de um vazamento e não tinha achado nada — o ponto estava a quatro metros do primeiro buraco.`,
       'Aquele caso definiu o método da casa: equipamento serve para localizar antes de abrir, não para justificar preço. Câmera, geofone e gás traçador resolvem situações diferentes, e usar o errado só gasta o tempo do cliente.',
       'Hoje são três equipes em rota e plantão de emergência até as 22h. O número que acompanhamos de perto não é faturamento: é a taxa de localização sem quebra, que segue acima de 90%.',
     ]}

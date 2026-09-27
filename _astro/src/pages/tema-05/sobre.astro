@@ -24,7 +24,7 @@ const depoimentos = (await getCollection('depoimentosT5'))
   .sort((a, b) => a.data.ordem - b.data.ordem)
   .map(d => ({ nome: d.data.nome, cidade: d.data.cidade, servico: d.data.servico, corpo: d.body.trim() }))
 
-const anos      = new Date().getFullYear() - site.anoFundacao
+const anos      = site.anoFundacao ? new Date().getFullYear() - site.anoFundacao : null
 const canonical = `${site.dominio}/sobre`
 
 const jsonLd = {
@@ -55,7 +55,7 @@ const jsonLd = {
   <PageHero
     variante="destaque"
     eyebrow="O escritório"
-    titulo={`${anos} anos em uma área só`}
+    titulo={anos ? `${anos} anos em uma área só` : 'Dedicação a uma área só'}
     descricao="Direito previdenciário desde 2011, sem outras áreas. A especialização é o que permite acompanhar mudança de regra e de jurisprudência com a frequência que essa matéria exige."
   />
 
@@ -63,7 +63,7 @@ const jsonLd = {
     eyebrow="Como começou"
     titulo="A decisão que nunca foi revista"
     paragrafos={[
-      `O escritório abriu em ${site.anoFundacao} com dois advogados e uma escolha incômoda: recusar tudo que não fosse previdenciário. Nos primeiros anos isso significou dispensar casos que pagariam a conta do mês.`,
+      `O escritório abriu ${site.anoFundacao ? `em ${site.anoFundacao}` : 'há alguns anos'} com dois advogados e uma escolha incômoda: recusar tudo que não fosse previdenciário. Nos primeiros anos isso significou dispensar casos que pagariam a conta do mês.`,
       'A aposta era simples. Regra de transição, tempo especial e critério de renda mudam o tempo todo, e acompanhar isso exige leitura semanal, não consulta esporádica quando o caso aparece.',
       'Hoje somos quatro advogados e uma equipe de apoio. O compromisso que fazemos na primeira conversa continua o mesmo: dizer quando o caso não tem fundamento, ainda que essa seja a resposta que menos gera contrato.',
     ]}

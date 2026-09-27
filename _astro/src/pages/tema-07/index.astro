@@ -53,7 +53,7 @@ const posts = (await getCollection('postsT7', ehPublicado))
     autor: nomeAutor(p.data, autores), href: `/tema-07/${p.id}`,
   }))
 
-const anos      = new Date().getFullYear() - site.anoFundacao
+const anos      = site.anoFundacao ? new Date().getFullYear() - site.anoFundacao : null
 const wa        = `https://wa.me/${site.nap.whatsapp}`
 const canonical = `${site.dominio}/`
 
@@ -115,7 +115,7 @@ const jsonLd = {
     nota="Cotação sem custo. A corretora é remunerada pela operadora — você paga o valor de tabela."
     imagem="https://images.unsplash.com/photo-1511895426328-dc8714191300?w=560&h=460&fit=crop&auto=format"
     imagemAlt="Família reunida em ambiente doméstico"
-    provaNumero={`+${anos} anos`}
+    provaNumero={anos ? `+${anos} anos` : undefined}
     provaTexto={`de corretagem em ${site.nap.cidade}`}
   />
 
@@ -191,7 +191,7 @@ const jsonLd = {
     eyebrow="Quem somos"
     titulo="Dezesseis anos comparando, não empurrando"
     paragrafos={[
-      `A Vereda abriu em ${site.anoFundacao} representando uma operadora só. Durou dois anos: ficou claro que, com um produto na mão, toda recomendação vira a mesma recomendação.`,
+      `A Vereda abriu ${site.anoFundacao ? `em ${site.anoFundacao}` : 'há alguns anos'} representando uma operadora só. Durou dois anos: ficou claro que, com um produto na mão, toda recomendação vira a mesma recomendação.`,
       'Hoje são nove operadoras na carteira. Isso significa que nem sempre a resposta é a que paga melhor para nós — e é justamente por isso que o cliente volta no ano seguinte.',
       'O trabalho que menos aparece é o de depois da venda: negativa de autorização, inclusão de dependente, dúvida de reembolso. É onde a corretora prova que serve para alguma coisa.',
     ]}

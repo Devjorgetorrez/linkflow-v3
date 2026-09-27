@@ -53,7 +53,7 @@ const posts = (await getCollection('postsT6', ehPublicado))
     autor: nomeAutor(p.data, autores), href: `/tema-06/${p.id}`,
   }))
 
-const anos      = new Date().getFullYear() - site.anoFundacao
+const anos      = site.anoFundacao ? new Date().getFullYear() - site.anoFundacao : null
 const wa        = `https://wa.me/${site.nap.whatsapp}`
 const canonical = `${site.dominio}/`
 
@@ -115,7 +115,7 @@ const jsonLd = {
     nota="Plantão de emergência até as 22h, todos os dias. Sem taxa de deslocamento em Goiânia."
     imagem="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=560&h=460&fit=crop&auto=format"
     imagemAlt="Inspeção termográfica em parede residencial"
-    provaNumero={`+${anos} anos`}
+    provaNumero={anos ? `+${anos} anos` : undefined}
     provaTexto={`atendendo ${site.nap.cidade} e região`}
   />
 
@@ -159,7 +159,7 @@ const jsonLd = {
     eyebrow="Quem somos"
     titulo="Treze anos procurando água onde ninguém vê"
     paragrafos={[
-      `A Hidroponto começou em ${site.anoFundacao} com um geofone emprestado e um carro. O primeiro cliente foi um condomínio que tinha aberto trinta metros de piso sem achar o vazamento.`,
+      `A Hidroponto começou ${site.anoFundacao ? `em ${site.anoFundacao}` : 'há alguns anos'} com um geofone emprestado e um carro. O primeiro cliente foi um condomínio que tinha aberto trinta metros de piso sem achar o vazamento.`,
       'Desde então a lógica do trabalho não mudou: equipamento serve para localizar, não para impressionar. Câmera termográfica, geofone e gás traçador resolvem casos diferentes, e escolher o errado custa tempo do cliente.',
       'Hoje são três equipes em rota e plantão de emergência até as 22h. O indicador que acompanhamos de perto é a taxa de localização sem quebra, que segue acima de 90%.',
     ]}

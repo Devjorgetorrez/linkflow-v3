@@ -55,7 +55,7 @@ const posts = (await getCollection('postsT4', ehPublicado))
     autor: nomeAutor(p.data, autores), href: `/tema-04/${p.id}`,
   }))
 
-const anos      = new Date().getFullYear() - site.anoFundacao
+const anos      = site.anoFundacao ? new Date().getFullYear() - site.anoFundacao : null
 const wa        = `https://wa.me/${site.nap.whatsapp}`
 const canonical = `${site.dominio}/`
 
@@ -116,7 +116,7 @@ const jsonLd = {
     nota="Mande a foto da peça e receba o valor fechado. Sem visita técnica cobrada."
     imagem="https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?w=560&h=460&fit=crop&auto=format"
     imagemAlt="Sofá claro higienizado em sala de estar"
-    provaNumero={`+${anos} anos`}
+    provaNumero={anos ? `+${anos} anos` : undefined}
     provaTexto={`atendendo ${site.nap.cidade} e região`}
   />
 
@@ -195,9 +195,9 @@ const jsonLd = {
   {/* 8 — quem somos, depois de já ter mostrado resultado */}
   <Proposito
     eyebrow="Sobre a Renovar"
-    titulo={`${anos} anos higienizando estofado em ${site.nap.cidade}`}
+    titulo={anos ? `${anos} anos higienizando estofado em ${site.nap.cidade}` : `Higienização de estofado em ${site.nap.cidade}`}
     paragrafos={[
-      `A Renovar começou em ${site.anoFundacao} com uma extratora e uma van. O que sustentou o crescimento não foi anúncio: foi cliente que chamou de novo seis meses depois e indicou o vizinho.`,
+      `A Renovar começou ${site.anoFundacao ? `em ${site.anoFundacao}` : 'há alguns anos'} com uma extratora e uma van. O que sustentou o crescimento não foi anúncio: foi cliente que chamou de novo seis meses depois e indicou o vizinho.`,
       'Trabalhamos com equipe própria, não terceirizada. Quem entra na sua casa é funcionário registrado, uniformizado e treinado internamente — inclusive para dizer quando uma mancha não vai sair.',
       'Já passamos de nove mil peças higienizadas na região. O número que acompanhamos de perto, porém, é outro: a taxa de retorno em garantia, que segue abaixo de 2%.',
     ]}

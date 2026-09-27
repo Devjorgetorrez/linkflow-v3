@@ -57,7 +57,7 @@ const posts = (await getCollection('postsT3', ehPublicado))
     href:          `/tema-03/${p.id}`,
   }))
 
-const anos      = new Date().getFullYear() - site.anoFundacao
+const anos      = site.anoFundacao ? new Date().getFullYear() - site.anoFundacao : null
 const canonical = `${site.dominio}/`
 
 const jsonLd = {
@@ -133,7 +133,7 @@ const jsonLd = {
     nota="Atendemos Londrina, região e empresas de outros estados por atendimento remoto."
     imagem="https://images.unsplash.com/photo-1600880292089-90a7e086ee0c?w=720&h=560&fit=crop&auto=format"
     imagemAlt="Contadora da Vértice revisando resultados com um cliente"
-    provaNumero={`+${anos} anos`}
+    provaNumero={anos ? `+${anos} anos` : undefined}
     provaTexto="de escritório aberto em Londrina"
   />
 
@@ -148,7 +148,7 @@ const jsonLd = {
     eyebrow="Quem somos"
     titulo="Um escritório que cresceu junto com a carteira, não em cima dela"
     paragrafos={[
-      `A Vértice abriu em ${site.anoFundacao} com duas salas no centro de Londrina e nove clientes. Hoje são pouco mais de duzentas empresas atendidas — número que segue limitado de propósito, porque cada cliente tem um contador designado e isso não escala sem perder qualidade.`,
+      `A Vértice abriu ${site.anoFundacao ? `em ${site.anoFundacao}` : 'há alguns anos'} com duas salas no centro de Londrina e nove clientes. Hoje são pouco mais de duzentas empresas atendidas — número que segue limitado de propósito, porque cada cliente tem um contador designado e isso não escala sem perder qualidade.`,
       'O que mudou nesses anos foi o tipo de pergunta que chega. No começo eram guias e prazos. Hoje é qual regime adotar, se compensa contratar, quanto o sócio pode retirar sem comprometer o caixa. A contabilidade continua sendo a base — o que se faz com ela é o serviço.',
       'Não vendemos software, não indicamos banco e não ganhamos comissão de nenhum fornecedor. A recomendação que damos é a que serve para a empresa.',
     ]}

@@ -34,7 +34,7 @@ const depoimentos = (await getCollection('depoimentosT3'))
     corpo:   d.body.trim(),
   }))
 
-const anos      = new Date().getFullYear() - site.anoFundacao
+const anos      = site.anoFundacao ? new Date().getFullYear() - site.anoFundacao : null
 const canonical = `${site.dominio}/sobre`
 
 const jsonLd = {
@@ -61,8 +61,8 @@ const jsonLd = {
 ---
 
 <Tema03Base
-  titulo={tituloOuPadrao(site, 'sobre', `Sobre a ${site.nome} — ${anos} anos em Londrina`)}
-  metaDescription={metaOuPadrao(site, 'sobre', `Escritório de contabilidade em Londrina desde ${site.anoFundacao}. Conheça a equipe, a trajetória e o modo de trabalho da ${site.nome}, com contador responsável por cliente.`)}
+  titulo={tituloOuPadrao(site, 'sobre', anos ? `Sobre a ${site.nome} — ${anos} anos em Londrina` : `Sobre a ${site.nome}`)}
+  metaDescription={metaOuPadrao(site, 'sobre', `Escritório de contabilidade em Londrina${site.anoFundacao ? ` desde ${site.anoFundacao}` : ''}. Conheça a equipe, a trajetória e o modo de trabalho da ${site.nome}, com contador responsável por cliente.`)}
   canonical={canonical}
   jsonLd={jsonLd}
   nodeId="sobre"
@@ -81,7 +81,7 @@ const jsonLd = {
 
   <PageHero
     eyebrow="Sobre o escritório"
-    titulo={`${anos} anos atendendo empresas do Paraná`}
+    titulo={anos ? `${anos} anos atendendo empresas do Paraná` : 'Atendendo empresas do Paraná'}
     descricao="Um escritório de porte médio, por opção. Carteira limitada para que cada cliente continue tendo um contador com nome, telefone e responsabilidade sobre o resultado."
   />
 
@@ -89,7 +89,7 @@ const jsonLd = {
     eyebrow="Como chegamos aqui"
     titulo="Começou com nove clientes e a mesma regra de hoje"
     paragrafos={[
-      `A Vértice abriu em ${site.anoFundacao}, em duas salas no centro de Londrina. A carteira inicial era quase toda do comércio da região, e o serviço era o que se esperava de um escritório na época: escrituração, guia e obrigação entregue.`,
+      `A Vértice abriu${site.anoFundacao ? ` em ${site.anoFundacao},` : ''} em duas salas no centro de Londrina. A carteira inicial era quase toda do comércio da região, e o serviço era o que se esperava de um escritório na época: escrituração, guia e obrigação entregue.`,
       'A mudança veio quando os clientes começaram a trazer perguntas que a guia não respondia. Se contratar mais um funcionário muda o meu anexo? Vale a pena manter essa linha de produto? Foi para responder isso que o relatório gerencial virou entrega padrão, e não serviço à parte.',
       'Hoje são pouco mais de duzentas empresas. O número cresce devagar de propósito: cada cliente tem um contador designado, e isso deixa de funcionar quando a carteira por profissional passa de certo ponto.',
     ]}

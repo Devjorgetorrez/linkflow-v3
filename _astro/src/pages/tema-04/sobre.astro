@@ -24,7 +24,7 @@ const depoimentos = (await getCollection('depoimentosT4'))
   .sort((a, b) => a.data.ordem - b.data.ordem)
   .map(d => ({ nome: d.data.nome, cidade: d.data.cidade, servico: d.data.servico, corpo: d.body.trim() }))
 
-const anos      = new Date().getFullYear() - site.anoFundacao
+const anos      = site.anoFundacao ? new Date().getFullYear() - site.anoFundacao : null
 const wa        = `https://wa.me/${site.nap.whatsapp}`
 const canonical = `${site.dominio}/sobre`
 
@@ -43,7 +43,7 @@ const jsonLd = {
 ---
 
 <Tema04Base
-  titulo={tituloOuPadrao(site, 'sobre', `Sobre a ${site.nome} — ${anos} anos em ${site.nap.cidade}`)}
+  titulo={tituloOuPadrao(site, 'sobre', anos ? `Sobre a ${site.nome} — ${anos} anos em ${site.nap.cidade}` : `Sobre a ${site.nome} em ${site.nap.cidade}`)}
   metaDescription={metaOuPadrao(site, 'sobre', "Conheça a Renovar Higienização: equipe própria, mais de 9 mil peças higienizadas em Campinas e região, e taxa de retorno em garantia abaixo de 2%.")}
   canonical={canonical}
   jsonLd={jsonLd}
@@ -56,7 +56,7 @@ const jsonLd = {
   <PageHero
     variante="destaque"
     eyebrow="Sobre a empresa"
-    titulo={`${anos} anos entrando na casa das pessoas`}
+    titulo={anos ? `${anos} anos entrando na casa das pessoas` : 'Entrando na casa das pessoas'}
     descricao="Equipe própria, registrada e uniformizada. Quem faz o serviço é quem responde por ele — não há terceirização de execução."
   />
 
@@ -64,7 +64,7 @@ const jsonLd = {
     eyebrow="Como começou"
     titulo="Uma extratora, uma van e um telefone"
     paragrafos={[
-      `A Renovar abriu em ${site.anoFundacao} com um equipamento e dois sócios que faziam tudo: orçamento, serviço e cobrança. A carteira cresceu por indicação, não por anúncio.`,
+      `A Renovar abriu ${site.anoFundacao ? `em ${site.anoFundacao}` : 'há alguns anos'} com um equipamento e dois sócios que faziam tudo: orçamento, serviço e cobrança. A carteira cresceu por indicação, não por anúncio.`,
       'Em 2016 montamos base própria no Jardim Proença, o que permitiu aceitar tapete grande e peça que precisa de secagem controlada. Em 2019 entrou a higienização automotiva, a pedido de clientes que já nos chamavam para casa.',
       'Hoje são três equipes em rota. O que não mudou foi o critério de contratação: preferimos formar alguém de dentro a contratar quem já traz vício de processo de outro lugar.',
     ]}

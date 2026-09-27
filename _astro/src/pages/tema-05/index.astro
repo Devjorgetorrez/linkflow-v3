@@ -58,7 +58,7 @@ const posts = (await getCollection('postsT5', ehPublicado))
     autor: nomeAutor(p.data, autores), href: `/tema-05/${p.id}`,
   }))
 
-const anos      = new Date().getFullYear() - site.anoFundacao
+const anos      = site.anoFundacao ? new Date().getFullYear() - site.anoFundacao : null
 const canonical = `${site.dominio}/`
 
 const jsonLd = {
@@ -109,7 +109,7 @@ const jsonLd = {
   <Hero
     variante="destaque"
     titulo="Advogados previdenciários dedicados a benefícios do INSS e a servidores públicos"
-    lead={`Desde ${site.anoFundacao} o escritório atua exclusivamente em direito previdenciário. Analisamos o caso, dizemos o que ele comporta e acompanhamos o processo até o fim — com relatório mensal do que andou.`}
+    lead={`${site.anoFundacao ? `Desde ${site.anoFundacao}, o` : 'O'} escritório atua exclusivamente em direito previdenciário. Analisamos o caso, dizemos o que ele comporta e acompanhamos o processo até o fim — com relatório mensal do que andou.`}
     ctaPrimTexto="Agendar uma conversa"
     ctaPrimHref="/tema-05/contato"
     ctaSecTexto="Ver áreas de atuação"
@@ -117,7 +117,7 @@ const jsonLd = {
     nota="Honorários conforme a tabela da OAB/MG, acertados por contrato antes de qualquer providência."
     imagem="https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=560&h=460&fit=crop&auto=format"
     imagemAlt="Equipe de advogados do escritório em reunião"
-    provaNumero={`+${anos} anos`}
+    provaNumero={anos ? `+${anos} anos` : undefined}
     provaTexto="de atuação exclusiva na área"
   />
 
@@ -137,7 +137,7 @@ const jsonLd = {
     eyebrow="O escritório"
     titulo="Uma área só, há mais de uma década"
     paragrafos={[
-      `Amparo Advocacia nasceu em ${site.anoFundacao} com uma decisão que nunca foi revista: atuar apenas em direito previdenciário. Não fazemos trabalhista, cível nem família — e recusamos os casos que chegam por essas portas.`,
+      `Amparo Advocacia nasceu ${site.anoFundacao ? `em ${site.anoFundacao}` : 'há alguns anos'} com uma decisão que nunca foi revista: atuar apenas em direito previdenciário. Não fazemos trabalhista, cível nem família — e recusamos os casos que chegam por essas portas.`,
       'Especializar custa faturamento no começo e devolve profundidade depois. Regra de transição, tempo especial e critério de renda do BPC mudam com frequência, e acompanhar isso exige leitura semanal de jurisprudência, não consulta esporádica.',
       'O compromisso que fazemos na primeira conversa é o de dizer quando o caso não tem fundamento. É a resposta que menos gera contrato e a que mais evita anos de expectativa em um processo perdido.',
     ]}

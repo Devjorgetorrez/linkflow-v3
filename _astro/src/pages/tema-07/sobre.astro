@@ -24,7 +24,7 @@ const depoimentos = (await getCollection('depoimentosT7'))
   .sort((a, b) => a.data.ordem - b.data.ordem)
   .map(d => ({ nome: d.data.nome, cidade: d.data.cidade, servico: d.data.servico, corpo: d.body.trim() }))
 
-const anos      = new Date().getFullYear() - site.anoFundacao
+const anos      = site.anoFundacao ? new Date().getFullYear() - site.anoFundacao : null
 const wa        = `https://wa.me/${site.nap.whatsapp}`
 const canonical = `${site.dominio}/sobre`
 
@@ -64,7 +64,7 @@ const jsonLd = {
   <PageHero
     variante="destaque"
     eyebrow="Quem somos"
-    titulo={`${anos} anos comparando planos`}
+    titulo={anos ? `${anos} anos comparando planos` : 'Comparando planos'}
     descricao="Corretora com registro na SUSEP e nove operadoras na carteira. Comparar exige ter mais de um produto na mão — e é por isso que não representamos uma só."
   />
 
@@ -72,7 +72,7 @@ const jsonLd = {
     eyebrow="Como começou"
     titulo="Começamos representando uma operadora. Durou dois anos."
     paragrafos={[
-      `A Vereda abriu em ${site.anoFundacao} como representante de uma operadora. Ficou claro rápido que, com um produto na mão, toda recomendação vira a mesma — e o cliente percebe.`,
+      `A Vereda abriu ${site.anoFundacao ? `em ${site.anoFundacao}` : 'há alguns anos'} como representante de uma operadora. Ficou claro rápido que, com um produto na mão, toda recomendação vira a mesma — e o cliente percebe.`,
       'A virada foi montar carteira com várias operadoras e passar a entregar comparativo em vez de proposta. O faturamento caiu no primeiro ano e a taxa de renovação subiu no segundo.',
       'Hoje o trabalho que menos aparece é o que mais nos define: negativa de autorização, inclusão de dependente, dúvida de reembolso. É o pós-venda que separa corretor de vendedor.',
     ]}
