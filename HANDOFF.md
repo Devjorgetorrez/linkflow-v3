@@ -21,15 +21,15 @@
 - **Git limpo**, working tree sem pendência, tudo commitado (`git log --oneline`
   mostra a sequência completa desde `bc70a98`, que fecha o Relatório de
   Testes 3 — anterior ao plano de QA).
+- **R5 — teste de ponta a ponta no VPS de teste: CONCLUÍDO em 27/09/2026**,
+  com autorização explícita do Lucas. Ver seção própria abaixo (achou e
+  corrigiu 3 bugs reais do instalador/motor).
 - **Pendência real, em aberto:**
-  1. **R5 — teste de ponta a ponta no VPS de teste.** Nunca foi feito (nem
-     antes do plano de QA, nem depois). Precisa de **autorização explícita**
-     antes de tocar no VPS. Ver "VPS de teste" abaixo para o escopo atualizado.
-  2. **Suíte Playwright**, autorizada pelo Lucas no início do plano de QA
+  1. **Suíte Playwright**, autorizada pelo Lucas no início do plano de QA
      para uso do agente de desenvolvimento — nunca chegou a ser criada. Todo
      o plano de QA foi validado por build real + teste de API (curl/Node),
      nunca por teste de navegador gravado.
-  3. Lista curta de lacunas conhecidas, sem correção — ver "Pendências,
+  2. Lista curta de lacunas conhecidas, sem correção — ver "Pendências,
      em ordem".
 - `relatorios/` e `templates-layout-temas/` continuam no `.gitignore`.
 
@@ -128,8 +128,10 @@ Motor de referência completo, sem promoção: **131 páginas** (inclui `/catalo
 o bloco Nginx `location /midia/` de clientes criados **antes** da Fase 4
 não tem o `^~` (prefixo com prioridade sobre a regra de extensão) — PDF e
 vídeo davam 404, e imagem caía no root do site. Precisa atualizar à mão o
-bloco desses clientes (o de teste, Torrez, está nessa situação). Clientes
-novos, criados pelo `novo-cliente.sh` atual, já nascem certos.
+bloco desses clientes. `torrez-desentupidora` (VPS de teste) já foi
+recriado do zero pelo `novo-cliente.sh` atual no R5 (27/09/2026) e já nasceu
+certo; `clinica-sorriso-vivo-jundiai`, criado antes, **ainda não foi
+conferido/corrigido** — não foi tocado no R5 por decisão do Lucas.
 
 ---
 
@@ -308,6 +310,95 @@ dois lados, se precisar retomar teste manual.
 
 ---
 
+## R5 — teste de ponta a ponta no VPS (27/09/2026) — CONCLUÍDO
+
+Feito com autorização explícita do Lucas, na mesma sessão que fechou a Fase 6.
+VPS `[IP-REMOVIDO]`. Achados de campo, todos corrigidos e commitados:
+
+**Estado do servidor, diferente do documentado.** Existia uma instalação
+antiga de um único cliente (`/opt/linkflow-teste`, modelo pré-multicliente,
+Torrez) e uma instalação atual, multicliente, com um cliente real e no ar
+(`clinica-sorriso-vivo-jundiai`, criado numa sessão anterior não registrada
+aqui, publicado em `dentista.turboblog.com.br`) — **não tocado, segue no ar**.
+`/opt/linkflow` (a referência multicliente) não tinha pasta `_astro` nenhuma
+e o `painel`/`scripts` compartilhados estavam de ~15/19 de setembro, sem
+quase nada das Fases 0–6.
+
+**O que foi feito:**
+1. Torrez antigo (`/opt/linkflow-teste`) desligado e removido, a pedido do
+   Lucas — "desligar e remover".
+2. `/opt/linkflow/painel`, `/opt/linkflow/scripts` e `/opt/linkflow/_astro`
+   (criada do zero) atualizados com o estado atual do repositório, `npm ci`
+   nos dois.
+3. Cliente `torrez-desentupidora` criado do zero por `novo-cliente.sh`,
+   reaproveitando os mesmos domínios que o Torrez antigo usava
+   (`teste.turboblog.com.br` / `painel.teste.turboblog.com.br`) e o
+   certificado SSL já existente (Let's Encrypt reconheceu como
+   "not yet due for renewal" e só reimplantou).
+4. Conteúdo real do Torrez (NAP, 5 serviços, área atendida — os mesmos 6
+   municípios do `projeto.md`) escrito em `config/site.ts` e
+   `content/servicos/*.md`, sem inventar CNPJ/e-mail/nota do Google (campos
+   que o onboarding nunca coletou ficaram vazios, não fabricados).
+5. Guardião (`previa` e `saida`) rodado contra o cliente real: **PASS** nos
+   dois, só com avisos esperados (sem post, sem prova social — pendências
+   reais de um site que ainda não passou pela Fase 3).
+6. Build real do Astro no servidor, deploy para `/var/www/torrez-desentupidora`.
+7. Primeiro admin do painel criado (`[EMAIL-REMOVIDO]`), login por sessão
+   testado de verdade.
+8. **Formulário do site publicado → lead real no painel**, ponta a ponta
+   (POST em `/api/submissao` com a origem do domínio real, LGPD exigida,
+   lead apareceu em `/api/leads`).
+9. **Post criado e publicado pelo painel → build real → no ar** no domínio
+   público, título e conteúdo conferidos no HTML servido.
+10. **Upload de mídia pelo painel → servida pelo Nginx do site** (`/midia/`
+    com `^~`, a correção da Fase 4) — confirmado com um PNG real, 200
+    `image/png`.
+
+**3 bugs reais encontrados e corrigidos (só apareceram rodando de verdade,
+nenhum teste isolado os pegava):**
+- `scripts/vps/novo-cliente.sh` chamava `ssl-cliente.sh` por caminho
+  relativo (`dirname "$0"`), mas o script já tinha trocado de diretório
+  (`cd` pro build do painel) antes disso — o SSL automático sempre falhava
+  em silêncio. Corrigido com `SCRIPT_DIR` absoluto, calculado antes de
+  qualquer `cd`.
+- O mesmo script tentava iniciar o painel no PM2 com `next start
+  --env-file <arquivo>` — essa flag **não existe** no `next start` desta
+  versão do Next, e o `pm2 start` retorna sucesso mesmo com o processo
+  entrando em loop de erro, então a falha nunca aparecia. Todo cliente novo
+  nascia com o painel fora do ar. Corrigido: o `.env` do cliente agora é
+  copiado para `painel/.env.production.local`, que o Next carrega sozinho,
+  sem flag nenhuma.
+- **6 layouts (`tema-03` a `tema-07`) mostravam "NaN anos" / "em undefined"**
+  na home e na página Sobre sempre que `site.anoFundacao` não estivesse
+  preenchido (22 ocorrências) — um cálculo de idade da empresa sem guarda
+  contra o campo ausente. Corrigido em todos: sem o ano, a frase muda para
+  uma versão sem data ("há alguns anos"/sem o trecho), nunca mostra
+  `NaN`/`undefined`.
+
+**Achado, não corrigido (decisão de produto, não de código):** o layout
+`tema-04` deixou de ser um template genérico de "serviço local" — o texto
+fixo da home e do Sobre (história de fundação, "por que nos escolher", FAQ)
+é hoje especificamente sobre **higienização de estofados**, não sobre
+qualquer "serviço local". Usar `tema-04` para o Torrez (desentupidora)
+significa que toda essa prosa segue sobre o negócio errado até a Fase 3
+reescrever — o que é esperado (mesma categoria de pendência que o guardião
+já avisa: "prova social"), mas vale reavaliar se `tema-04` era mesmo o
+layout certo pro Torrez, ou se `tema-06` (Hidroponto — "serviço técnico de
+emergência") descreve melhor o nicho dele. Não decidido nesta sessão.
+
+**Observação, sem ação:** todas as rotas de página (`/servico`) respondem
+com 301 para `/servico/` (barra no fim) antes de servir o conteúdo — é o
+Nginx tratando o caminho como diretório, comportamento padrão do servidor
+web para sites estáticos, **não é regressão desta sessão** (mesma
+configuração usada pelo cliente `clinica-sorriso-vivo-jundiai`, criado
+antes). Só um salto a mais por link interno; não chegou a ser investigado
+se vale eliminar.
+
+**Estado final do servidor:** `torrez-desentupidora` e
+`clinica-sorriso-vivo-jundiai` no ar, cada um com painel e site próprios,
+SSL válido nos dois. `clinica-sorriso-vivo-jundiai` não foi tocado em
+nenhum momento.
+
 ## Testes (guardados em `scripts/testes/`)
 
 - `bash scripts/testes/testar_promocao.sh <tema|sem-promocao> <dir_de_build>`
@@ -356,39 +447,39 @@ dois lados, se precisar retomar teste manual.
 
 ## Pendências, em ordem
 
-1. **R5 — teste de ponta a ponta no VPS de teste.** Nunca feito. Precisa
-   cobrir, além do que já cobria antes do plano de QA: o Nginx com `^~
-   /midia/` (bloco do cliente Torrez precisa ser atualizado à mão antes ou
-   durante o teste), `painelUrl` preenchido na publicação (bloqueia sem
-   ele), o formulário do site enviando lead de verdade ao painel publicado,
-   o banner de cookies e o registro de consentimento num domínio real, o
-   editor de posts/serviços publicando de ponta a ponta. **Pedir
-   autorização ao Lucas antes de tocar no VPS.**
-2. **Suíte Playwright**, autorizada mas não criada — cobriria os fluxos que
+1. **Suíte Playwright**, autorizada mas não criada — cobriria os fluxos que
    só foram validados por API/build nesta sessão.
-3. **Página institucional livre** (fora de serviço) — botão existe, mostra
+2. **Layout do Torrez (tema-04) pode não ser o mais adequado** — achado no
+   R5: o texto fixo de `tema-04` é hoje específico de higienização de
+   estofados, não genérico. Reavaliar se `tema-06` (serviço técnico de
+   emergência) descreve melhor uma desentupidora antes de rodar a Fase 3
+   real do Torrez.
+3. **`clinica-sorriso-vivo-jundiai`, cliente real no VPS** (criado numa
+   sessão anterior não documentada aqui) — confirmar com o Lucas/Jorge o
+   que esse cliente é e o que falta nele; não foi tocado no R5.
+4. **Página institucional livre** (fora de serviço) — botão existe, mostra
    "Em breve".
-4. **Corpo de texto livre** das páginas fixas e da página-guia — só
+5. **Corpo de texto livre** das páginas fixas e da página-guia — só
    título/meta viraram editáveis; o corpo depende de mudança maior no
    motor (onde renderizar um texto livre dentro do layout de cada tema).
-5. **Tela de consentimentos registrados** (`dados/consentimentos.json`) —
+6. **Tela de consentimentos registrados** (`dados/consentimentos.json`) —
    o registro passou a acontecer de verdade (Fase 6), mas não há UI para
    consultá-los no painel.
-6. **Trava de ~30 s em Leads (A44 do relatório de QA)** — não reproduzida
+7. **Trava de ~30 s em Leads (A44 do relatório de QA)** — não reproduzida
    nem confirmada como resolvida; suspeita é I/O síncrono em
    `painel/lib/dados.ts` somado ao excesso de chamadas (já reduzido).
    Precisa de teste ao vivo.
-7. **`painel/lib/dados.ts` usa `fs.readFileSync`/`writeFileSync` síncronos**
+8. **`painel/lib/dados.ts` usa `fs.readFileSync`/`writeFileSync` síncronos**
    em toda chamada de API de leads/formulários/tarefas — risco de
    travamento sob carga; converter para async é mudança maior, ainda não
    feita.
-8. **Corrida em `usuarios.json`** — a escrita é atômica, mas não há trava
+9. **Corrida em `usuarios.json`** — a escrita é atômica, mas não há trava
    contra leitura-modificação-gravação simultânea de duas requisições.
-9. **Permissão de arquivo:** `usuarios.json` (com hash de senha) fica
-   legível por outros usuários locais no servidor.
-10. **`/api/auth/verificar-senha`** não tem limite de tentativas (exige
+10. **Permissão de arquivo:** `usuarios.json` (com hash de senha) fica
+    legível por outros usuários locais no servidor.
+11. **`/api/auth/verificar-senha`** não tem limite de tentativas (exige
     sessão, mas dá para forçar a própria senha).
-11. **`scripts/criar-admin.mjs`** é legado, incompatível com o painel
+12. **`scripts/criar-admin.mjs`** é legado, incompatível com o painel
     atual (algoritmo de hash diferente, caminho de gravação diferente) —
     o admin que ele cria provavelmente não consegue logar. Considerar
     remover ou reescrever.
@@ -399,12 +490,27 @@ dois lados, se precisar retomar teste manual.
 
 ## VPS de teste
 
-`[IP-REMOVIDO]`, porta `22022`, `LINKFLOW_DIR: /opt/linkflow-teste`,
-`LINKFLOW_SLUG: torrez-desentupidora`. **Pedir autorização ao Lucas antes de
-qualquer ação no VPS.** Critério de "R5 concluído": Torrez recriada (ou
-atualizada) do zero pelo fluxo do agente, site e painel no ar, Nginx com o
-bloco de mídia correto, formulário do site entregando lead de verdade no
-painel, um post publicado pelo painel sem intervenção manual.
+`[IP-REMOVIDO]`, porta `22022`. **Pedir autorização ao Lucas antes de
+qualquer ação no VPS** — vale para qualquer mudança nova, mesmo depois do
+R5.
+
+**Estado atual (27/09/2026), depois do R5:**
+- `/opt/linkflow` — instalação multicliente atual, motor de referência e
+  scripts sincronizados com o repositório (feito no R5). É daqui que
+  `novo-cliente.sh` copia para cada cliente novo.
+- `/opt/linkflow/clientes/torrez-desentupidora` — `LINKFLOW_SLUG:
+  torrez-desentupidora`, criado do zero no R5, site em
+  `teste.turboblog.com.br`, painel em `painel.teste.turboblog.com.br`
+  (admin: `[EMAIL-REMOVIDO]`, senha `[SENHA-REMOVIDA]` — trocar antes de
+  qualquer uso real). Conteúdo é o real do `projeto.md` (NAP, 5 serviços),
+  mas a prosa fixa do tema-04 (fundação, FAQ) ainda é de demonstração —
+  Fase 3 nunca rodou para este cliente.
+- `/opt/linkflow/clientes/clinica-sorriso-vivo-jundiai` — cliente real,
+  criado numa sessão anterior não documentada neste handoff, publicado em
+  `dentista.turboblog.com.br`. **Não foi tocado no R5.** Confirmar com o
+  Lucas/Jorge o que é esse cliente antes de mexer nele.
+- O modelo antigo de um único cliente (`/opt/linkflow-teste`) foi
+  **removido** no R5 — não existe mais.
 
 ---
 
