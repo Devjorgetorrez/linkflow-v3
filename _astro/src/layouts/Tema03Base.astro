@@ -9,6 +9,7 @@
 import '../styles/global.css'
 import { site } from '../config/tema-03.ts'
 import { urlAbsoluta } from '../lib/schema.ts'
+import BotaoWhatsApp from '../components/blocos/BotaoWhatsApp.astro'
 
 interface Props {
   titulo:          string
@@ -65,6 +66,9 @@ const ogImagem    = urlAbsoluta(site, site.ogImagem)
     rel="stylesheet"
   />
 
+  {/* URL do painel (envio do formulário de contato); sem ela o formulário não envia */}
+  {site.painelUrl && <meta name="lf-painel-url" content={site.painelUrl} />}
+
   {jsonLd && (
     <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
   )}
@@ -73,5 +77,7 @@ const ogImagem    = urlAbsoluta(site, site.ogImagem)
   <main data-node-id={nodeId}>
     <slot />
   </main>
+  <script>import '../scripts/utm.ts'</script>
+  <BotaoWhatsApp whatsapp={site.nap?.whatsapp} ativo={site.whatsappFlutuante !== false} mensagem={site.whatsappMensagem} />
 </body>
 </html>

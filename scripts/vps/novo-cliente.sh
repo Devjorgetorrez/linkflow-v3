@@ -111,6 +111,32 @@ rm -f "$CLIENTE_DIR/_astro/src/content/depoimentos/"*.md 2>/dev/null || true
 rm -f "$CLIENTE_DIR/_astro/src/content/autores/"*.md 2>/dev/null || true
 rm -f "$CLIENTE_DIR/_astro/src/content/categorias/"*.md 2>/dev/null || true
 
+# painelUrl: destino do formulário de contato do site (POST <painelUrl>/api/submissao).
+# Preenchido aqui com o domínio do painel que ESTE script acabou de configurar.
+# Só a linha do campo é alterada (sed restrito); se o config não tiver o campo,
+# ele entra logo abaixo de `dominio:`. O DOMINIO_PAINEL é validado antes (sem
+# caracteres que quebrem o sed). O motor local do cliente recebe o mesmo valor
+# na ETAPA 6.2 da fase2-site-astro; aqui cobre o config da cópia do servidor.
+SITE_TS="$CLIENTE_DIR/_astro/src/config/site.ts"
+if [[ ! "$DOMINIO_PAINEL" =~ ^[A-Za-z0-9.-]+$ ]]; then
+  echo "Erro: domínio do painel inválido para o config do site: $DOMINIO_PAINEL"
+  exit 1
+fi
+if [ -f "$SITE_TS" ]; then
+  if grep -qE "^[[:space:]]*painelUrl[[:space:]]*:[[:space:]]*['\"]" "$SITE_TS"; then
+    sed -i -E "s|^([[:space:]]*painelUrl[[:space:]]*:[[:space:]]*)['\"][^'\"]*['\"]|\1'https://$DOMINIO_PAINEL'|" "$SITE_TS"
+  else
+    sed -i -E "0,/^[[:space:]]*dominio[[:space:]]*:.*/s||&\n  painelUrl: 'https://$DOMINIO_PAINEL',|" "$SITE_TS"
+  fi
+  if grep -qE "^[[:space:]]*painelUrl[[:space:]]*:[[:space:]]*'https://$DOMINIO_PAINEL'," "$SITE_TS"; then
+    echo "  painelUrl do site → https://$DOMINIO_PAINEL"
+  else
+    echo "  ⚠️  Não consegui gravar painelUrl no config do site — o formulário de contato não vai enviar até isso ser corrigido"
+  fi
+else
+  echo "  ⚠️  config/site.ts não encontrado em $CLIENTE_DIR/_astro — painelUrl não gravado"
+fi
+
 # Página temporária enquanto o site não foi buildado
 cat > $SITES_DIR/$SLUG/index.html << HTML
 <!DOCTYPE html>

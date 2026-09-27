@@ -223,6 +223,13 @@ ssh -p [porta] root@[IP] \
 como no PASSO 3. O script promove esse layout pra raiz e apaga os outros
 automaticamente — nenhuma ação extra necessária aqui.
 
+O script também grava `painelUrl: 'https://[DOMINIO_PAINEL]'` no `config/site.ts`
+da cópia do cliente (só a linha do campo; se o campo não existir, entra abaixo de
+`dominio:`) e imprime `painelUrl do site → https://...`. Se aparecer o aviso
+"Não consegui gravar painelUrl", o formulário de contato do site não vai enviar:
+corrigir antes de seguir. O `painelUrl` do site local é preenchido na ETAPA 6.2 da
+`fase2-site-astro` com o mesmo valor — tem de ser exatamente `https://[DOMINIO_PAINEL]`.
+
 Isso cria, isolado desse cliente:
 - Pasta própria em `/opt/linkflow/clientes/[SLUG]/` (dados, mídia,
   `usuarios.json` vazio, motor Astro próprio)
@@ -364,6 +371,12 @@ senha pelo servidor.
 Confirmar que o login funciona:
 > "Acesse https://painel.[dominio]/login e entre com o e-mail e senha
 > que acabamos de criar."
+
+**Teste de ponta a ponta do formulário (site → lead no painel):** com o painel
+no ar e o SSL `ok`, seguir a ETAPA 6.6 da `fase2-site-astro` (POST de teste em
+`https://painel.[dominio]/api/submissao` e conferência na tela de Leads). O CORS
+do painel é restrito à origem do site: se o navegador reclamar de CORS, o
+endereço do site não bate com o domínio que o painel aceita como origem (confira com quem mantém o painel).
 
 ---
 

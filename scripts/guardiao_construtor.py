@@ -77,6 +77,30 @@ def rota_pilar_do_config(config_conteudo):
 
 # ─── HELPERS ──────────────────────────────────────────────────────────────────
 
+def painel_url_do_config(config_conteudo):
+    """Valor de `painelUrl` no site.ts: None se o campo nao existe, '' se vazio."""
+    m = re.search(r"^[ 	]*painelUrl\s*:\s*['\"]([^'\"]*)['\"]", config_conteudo or "", re.MULTILINE)
+    return None if not m else m.group(1).strip()
+
+
+def problema_painel_url(valor):
+    """Motivo pelo qual painelUrl nao serve para publicar; None se esta ok."""
+    if not valor:
+        return "vazio"
+    if not re.match(r"^https://[a-z0-9.-]+\.[a-z]{2,}(:\d+)?/?$", valor, re.IGNORECASE):
+        return f"'{valor}' nao e uma URL https de painel (esperado algo como https://painel.seudominio.com.br)"
+    if any(x in valor.lower() for x in ("seudominio", "exemplo", "localhost", "dominio-provisorio")):
+        return f"'{valor}' e um endereco de exemplo/provisorio"
+    return None
+
+
+MSG_PAINEL_URL = (
+    "painelUrl no config/site.ts {problema} - sem o endereco do painel o formulario de "
+    "contato NAO envia e os leads nunca chegam ao painel. Preencha com https://painel.[dominio] "
+    "(ETAPA 6.2 da fase2-site-astro)"
+)
+
+
 def campo_vazio(valor: str) -> bool:
     """True se o valor é vazio ou placeholder."""
     placeholders = [
@@ -388,6 +412,19 @@ def verificar_publicacao(slug):
     if not m_tema or m_tema.group(1).strip().lower() not in TEMAS_VALIDOS:
         erros.append("tema_pasta ausente ou invalido no projeto.md - o layout precisa estar definido para promover")
 
+    # painelUrl: o gate roda ANTES da ETAPA 6.2 (que preenche o campo com o dominio
+    # real). Valor preenchido mas invalido bloqueia; vazio avisa aqui e BLOQUEIA na saida.
+    cfg = _LINKFLOW_DIR / "_astro" / "src" / "config" / "site.ts"
+    if cfg.exists():
+        pu = painel_url_do_config(cfg.read_text(encoding="utf-8"))
+        prob = problema_painel_url(pu)
+        if pu is None:
+            avisos.append("Campo painelUrl ausente no config/site.ts - o formulario de contato nao vai enviar. Adicione 'painelUrl' (ETAPA 6.2).")
+        elif prob == "vazio":
+            avisos.append("painelUrl ainda vazio no config/site.ts - preencha com https://painel.[dominio] na ETAPA 6.2; sem ele o formulario de contato nao envia e o gate de saida bloqueia.")
+        elif prob:
+            erros.append(MSG_PAINEL_URL.format(problema=prob))
+
     return imprimir_resultado(erros, avisos, "publicacao")
 
 
@@ -462,6 +499,17 @@ def verificar_saida(slug, fase="saida"):
                 erros.append("Campo 'dominio' vazio no config do cliente — sitemap e canonical ficarao errados")
             elif "seudominio" in match.group(1) or "exemplo" in match.group(1):
                 erros.append(f"Campo 'dominio' com placeholder: '{match.group(1)}'")
+
+        # ── painelUrl: destino do formulario de contato (leads -> painel) ────
+        pu = painel_url_do_config(config_conteudo)
+        prob = problema_painel_url(pu)
+        if previa:
+            if prob:
+                avisos.append("painelUrl vazio na previa local: o formulario mostra 'Previa' e nao envia (esperado ate a publicacao).")
+        elif pu is None:
+            erros.append("Campo painelUrl ausente no config/site.ts - o formulario de contato nao envia (ETAPA 6.2 da fase2-site-astro)")
+        elif prob:
+            erros.append(MSG_PAINEL_URL.format(problema=prob))
 
         # ── Dado de DEMONSTRACAO do layout que sobrou no config ──────────────
         achados, tem_referencia = demonstracao_que_sobrou(config_conteudo, astro_dir)

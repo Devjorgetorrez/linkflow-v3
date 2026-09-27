@@ -301,6 +301,11 @@ export const site = {
   slogan:      "[kw_principal] em [cidade]",
   // Prévia local: domínio provisório. É trocado pelo real no Marco 2 (ETAPA 6.2).
   dominio:     "https://seudominio.com.br",
+  // Endereço do painel: destino do formulário de contato. VAZIO na prévia (o
+  // formulário mostra "Prévia…" e não envia). Preenchido na ETAPA 6.2. Nunca inventar.
+  painelUrl:         "",
+  whatsappFlutuante: true,   // botão fixo do WhatsApp; só aparece se nap.whatsapp existir
+  whatsappMensagem:  "",     // vazio = "Olá! Vim pelo site e gostaria de mais informações."
   cnpj:        [cnpj ou null],
   anoFundacao: [ano_fundacao ou null],
 
@@ -558,6 +563,20 @@ grep -rl "seudominio" dist || echo "sem placeholder de domínio"
 Nenhum arquivo pode ter sobrado com `seudominio`. Sitemap, robots, dados
 estruturados e contato passam a sair com o domínio real neste build.
 
+**Formulário de contato → painel.** No mesmo `config/site.ts`, preencher
+`painelUrl` com `"https://painel.[dominio]"` (é o mesmo endereço que a `vps-setup`
+usa como `DOMINIO_PAINEL` e que está em `dominio_painel:` no projeto.md — os dois
+têm de ser idênticos). Sem `painelUrl` o formulário do site **não envia** e o lead
+nunca chega ao painel; o guardião de saída bloqueia se estiver vazio. Conferir
+depois do build:
+
+```bash
+grep -rl 'name="lf-painel-url"' dist | head -1 || echo "ERRO: painelUrl não entrou no HTML"
+```
+
+O botão flutuante de WhatsApp e o "Continuar no WhatsApp" pós-envio usam
+`nap.whatsapp` (sem número, não aparecem) e não precisam de mais nada.
+
 ### 6.3 Servidor (infraestrutura)
 
 Invocar a skill `vps-setup` — **Parte A (PASSOS 0 a 4)**. Ela pede os dados do
@@ -606,6 +625,22 @@ Invocar `vps-setup` — **Parte B (PASSOS 5B a 7)**, uma tarefa por vez:
 Se o DNS ainda não apontou, dizer "o site já está no servidor, mas o endereço
 ainda não abre — isso pode levar algumas horas" e **esperar**; não criar o admin
 antes.
+
+### 6.6 Teste de ponta a ponta: site → lead no painel
+
+Só depois do administrador criado e do SSL do painel `ok`. Enviar um contato de
+teste ao endpoint que o formulário usa e conferir que ele aparece na tela de
+Leads do painel (Origem = página `/teste-instalacao`):
+
+```bash
+curl -s -X POST "https://painel.[dominio]/api/submissao"   -H "Content-Type: application/json" -H "Origin: https://[dominio]"   -d '{"formularioId":"contato","nome":"Teste de instalação","email":"","telefone":"","mensagem":"Teste automático do formulário — pode apagar.","_hp":"","paginaOrigem":"/teste-instalacao","lgpdAceite":false,"camposExtras":{}}'
+```
+
+Deve responder `{"ok":true,...}`. Se responder erro de validação, falha de rede ou
+CORS, **parar e avisar** ("o formulário do site ainda não entrega os contatos") —
+nunca reportar o site como pronto. Pedir ao usuário, como **um único pedido**,
+que abra o painel > Leads e apague o contato de teste (ou apague pela API, se
+disponível). Se o `painelUrl` do site estiver vazio, é o defeito a corrigir aqui.
 
 ## GUARDIÃO DE SAÍDA — Executar ANTES de reportar "no ar"
 

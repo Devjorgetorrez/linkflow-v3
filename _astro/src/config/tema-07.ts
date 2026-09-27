@@ -15,6 +15,16 @@ export const site = {
   nomeBreve:   'Vereda',
   slogan:      'A gente compara, você escolhe',
   dominio:     'https://veredacorretora.com.br',
+
+  /* Formulário de contato e WhatsApp.
+     painelUrl: URL https do painel do cliente (ex.: 'https://painel.seudominio.com.br').
+       Vazio na prévia local — o formulário mostra um aviso e não envia. É preenchido
+       na publicação (fase2-site-astro ETAPA 6.2 / novo-cliente.sh); nunca inventar.
+     whatsappFlutuante: botão fixo no canto da tela; só aparece se nap.whatsapp existir.
+     whatsappMensagem: texto inicial do botão flutuante; vazio = mensagem neutra padrão. */
+  painelUrl:         '',
+  whatsappFlutuante: true,
+  whatsappMensagem:  '',
   cnpj:        '55.666.777/0001-88',
   anoFundacao: 2009,
 

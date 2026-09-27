@@ -12,6 +12,16 @@ export const site = {
   nomeBreve:   'Vértice',
   slogan:      'Números claros, decisões seguras',
   dominio:     'https://verticecontabilidade.com.br',
+
+  /* Formulário de contato e WhatsApp.
+     painelUrl: URL https do painel do cliente (ex.: 'https://painel.seudominio.com.br').
+       Vazio na prévia local — o formulário mostra um aviso e não envia. É preenchido
+       na publicação (fase2-site-astro ETAPA 6.2 / novo-cliente.sh); nunca inventar.
+     whatsappFlutuante: botão fixo no canto da tela; só aparece se nap.whatsapp existir.
+     whatsappMensagem: texto inicial do botão flutuante; vazio = mensagem neutra padrão. */
+  painelUrl:         '',
+  whatsappFlutuante: true,
+  whatsappMensagem:  '',
   cnpj:        '11.222.333/0001-44',
   anoFundacao: 2003,
 

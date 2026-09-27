@@ -3,7 +3,7 @@
 Uso: python scripts/testes/testar_guardiao.py
 Cria um projeto temporario em cada cenario (construcao sem dominio, layout invalido,
 publicacao bloqueada/liberada, previa com dominio provisorio, saida, pilar /planos).
-Esperado: 21 cenarios OK e a linha final "TUDO OK".
+Esperado: 27 cenarios OK e a linha final "TUDO OK".
 """
 import os, shutil, subprocess, sys, tempfile
 from pathlib import Path
@@ -33,7 +33,7 @@ ok
 """
 
 
-def montar(tmp, tema="tema-07", extra="", pilar="/planos", nav_pilar=True):
+def montar(tmp, tema="tema-07", extra="", pilar="/planos", nav_pilar=True, painel=None):
     proj = tmp / "proj"
     lf = tmp / "lf"
     sites = tmp / "sites"
@@ -44,7 +44,7 @@ def montar(tmp, tema="tema-07", extra="", pilar="/planos", nav_pilar=True):
     rota = f"  rotaPilar: '{pilar}',\n" if pilar != "/servicos" else ""
     nav = f"[{{ label: 'Planos', href: '{pilar}', filhos: [] }}]" if nav_pilar else "[{ label: 'Home', href: '/' }]"
     (cfg / "site.ts").write_text(
-        "export const site = {\n  dominio: '',\n" + rota +
+        "export const site = {\n  dominio: '',\n" + (f"  painelUrl: '{painel}',\n" if painel is not None else "") + rota +
         "  nap: { telefone: '11999990000' },\n  redes: [],\n  nav: " + nav + ",\n"
         "  navFooterColunas: [\n    { titulo: 'Planos', links: [] },\n  ],\n}\n", encoding="utf-8")
     cont = lf / "_astro" / "src" / "content"
@@ -163,6 +163,27 @@ try:
     (cli / "_astro" / "src" / "config" / "site.ts").write_text(cfg2, encoding="utf-8")
     r = subprocess.run([sys.executable, str(GUARD), "--slug", "teste", "--fase", "previa"], env=env, capture_output=True, text=True, encoding="utf-8")
     checar("com area e horario do cliente, esses dois deixam de ser apontados", "funcionamento: bloco identico" not in r.stdout and "areaAtendimento: bloco identico" not in r.stdout, r.stdout)
+
+    # 8. painelUrl (destino do formulario de contato): previa avisa, publicacao valida, saida exige
+    ext = "visual_aprovado: sim\ndominio: veredaseguros.com.br\nemail_institucional: a@b.com"
+    p, l, s = montar(tmp / "n1", painel="")
+    rc, out = rodar("previa", p, l, s)
+    checar("previa com painelUrl vazio PASSA e apenas avisa", rc == 0 and "painelUrl vazio na previa" in out, out)
+    p, l, s = montar(tmp / "n2", extra=ext, painel="")
+    rc, out = rodar("publicacao", p, l, s)
+    checar("publicacao com painelUrl vazio avisa (preenche na 6.2)", rc == 0 and "painelUrl ainda vazio" in out, out)
+    p, l, s = montar(tmp / "n3", extra=ext, painel="http://painel.veredaseguros.com.br")
+    rc, out = rodar("publicacao", p, l, s)
+    checar("publicacao com painelUrl http BLOQUEIA", rc == 1 and "painelUrl" in out and "https" in out, out)
+    p, l, s = montar(tmp / "n4", extra=ext, painel="https://painel.veredaseguros.com.br")
+    rc, out = rodar("publicacao", p, l, s)
+    checar("publicacao com painelUrl https PASSA", rc == 0 and "painelUrl" not in out, out)
+    p, l, s = montar(tmp / "n5", extra=ext, painel="")
+    rc, out = rodar("saida", p, l, s)
+    checar("saida com painelUrl vazio BLOQUEIA", rc == 1 and "painelUrl no config/site.ts vazio" in out, out)
+    p, l, s = montar(tmp / "n6", extra=ext)
+    rc, out = rodar("saida", p, l, s)
+    checar("saida sem o campo painelUrl BLOQUEIA", rc == 1 and "painelUrl ausente" in out, out)
 finally:
     shutil.rmtree(tmp, ignore_errors=True)
 

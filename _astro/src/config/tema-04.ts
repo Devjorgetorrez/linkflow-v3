@@ -13,6 +13,16 @@ export const site = {
   nomeBreve:   'Renovar',
   slogan:      'Seu estofado como no primeiro dia',
   dominio:     'https://renovarhigienizacao.com.br',
+
+  /* Formulário de contato e WhatsApp.
+     painelUrl: URL https do painel do cliente (ex.: 'https://painel.seudominio.com.br').
+       Vazio na prévia local — o formulário mostra um aviso e não envia. É preenchido
+       na publicação (fase2-site-astro ETAPA 6.2 / novo-cliente.sh); nunca inventar.
+     whatsappFlutuante: botão fixo no canto da tela; só aparece se nap.whatsapp existir.
+     whatsappMensagem: texto inicial do botão flutuante; vazio = mensagem neutra padrão. */
+  painelUrl:         '',
+  whatsappFlutuante: true,
+  whatsappMensagem:  '',
   cnpj:        '22.333.444/0001-55',
   anoFundacao: 2013,
   descricao:   'Higienização profissional de estofados, colchões e tapetes em Campinas e região.',
