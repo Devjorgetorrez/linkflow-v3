@@ -17,6 +17,7 @@ import {
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
+import { AvatarUsuario } from "@/components/AvatarUsuario";
 import { Marca } from "@/components/Marca";
 import { useSession, signOut } from "next-auth/react";
 import { paginaPermitida } from "@/lib/permissoes-paginas";
@@ -286,6 +287,17 @@ export function Sidebar() {
     iniciais: ((session?.user as { name?: string })?.name || usuario.nome)
       .split(" ").slice(0, 2).map((n: string) => n[0]).join("").toUpperCase() || "?",
   };
+
+  // Foto de perfil do usuário logado (a sessão só traz nome e e-mail).
+  const idSessao = (session?.user as { id?: string } | undefined)?.id;
+  const [fotoPerfil, setFotoPerfil] = useState("");
+  useEffect(() => {
+    if (!idSessao) return;
+    fetch(`/api/usuarios/${idSessao}`)
+      .then((r) => r.json())
+      .then((d) => setFotoPerfil(String(d?.usuario?.autoria?.foto ?? "")))
+      .catch(() => {});
+  }, [idSessao]);
 
   /* ── Modo estreito (accordion) ── */
   const [estreito, setEstreito] = useState(true);
@@ -575,9 +587,12 @@ export function Sidebar() {
           href="/perfil"
           className="flex items-center gap-2.5 rounded-[var(--radius)] px-1 py-1 transition-colors hover:bg-white/10"
         >
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/15 text-[11px] font-semibold text-white">
-            {usuarioReal.iniciais}
-          </span>
+          <AvatarUsuario
+            nome={usuarioReal.nome}
+            foto={fotoPerfil}
+            tamanho={64}
+            className="h-8 w-8 rounded-full bg-white/15 text-[11px] font-semibold text-white"
+          />
           <div className="min-w-0 flex-1 leading-tight">
             <p className="truncate text-[12.5px] font-medium text-white/90">{usuarioReal.nome}</p>
             <p className="truncate text-[11px] text-white/50">{usuarioReal.email}</p>

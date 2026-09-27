@@ -4,6 +4,7 @@ import { ExternalLink, Pencil, Search, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
+import { AvatarUsuario } from "@/components/AvatarUsuario";
 import { useStore } from "@/lib/store";
 
 const GRADIENTES = [
@@ -90,11 +91,12 @@ export function ListaAutores() {
               >
                 {/* identidade */}
                 <div className="flex items-start gap-4">
-                  <div
-                    className={`flex h-14 w-14 flex-none items-center justify-center rounded-xl bg-gradient-to-br ${gradiente(autor.id)} text-lg font-bold text-white`}
-                  >
-                    {iniciais(autor.nome)}
-                  </div>
+                  <AvatarUsuario
+                    nome={autor.nome}
+                    foto={autor.foto}
+                    tamanho={160}
+                    className={`h-14 w-14 flex-none rounded-xl bg-gradient-to-br ${gradiente(autor.id)} text-lg font-bold text-white`}
+                  />
                   <div className="min-w-0">
                     <p className="truncate font-semibold text-ink">
                       {autor.nome}

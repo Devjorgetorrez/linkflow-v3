@@ -6,12 +6,14 @@ import { useState, useEffect } from "react";
 
 import { useStore } from "@/lib/store";
 import type { Usuario as UsuarioBase } from "@/mock/types";
+import { AvatarUsuario } from "@/components/AvatarUsuario";
 import { cn } from "@/lib/utils";
 
 // Tipo local — estende o Usuario do Jorge com campos derivados da API
 interface UsuarioListado extends UsuarioBase {
   nome: string;
   iniciais?: string;
+  foto?: string;
   postsAssinados: number;
   criadoEm: string;
 }
@@ -72,6 +74,7 @@ export default function UsuariosPage() {
             return {
               id: String(u.id ?? ""),
               nome,
+              foto: String(autoria?.foto ?? ""),
               iniciais: String(u.iniciais ?? (nome.split(" ").slice(0, 2).map((n: string) => n[0]).join("").toUpperCase() || "?")),
               acesso: {
                 emailLogin: String(acesso?.emailLogin ?? ""),
@@ -214,11 +217,12 @@ export default function UsuariosPage() {
                     {/* Nome */}
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
-                        <div
-                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${gradiente(u.id)} text-[11px] font-bold text-white`}
-                        >
-                          {iniciais(nomeExibicao)}
-                        </div>
+                        <AvatarUsuario
+                          nome={nomeExibicao}
+                          foto={u.foto}
+                          tamanho={64}
+                          className={`h-8 w-8 rounded-full bg-gradient-to-br ${gradiente(u.id)} text-[11px] font-bold text-white`}
+                        />
                         <div>
                           <p className="font-medium text-[var(--ink)]">{nomeExibicao}</p>
                           <div className="mt-0.5 flex items-center gap-1.5">
