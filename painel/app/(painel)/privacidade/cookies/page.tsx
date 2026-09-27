@@ -179,7 +179,12 @@ function ModalCard() {
 /* ------------------------------------------------------------------ */
 
 export default function CookiesPage() {
-  const { cookieConfig: initConfig, setCookieConfig: salvarNoStore, politicaPublicada } = useStore();
+  const { cookieConfig: initConfig, setCookieConfig: salvarNoStore } = useStore();
+  // A política é considerada "publicada" com os mesmos 5 campos obrigatórios que a tela
+  // Política usa para mostrar "100% completo" (Completeness, em privacidade/politica) — nunca
+  // vinha de lugar nenhum antes (era um estado do store que nada preenchia, então o botão
+  // "Salvar configuração" ficava sempre desabilitado). Calculado do legalPainel real.
+  const [politicaPublicada, setPoliticaPublicada] = useState(false);
   const [config, setConfigState] = useState(initConfig);
   const [aba, setAba] = useState<"banner" | "modal">("banner");
   const [salvando, setSalvando] = useState(false);
@@ -203,6 +208,13 @@ export default function CookiesPage() {
           }));
         }
         const lp: Partial<LegalPainel> = data.config.legalPainel ?? {};
+        setPoliticaPublicada(
+          !!lp.cnpj &&
+          !!lp.endereco &&
+          !!lp.emailContato &&
+          !!(lp.retencaoFormularios && lp.retencaoAnaliticos && lp.retencaoMarketing) &&
+          !!(lp.versaoPolitica && lp.atualizadaEm),
+        );
         if (lp.cookieAnaliticosFinalidade || lp.cookieMarketingFinalidade || lp.cookieFuncionaisFinalidade) {
           setConfigState((prev) => ({
             ...prev,

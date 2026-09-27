@@ -24,13 +24,16 @@
 - **R5 — teste de ponta a ponta no VPS de teste: CONCLUÍDO em 27/09/2026**,
   com autorização explícita do Lucas. Ver seção própria abaixo (achou e
   corrigiu 3 bugs reais do instalador/motor).
-- **Pendência real, em aberto:**
-  1. **Suíte Playwright**, autorizada pelo Lucas no início do plano de QA
-     para uso do agente de desenvolvimento — nunca chegou a ser criada. Todo
-     o plano de QA foi validado por build real + teste de API (curl/Node),
-     nunca por teste de navegador gravado.
-  2. Lista curta de lacunas conhecidas, sem correção — ver "Pendências,
-     em ordem".
+- **Suíte Playwright: criada e verde em 27/09/2026** (`painel/tests/`,
+  42 specs, `npx playwright test`) — cobre login/rate-limit, posts,
+  serviços, mídia, usuários, aparência, leads, privacidade e um smoke test
+  de navegação por todo o menu. Achou e levou à correção de um bug real do
+  produto (`politicaPublicada` morto em `privacidade/cookies`, ver
+  "Pendências, em ordem"). Ver seção própria "Suíte Playwright" abaixo
+  para como rodar e a pegadinha do servidor de teste que precisou de
+  restart.
+- **Pendência real, em aberto:** lista curta de lacunas conhecidas, sem
+  correção — ver "Pendências, em ordem".
 - `relatorios/` e `templates-layout-temas/` continuam no `.gitignore`.
 
 ## Quem é quem
@@ -447,8 +450,18 @@ nenhum momento.
 
 ## Pendências, em ordem
 
-1. **Suíte Playwright**, autorizada mas não criada — cobriria os fluxos que
-   só foram validados por API/build nesta sessão.
+1. ~~Suíte Playwright, autorizada mas não criada~~ — **resolvida em
+   27/09/2026**: 42 testes, verdes (41 passam + 1 skip esperado). No
+   processo, achou um bug real do produto — em
+   `app/(painel)/privacidade/cookies/page.tsx`, o botão "Salvar
+   configuração" lia `politicaPublicada` de `lib/store.tsx`, mas
+   `setPoliticaPublicada` nunca era chamado em lugar nenhum do painel:
+   ficava sempre `false`, então o botão ficava permanentemente
+   desabilitado mesmo com a Política de Privacidade completa. Corrigido:
+   a tela agora calcula `politicaPublicada` ela mesma, a partir dos
+   mesmos 5 campos obrigatórios que a tela Política usa pra "100%
+   completo" (CNPJ, endereço, e-mail de contato, retenções, versão+data).
+   Estado morto removido de `lib/store.tsx`.
 2. ~~Layout do Torrez pode não ser o mais adequado~~ — **resolvido em
    27/09/2026**: trocado de `tema-04` para `tema-06` (serviço técnico de
    emergência, já cita "desentupidora" na descrição do nicho). A prosa fixa
@@ -487,6 +500,40 @@ nenhum momento.
     `hashtags`/`buscasFrequentes` dos configs apontam direto para slugs de
     post/serviço (link morto se o post virar rascunho); `public/tema-0X.json`
     ainda descreve rotas antigas (só informativo).
+
+## Suíte Playwright
+
+`painel/tests/` — 42 testes, `playwright.config.ts` na raiz do painel.
+`tests/README.md` explica como preparar a cópia de teste (nunca roda contra
+a pasta real sem antes conferir). Roda com `workers: 1` (specs
+compartilham `usuarios.json`/posts/serviços do mesmo servidor) e
+`fullyParallel: false`.
+
+```
+export PLAYWRIGHT_API_KEY=<a mesma PAINEL_API_KEY do servidor>
+export PLAYWRIGHT_BASE_URL=http://localhost:3210   # ou outra cópia já no ar
+npx playwright test --reporter=list
+```
+
+`tests/global-setup.ts` cria/reativa os usuários de teste via API antes da
+suíte rodar. `tests/privacidade.spec.ts` faz sua própria checagem de
+estado (se a Política já está completa no servidor, um teste se
+auto-`skip`; o outro sempre PATCH-a os campos, testa e devolve o valor
+original em `finally`) — pensado pra não estragar um servidor
+compartilhado com dados manuais de outra sessão.
+
+**Pegadinha real, já vivida:** um servidor `next dev` de teste que fica no
+ar por muitas horas (esta sessão usou o mesmo processo o dia inteiro) pode
+ter o Fast Refresh falhando silenciosamente numa edição específica — sem
+erro no terminal, sem overlay de erro no navegador — e continuar servindo
+o bundle de ANTES da edição. Foi exatamente o que aconteceu com o fix do
+`politicaPublicada`: o código no disco estava certo, a API confirmava os
+dados certos, mas a tela continuava mostrando o bug antigo até eu matar o
+processo (`netstat -ano | findstr :3210` → PID → `Stop-Process`) e subir
+`npm run dev` de novo. Se um teste falha de um jeito que não bate com o
+código-fonte lido na hora, suspeitar disso antes de caçar bug fantasma —
+principalmente depois de editar um arquivo que muda imports/hooks
+(remover um import do `lib/store.tsx`, no caso).
 
 ## VPS de teste
 

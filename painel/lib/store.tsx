@@ -405,8 +405,6 @@ interface Estado {
 
   cookieConfig: CookieConfig;
   setCookieConfig: (patch: Partial<Omit<CookieConfig, "categorias">> & { categorias?: Partial<CookieConfig["categorias"]> }) => void;
-  politicaPublicada: boolean;
-  setPoliticaPublicada: (v: boolean) => void;
 
   privacidadeConfig: PrivacidadeConfig;
   setPrivacidadeConfig: (patch: Partial<PrivacidadeConfig>) => void;
@@ -701,7 +699,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [llms, setLlms] = useState(LLMS_INICIAL);
   const [usuariosList, setUsuarios] = useState<Usuario[]>([]);
   const [cookieConfig, setCookieConfigState] = useState<CookieConfig>(COOKIE_CONFIG_INICIAL);
-  const [politicaPublicada, setPoliticaPublicada] = useState(false);
   const [privacidadeConfig, setPrivacidadeConfigState] = useState<PrivacidadeConfig>(PRIVACIDADE_CONFIG_INICIAL);
   const [termosConfig, setTermosConfigState] = useState<TermosConfig>(TERMOS_CONFIG_INICIAL);
   const [configIdentidade, setConfigIdentidadeState] = useState<ConfigIdentidade>(CONFIG_IDENTIDADE_INICIAL);
@@ -1256,8 +1253,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         ...patch,
         categorias: { ...c.categorias, ...(patch.categorias ?? {}) },
       })),
-      politicaPublicada,
-      setPoliticaPublicada,
 
       privacidadeConfig,
       setPrivacidadeConfig: (patch) => setPrivacidadeConfigState((c) => ({ ...c, ...patch })),
