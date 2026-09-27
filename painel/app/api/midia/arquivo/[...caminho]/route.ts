@@ -34,11 +34,16 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ caminho: st
   if (!tipo || !fs.existsSync(alvo) || !fs.statSync(alvo).isFile()) {
     return NextResponse.json({ ok: false, erro: "Arquivo não encontrado." }, { status: 404 });
   }
+  const st = fs.statSync(alvo);
+  const etag = `"${st.size}-${Math.floor(st.mtimeMs)}"`;
+  if (req.headers.get("if-none-match") === etag) return new NextResponse(null, { status: 304, headers: { ETag: etag } });
   return new NextResponse(new Uint8Array(fs.readFileSync(alvo)), {
     headers: {
       "Content-Type": tipo,
       "X-Content-Type-Options": "nosniff",
-      "Cache-Control": "private, max-age=300",
+      "Cache-Control": "private, no-cache",
+      ETag: `"${st.size}-${Math.floor(st.mtimeMs)}"`,
+      "Last-Modified": st.mtime.toUTCString(),
     },
   });
 }

@@ -17,7 +17,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { AreaTexto, Botao, Campo, Entrada, Mono, Thumb } from "@/components/ui";
 import { useSession } from "next-auth/react";
-import { enviarMidia } from "@/lib/midia-cliente";
+import { enviarMidia, substituirMidia } from "@/lib/midia-cliente";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import type { Midia } from "@/mock/types";
@@ -59,6 +59,7 @@ function GradeMidia({
   onAbrir,
   onDrop,
   mostrarDropZone,
+  versoes,
 }: {
   itens: Midia[];
   selecaoAtiva: boolean;
@@ -67,6 +68,7 @@ function GradeMidia({
   onAbrir: (m: Midia, idx: number) => void;
   onDrop: (e: React.DragEvent) => void;
   mostrarDropZone: boolean;
+  versoes: Record<string, number>;
 }) {
   const [arrastando, setArrastando] = useState(false);
 
@@ -89,7 +91,7 @@ function GradeMidia({
               {/* miniatura */}
               <div className="relative overflow-hidden rounded-t-[var(--radius)]">
                 {ehImagem ? (
-                  <Thumb gradiente={m.gradiente} url={m.url} alt={m.alt} miniatura={320} className="aspect-square w-full" />
+                  <Thumb gradiente={m.gradiente} url={m.url} alt={m.alt} miniatura={320} versao={versoes[m.id]} className="aspect-square w-full" />
                 ) : (
                   <div className="flex aspect-square w-full items-center justify-center bg-secondary">
                     <FileText size={28} className="text-ink-muted" />
@@ -152,12 +154,14 @@ function ListaMidia({
   selecionados,
   onToggle,
   onAbrir,
+  versoes,
 }: {
   itens: Midia[];
   selecaoAtiva: boolean;
   selecionados: Set<string>;
   onToggle: (id: string) => void;
   onAbrir: (m: Midia, idx: number) => void;
+  versoes: Record<string, number>;
 }) {
   return (
     <div className="overflow-x-auto">
@@ -202,6 +206,7 @@ function ListaMidia({
                     url={formatoEhImagem(m.formato) ? m.url : undefined}
                     alt={m.alt}
                     miniatura={96}
+                    versao={versoes[m.id]}
                     className="h-8 w-8 shrink-0"
                   />
                 </td>
@@ -249,6 +254,10 @@ function PainelDetalhe({
   onNext,
   onSalvar,
   onExcluir,
+  onSubstituir,
+  substituindo,
+  podeSubstituir,
+  versoes,
 }: {
   midia: Midia;
   indice: number;
@@ -259,7 +268,12 @@ function PainelDetalhe({
   /** Grava no servidor; só resolve ok depois da resposta do PATCH. */
   onSalvar: (patch: Partial<Midia>) => Promise<{ ok: boolean; erro?: string }>;
   onExcluir: () => void;
+  onSubstituir: (file: File) => void;
+  substituindo: boolean;
+  podeSubstituir: boolean;
+  versoes: Record<string, number>;
 }) {
+  const inputSubstituir = useRef<HTMLInputElement>(null);
   const [altLocal, setAltLocal] = useState(midia.alt);
   const [tituloLocal, setTituloLocal] = useState(midia.titulo);
   const [legendaLocal, setLegendaLocal] = useState(midia.legenda);
@@ -365,6 +379,7 @@ function PainelDetalhe({
             gradiente={midia.gradiente}
             url={formatoEhImagem(midia.formato) ? midia.url : undefined}
             alt={midia.alt}
+            versao={versoes[midia.id]}
             className="aspect-video w-full rounded-none"
           />
 
@@ -515,6 +530,25 @@ function PainelDetalhe({
 
         {/* footer sticky */}
         <div className="flex shrink-0 items-center gap-2 border-t border-line bg-surface-2 px-3 py-2.5">
+          {podeSubstituir && (
+            <>
+              <input
+                ref={inputSubstituir}
+                type="file"
+                accept={`.${midia.formato}`}
+                className="hidden"
+                onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) onSubstituir(f); }}
+              />
+              <Botao
+                variante="secundario"
+                tamanho="sm"
+                disabled={substituindo}
+                onClick={() => inputSubstituir.current?.click()}
+              >
+                {substituindo ? "Substituindo…" : "Substituir arquivo"}
+              </Botao>
+            </>
+          )}
           <Botao variante="perigo" tamanho="sm" className="ml-auto" onClick={onExcluir}>
             {midia.usadaEm.length > 0
               ? `Excluir (usado em ${midia.usadaEm.length})`
@@ -693,10 +727,38 @@ ${usadas} deles está em uso em páginas do site.` : texto)) return;
   const [erroEnvio, setErroEnvio] = useState<string | null>(null);
 
   const [avisoEnvio, setAvisoEnvio] = useState<string | null>(null);
+  const [versoes, setVersoes] = useState<Record<string, number>>({});
+  const [substituindo, setSubstituindo] = useState(false);
+  const [arrastandoTela, setArrastandoTela] = useState(false);
   const inputArquivos = useRef<HTMLInputElement>(null);
 
   function handleDrop(e: React.DragEvent) {
     return enviarArquivos(Array.from(e.dataTransfer.files));
+  }
+
+  /** Troca o conteúdo mantendo o endereço: todo lugar que usa esta mídia passa a mostrar o novo. */
+  async function substituirArquivo(file: File) {
+    if (!midiaAberta || substituindo) return;
+    const usadas = midiaAberta.usadaEm.length;
+    if (!confirm(
+      `Substituir "${midiaAberta.arquivo}" por "${file.name}"?` +
+      `
+
+O endereço continua o mesmo e todos os lugares que usam esta mídia${usadas ? ` (${usadas} em uso)` : ""} passam a mostrar o arquivo novo. Não dá para desfazer.`,
+    )) return;
+    setSubstituindo(true);
+    setErroEnvio(null);
+    setAvisoEnvio(null);
+    const r = await substituirMidia(midiaAberta.id, file);
+    if (r.ok) {
+      setVersoes((v) => ({ ...v, [midiaAberta.id]: Date.now() }));
+      const listagem = await recarregarMidia();
+      if (listagem) setMidia(listagem);
+      setAvisoEnvio(`"${midiaAberta.arquivo}" foi substituído. Para o site público mostrar o novo, use "Atualizar o site" e aguarde o navegador renovar o cache.`);
+    } else {
+      setErroEnvio(r.erro ?? "Não foi possível substituir.");
+    }
+    setSubstituindo(false);
   }
 
   async function enviarArquivos(files: File[]) {
@@ -899,15 +961,30 @@ ${usadas} deles está em uso em páginas do site.` : texto)) return;
         </div>
       )}
 
-      {/* conteúdo */}
-      <div className="flex-1 overflow-auto">
+      {/* conteúdo — a área inteira recebe arquivos arrastados (grade, lista ou biblioteca vazia) */}
+      <div
+        className="relative flex-1 overflow-auto"
+        onDragOver={(e) => { if (podeEnviar && e.dataTransfer.types.includes("Files")) { e.preventDefault(); setArrastandoTela(true); } }}
+        onDragLeave={(e) => { if (e.currentTarget === e.target) setArrastandoTela(false); }}
+        onDrop={(e) => { if (podeEnviar && e.dataTransfer.files.length) { e.preventDefault(); setArrastandoTela(false); void handleDrop(e); } }}
+      >
+        {arrastandoTela && (
+          <div className="pointer-events-none absolute inset-2 z-20 flex items-center justify-center rounded-[var(--radius)] border-2 border-dashed border-primary bg-primary/10 text-[13px] font-medium text-primary">
+            Solte para enviar à biblioteca
+          </div>
+        )}
         {visiveis.length === 0 ? (
-          <div className="flex h-40 items-center justify-center text-[12px] text-ink-muted">
-            Nenhum arquivo encontrado
+          <div className="flex h-64 flex-col items-center justify-center gap-2 text-center text-[12px] text-ink-muted">
+            <Upload size={22} />
+            <p>{midia.length === 0 ? "A biblioteca está vazia." : "Nenhum arquivo encontrado com estes filtros."}</p>
+            {podeEnviar && midia.length === 0 && (
+              <p>Arraste arquivos para esta área ou use “Adicionar arquivo”.</p>
+            )}
           </div>
         ) : visualizacao === "grade" ? (
           <GradeMidia
             itens={visiveis}
+            versoes={versoes}
             selecaoAtiva={selecaoAtiva}
             selecionados={selecionados}
             onToggle={toggleSelecionado}
@@ -918,6 +995,7 @@ ${usadas} deles está em uso em páginas do site.` : texto)) return;
         ) : (
           <ListaMidia
             itens={visiveis}
+            versoes={versoes}
             selecaoAtiva={selecaoAtiva}
             selecionados={selecionados}
             onToggle={toggleSelecionado}
@@ -934,6 +1012,10 @@ ${usadas} deles está em uso em páginas do site.` : texto)) return;
           total={visiveis.length}
           onClose={fecharPainel}
           onExcluir={() => excluirMidias([midiaAberta.id])}
+          onSubstituir={(f) => void substituirArquivo(f)}
+          substituindo={substituindo}
+          podeSubstituir={podeEnviar}
+          versoes={versoes}
           onPrev={irParaPrev}
           onNext={irParaNext}
           onSalvar={async (patch) => {

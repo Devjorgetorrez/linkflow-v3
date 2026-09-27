@@ -53,7 +53,7 @@ function servirOriginal(alvo: string, tipo: string) {
     headers: {
       "Content-Type": tipo,
       "X-Content-Type-Options": "nosniff",
-      "Cache-Control": "private, max-age=300",
+      "Cache-Control": "private, no-cache",
       "X-Miniatura": "original",
     },
   });
@@ -103,7 +103,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ caminho: st
   const cabecalhos = {
     "Content-Type": "image/webp",
     "X-Content-Type-Options": "nosniff",
-    "Cache-Control": "private, max-age=3600",
+    "Cache-Control": "private, no-cache",
     ETag: etag,
   };
   if (req.headers.get("if-none-match") === etag) return new NextResponse(null, { status: 304, headers: cabecalhos });

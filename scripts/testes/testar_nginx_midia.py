@@ -112,7 +112,7 @@ def main():
 
     midia = next(l for l in locs if l["path"] == "/midia/")["corpo"]
     midia = chr(10).join(ln for ln in midia.splitlines() if not ln.strip().startswith("#"))
-    for exigido in ("autoindex off", "nosniff", "max-age=2592000", "immutable"):
+    for exigido in ("autoindex off", "nosniff", "max-age=86400"):
         ok = exigido in midia
         falhas += not ok
         print(f"{'OK  ' if ok else 'FAIL'} bloco /midia/ contem '{exigido}'")

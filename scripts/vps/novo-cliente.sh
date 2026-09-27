@@ -241,10 +241,10 @@ server {
         if (\$uri ~* "(^|/)\.|\.meta\.json\$") {
             return 404;
         }
-        # 30 dias, não 1 ano; immutable é seguro porque o painel nunca sobrescreve
-        # um nome (cria -1, -2...). Sem try_files: com alias ele usa o URI original (bug
-        # conhecido) e quebraria o arquivo; arquivo ausente já dá 404 sozinho.
-        add_header Cache-Control "public, max-age=2592000, immutable" always;
+        # Cache de 1 dia, SEM immutable: o painel permite substituir uma mídia mantendo o
+        # endereço, e o navegador precisa revalidar. Sem try_files: com alias ele usa o URI
+        # original (bug conhecido) e quebraria o arquivo; arquivo ausente já dá 404 sozinho.
+        add_header Cache-Control "public, max-age=86400" always;
         add_header X-Content-Type-Options "nosniff" always;
     }
 

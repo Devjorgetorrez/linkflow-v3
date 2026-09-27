@@ -38,6 +38,7 @@ export const MATRIZ = {
   "midia:POST:avatar": TODOS,
   "midia/[id]:GET": TODOS,
   "midia/[id]:PATCH": ADM_ED,
+  "midia/[id]:PUT": ADM_ED,
   "midia/[id]:DELETE": ADM_ED,
   // Leitura auxiliar das telas de edição
   "autores:GET": TODOS,

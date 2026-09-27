@@ -418,6 +418,7 @@ export function Thumb({
   url,
   alt = "",
   miniatura,
+  versao,
 }: {
   gradiente: string;
   className?: string;
@@ -427,9 +428,11 @@ export function Thumb({
   alt?: string;
   /** Largura (px) da miniatura leve a carregar em vez do original (grades e listas). */
   miniatura?: number;
+  /** Muda quando o arquivo foi substituído (mesmo endereço): força recarregar a imagem. */
+  versao?: number;
 }) {
   const [falhou, setFalhou] = useState(false);
-  useEffect(() => setFalhou(false), [url]);
+  useEffect(() => setFalhou(false), [url, versao]);
   return (
     <div
       className={cn("relative overflow-hidden rounded-[var(--radius)] border border-line", className)}
@@ -438,7 +441,7 @@ export function Thumb({
       {url && !falhou && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={miniatura ? urlMiniaturaMidia(url, miniatura) : urlPreviaMidia(url)}
+          src={(miniatura ? urlMiniaturaMidia(url, miniatura) : urlPreviaMidia(url)) + (versao ? `${(miniatura ? urlMiniaturaMidia(url, miniatura) : urlPreviaMidia(url)).includes("?") ? "&" : "?"}v=${versao}` : "")}
           alt={alt}
           loading="lazy"
           onError={() => setFalhou(true)}
