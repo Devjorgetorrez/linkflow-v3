@@ -20,6 +20,10 @@ SEM_SSL=${5:-""}
 LINKFLOW_DIR="/opt/linkflow"
 SITES_DIR="/var/www"
 CLIENTE_DIR="$LINKFLOW_DIR/clientes/$SLUG"
+# Caminho absoluto da própria pasta, resolvido ANTES de qualquer `cd` do script (o build do
+# painel troca de diretório mais abaixo) — "$(dirname "$0")" relativo quebraria a chamada do
+# ssl-cliente.sh depois desses `cd`, porque passaria a resolver contra o cwd errado.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo "[novo-cliente] Configurando $SLUG → $DOMINIO_SITE | painel: $DOMINIO_PAINEL | tema: $TEMA"
 
@@ -203,16 +207,19 @@ npm ci --omit=dev --silent
 rm -f $PAINEL_SRC/.env.local.tmp
 
 # ─── PM2 — processo isolado por cliente ───────────────────────────────────────
+# O Next.js carrega .env.production.local sozinho, do cwd do processo — sem
+# precisar de flag nenhuma. (`next start --env-file` NÃO existe nesta versão do
+# Next — dá "unknown option" e derruba o processo; `pm2 start --env <arquivo>`
+# também está errado, o --env do PM2 é o NOME de um ambiente de ecosystem file,
+# não um caminho. As duas formas antigas falhavam sempre e em silêncio, porque
+# `pm2 start` retorna sucesso mesmo que o processo caia logo depois de subir.)
 echo "  Iniciando PM2..."
-pm2 start $CLIENTE_DIR/painel/node_modules/.bin/next \
+cp "$CLIENTE_DIR/.env" "$CLIENTE_DIR/painel/.env.production.local"
+chmod 600 "$CLIENTE_DIR/painel/.env.production.local"
+pm2 start "$CLIENTE_DIR/painel/node_modules/.bin/next" \
   --name "painel-$SLUG" \
   --cwd "$CLIENTE_DIR/painel" \
-  -- start -p $PORTA \
-  --env-file "$CLIENTE_DIR/.env" 2>/dev/null || \
-pm2 start "node_modules/.bin/next start -p $PORTA" \
-  --name "painel-$SLUG" \
-  --cwd "$CLIENTE_DIR/painel" \
-  --env "$CLIENTE_DIR/.env"
+  -- start -p $PORTA
 
 pm2 save
 
@@ -294,7 +301,7 @@ nginx -t && systemctl reload nginx
 SSL_STATUS="não solicitado (--sem-ssl)"
 if [ "$SEM_SSL" != "--sem-ssl" ]; then
   echo "  Conferindo DNS e gerando SSL..."
-  SAIDA_SSL=$(bash "$(dirname "$0")/ssl-cliente.sh" "$SLUG" "$DOMINIO_SITE" "$DOMINIO_PAINEL" 2>&1) || true
+  SAIDA_SSL=$(bash "$SCRIPT_DIR/ssl-cliente.sh" "$SLUG" "$DOMINIO_SITE" "$DOMINIO_PAINEL" 2>&1) || true
   echo "$SAIDA_SSL" | sed 's/^/    /'
   SSL_STATUS=$(echo "$SAIDA_SSL" | grep '^SSL_STATUS=' | tail -1 | cut -d= -f2-)
   SSL_STATUS=${SSL_STATUS:-"falhou (ver saída acima)"}
