@@ -9,10 +9,12 @@ import {
   Info,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { useBaseSite, useDominio } from "@/lib/useDominio";
 import { usePaginasReais } from "@/lib/usePaginasReais";
+import { useStore } from "@/lib/store";
+import { urlPost } from "@/lib/urls-publicas";
 import { CabecalhoTela } from "@/components/Tela";
 import { IndexacaoBadge } from "@/components/paginas/IndexacaoBadge";
 import { Botao, Painel, CabecalhoPainel } from "@/components/ui";
@@ -76,12 +78,36 @@ export default function PaginaDetalhe() {
   const { base: baseSite } = useBaseSite();
 
   const { paginas, carregando, origemRotulo, erro } = usePaginasReais();
+  const { posts } = useStore();
   // id pode vir encodado na URL — decodificar antes de comparar
   const pagina = useMemo(() => {
     const idDecoded = decodeURIComponent(id);
     return paginas.find((p) => p.id === idDecoded) ?? null;
   }, [paginas, id]);
   const naoEncontrada = !carregando && !pagina;
+
+  // Se esta "página" é na verdade um artigo do blog (mesma URL de um post real), a edição
+  // é sempre pelo editor de Posts, nunca pelo agente — mesmo que ela apareça aqui por algum
+  // motivo (ex.: link antigo, cache). Evita instruir "chame o Claude Code" para algo editável.
+  const postCorrespondente = useMemo(() => {
+    if (!pagina) return null;
+    return posts.find((p) => urlPost(p.slug) === pagina.url) ?? null;
+  }, [pagina, posts]);
+
+  // O mesmo vale para serviços (tipo "money"): desde a Fase 6 eles têm editor
+  // próprio no painel. O slug da página É o id do serviço (/api/servicos usa a
+  // chave do arquivo), então não precisa de busca — só confirmar que existe.
+  const [servicoExiste, setServicoExiste] = useState<string | null>(null);
+  useEffect(() => {
+    if (!pagina || pagina.tipo !== "money" || postCorrespondente) { setServicoExiste(null); return; }
+    let ativo = true;
+    const slug = pagina.url.replace(/^\//, "");
+    fetch(`/api/servicos/${encodeURIComponent(slug)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (ativo && d?.ok) setServicoExiste(d.servico?.id ?? slug); })
+      .catch(() => {});
+    return () => { ativo = false; };
+  }, [pagina, postCorrespondente]);
 
   if (carregando) {
     return (
@@ -237,38 +263,65 @@ export default function PaginaDetalhe() {
               descricao="Páginas do site são geradas pelo motor Astro"
               icone={<Bot size={14} />}
             />
-            <div className="mt-3 rounded-[var(--radius)] border border-line bg-surface p-4">
-              <div className="flex items-start gap-3">
-                <Info size={14} className="mt-0.5 shrink-0 text-ink-muted" />
-                <div className="space-y-2 text-[12.5px] text-ink-muted leading-relaxed">
-                  <p>
-                    Esta página é gerada automaticamente pelo motor Astro a partir dos templates
-                    do tema e das configurações do cliente. Diferente de um WordPress, não há
-                    editor visual — o conteúdo e a estrutura são controlados pelo agente.
-                  </p>
-                  <p>Para alterar esta página, acione o agente com um dos comandos (<code>&lt;slug&gt;</code> é o nome do projeto do cliente):</p>
-                  <ul className="mt-2 space-y-1.5">
-                    <li className="flex items-center gap-2">
-                      <code className="rounded bg-surface-2 px-1.5 py-0.5 font-mono text-[11px] text-ink">
-                        /link-flow conteudo &lt;slug&gt;
-                      </code>
-                      <span>— reescrever o conteúdo (texto, title, meta e H1)</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <code className="rounded bg-surface-2 px-1.5 py-0.5 font-mono text-[11px] text-ink">
-                        /link-flow publicar &lt;slug&gt;
-                      </code>
-                      <span>— publicar as alterações no site</span>
-                    </li>
-                  </ul>
-                  <p className="mt-2">
-                    Após as alterações, clique em{" "}
-                    <span className="font-medium text-ink">Publicar</span> no topo do painel
-                    para atualizar o site.
-                  </p>
+            {postCorrespondente || servicoExiste ? (
+              <div className="mt-3 rounded-[var(--radius)] border border-line bg-surface p-4">
+                <div className="flex items-start gap-3">
+                  <Info size={14} className="mt-0.5 shrink-0 text-ink-muted" />
+                  <div className="flex-1 space-y-2 text-[12.5px] text-ink-muted leading-relaxed">
+                    <p>
+                      {postCorrespondente ? (
+                        <>Esta página é um <span className="font-medium text-ink">artigo do blog</span>.</>
+                      ) : (
+                        <>Esta página é um <span className="font-medium text-ink">serviço</span>.</>
+                      )}{" "}
+                      Ela tem editor próprio no painel — título, corpo, SEO e publicação —, sem
+                      precisar acionar o agente.
+                    </p>
+                    <Botao
+                      variante="primario"
+                      onClick={() => router.push(
+                        postCorrespondente ? `/posts/${postCorrespondente.id}` : `/servicos/${servicoExiste}`
+                      )}
+                    >
+                      {postCorrespondente ? "Editar artigo" : "Editar serviço"}
+                    </Botao>
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="mt-3 rounded-[var(--radius)] border border-line bg-surface p-4">
+                <div className="flex items-start gap-3">
+                  <Info size={14} className="mt-0.5 shrink-0 text-ink-muted" />
+                  <div className="space-y-2 text-[12.5px] text-ink-muted leading-relaxed">
+                    <p>
+                      Esta página é gerada automaticamente pelo motor Astro a partir dos templates
+                      do tema e das configurações do cliente. Diferente de um WordPress, não há
+                      editor visual — o conteúdo e a estrutura são controlados pelo agente.
+                    </p>
+                    <p>Para alterar esta página, acione o agente com um dos comandos (<code>&lt;slug&gt;</code> é o nome do projeto do cliente):</p>
+                    <ul className="mt-2 space-y-1.5">
+                      <li className="flex items-center gap-2">
+                        <code className="rounded bg-surface-2 px-1.5 py-0.5 font-mono text-[11px] text-ink">
+                          /link-flow conteudo &lt;slug&gt;
+                        </code>
+                        <span>— reescrever o conteúdo (texto, title, meta e H1)</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <code className="rounded bg-surface-2 px-1.5 py-0.5 font-mono text-[11px] text-ink">
+                          /link-flow publicar &lt;slug&gt;
+                        </code>
+                        <span>— publicar as alterações no site</span>
+                      </li>
+                    </ul>
+                    <p className="mt-2">
+                      Após as alterações, clique em{" "}
+                      <span className="font-medium text-ink">Publicar</span> no topo do painel
+                      para atualizar o site.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </Painel>
         </div>
 
