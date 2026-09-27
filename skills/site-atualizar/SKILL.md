@@ -87,6 +87,15 @@ REMOTE
 Monitorar output. Se falhar, mesma regra do `fase2-site-astro`: máximo
 3 tentativas de correção, e nunca publicar com build quebrado.
 
+`npm run build` no servidor pode levar minutos — regra de
+`vps-setup › Regra: comando longo nunca vira espera do usuário`: rode em
+background e retome sozinho quando terminar, sem parar dizendo que está
+"esperando resposta". Isso vale ainda mais aqui: quando este PASSO roda
+sem ninguém acompanhando (publicação agendada via `schedule`, gatilho
+"automatizar blog" do orquestrador), não existe usuário pra mandar
+"terminou?" — se o agente travar esperando um empurrão que nunca vem, o
+artigo nunca é publicado e ninguém percebe.
+
 > "O build falhou 3 vezes. Não vou publicar com build quebrado.
 > Erro: [output do build]"
 

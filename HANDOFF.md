@@ -32,6 +32,23 @@
   "Pendências, em ordem"). Ver seção própria "Suíte Playwright" abaixo
   para como rodar e a pegadinha do servidor de teste que precisou de
   restart.
+- **Regra nova nas skills de deploy (27/09/2026):** o Lucas relatou que,
+  durante o R5, o agente parou no meio de um passo de VPS dizendo que
+  estava "esperando resposta" — e só retomou depois de uma mensagem
+  extra perguntando "terminou?". Isso não pode acontecer com o usuário
+  final (nem com publicação agendada, onde não existe ninguém pra
+  reperguntar). Causa mais provável: nenhuma das skills de deploy dizia
+  como rodar os comandos SSH longos (bootstrap 5–15 min, `npm ci`/`npm run
+  build` no servidor) — sem instrução, um comando em primeiro plano corre
+  risco de estourar o tempo-limite padrão da ferramenta antes do processo
+  remoto terminar. Adicionada regra explícita em `vps-setup/SKILL.md`
+  ("Regra: comando longo nunca vira espera do usuário") e referenciada em
+  `fase2-site-astro`, `site-atualizar` e `site-publicar`: rodar em
+  background, nunca dizer que está "esperando resposta" por um comando
+  (só por uma decisão real do usuário), e retomar sozinho quando o
+  comando terminar. **Não testado de ponta a ponta nesta sessão** (exige
+  rodar o bootstrap completo de novo num VPS) — só a instrução foi
+  corrigida; validar no próximo deploy real.
 - **Pendência real, em aberto:** lista curta de lacunas conhecidas, sem
   correção — ver "Pendências, em ordem".
 - `relatorios/` e `templates-layout-temas/` continuam no `.gitignore`.

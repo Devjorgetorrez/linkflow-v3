@@ -620,6 +620,12 @@ REMOTE
 Se o build falhar no servidor, mesma regra da 5.1: diagnosticar, corrigir, no
 máximo 3 tentativas — nunca publicar build quebrado.
 
+`npm ci` + `npm run build` no servidor pode levar vários minutos —
+mesma regra de `vps-setup › Regra: comando longo nunca vira espera do
+usuário`: rode em background, não pare agindo nem diga que está
+"esperando resposta", e retome sozinho assim que o comando terminar. O
+usuário nunca deveria precisar perguntar "terminou?" pra você continuar.
+
 ### 6.5 Endereço, SSL e acesso ao painel
 
 Invocar `vps-setup` — **Parte B (PASSOS 5B a 7)**, uma tarefa por vez:

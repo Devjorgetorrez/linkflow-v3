@@ -298,6 +298,13 @@ REMOTE
 Se o build falhar no servidor, mesma regra: até 3 tentativas, nunca
 publicar build quebrado.
 
+`npm run build` no servidor pode levar minutos — regra de
+`vps-setup › Regra: comando longo nunca vira espera do usuário`: rode em
+background e retome sozinho quando terminar, sem parar dizendo que está
+"esperando resposta". Vale ainda mais quando este PASSO roda sem ninguém
+acompanhando (publicação agendada via `schedule`) — não existe usuário
+pra mandar "terminou?".
+
 Se o `rsync`/SSH falhar:
 - Tentar de novo (até 3x)
 - Se persistir: reportar o erro completo

@@ -64,6 +64,32 @@ tentou fazer de errado, e registre no resumo final como
 silêncio. Nunca peça ao operador para rodar o mesmo passo manualmente sem
 antes reportar o defeito.
 
+## Regra: comando longo nunca vira espera do usuário
+
+O bootstrap (PASSO 3) e a adição de cliente (PASSO 4) chamam scripts que
+ficam de 1 a 15 minutos rodando no servidor por SSH. Isso é tempo de
+comando, não uma decisão do usuário — ele não deve precisar mandar outra
+mensagem pra "destravar" o agente.
+
+- **Rode o SSH desses passos em background** (`run_in_background: true` no
+  Bash, ou equivalente da ferramenta em uso) em vez de um comando em
+  primeiro plano — um comando de até 15 min corre risco real de estourar o
+  tempo-limite padrão da ferramenta antes do bootstrap terminar no
+  servidor.
+- Depois de disparar, **não pare de agir nem diga que está "esperando uma
+  resposta"** — essa frase é para quando falta uma decisão do usuário, não
+  para um comando em andamento. Diga só o que o PASSO manda ("estou
+  preparando o servidor, leva de 5 a 15 minutos") e continue: aguarde a
+  notificação de conclusão do próprio ambiente (ou, se a ferramenta em uso
+  não tiver isso, agende sua própria checagem periódica) e retome sozinho
+  assim que o comando terminar — nunca deixe o próximo passo dependendo de
+  o usuário perguntar "terminou?".
+- Se o ambiente não suportar rodar em background nem agendar uma checagem
+  automática, use um comando em primeiro plano com tempo-limite explícito
+  maior que 15 minutos (nunca o padrão) — melhor esperar de verdade um
+  comando que já está rodando do que deixá-lo estourar o tempo-limite no
+  meio do bootstrap.
+
 ## Quando usar esta skill
 
 - Primeiro setup de um VPS novo (nenhum cliente configurado ainda)
