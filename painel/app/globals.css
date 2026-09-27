@@ -68,7 +68,12 @@
   --sidebar-active-shadow: 0 2px 8px rgba(26,90,245,0.35), 0 1px 3px rgba(0,0,0,0.20);
   --sidebar-flyout: #132040;
   --sidebar-flyout-shadow: 4px 2px 16px rgba(0,0,0,0.42);
-  --sidebar-header-bg: #ccd5e3;
+  /* A73: era #ccd5e3 (cinza-azulado claro) — o bloco da logo (canto sup.
+     esquerdo) ficava claro mesmo no tema escuro. Tom escuro consistente
+     com --sidebar-flyout, só um pouco mais claro que --sidebar para manter
+     a tira de destaque que o tema claro também tem (header mais claro que
+     o corpo da sidebar). */
+  --sidebar-header-bg: #101d36;
   --sidebar-header-border: rgba(255,255,255,0.08);
 }
 

@@ -1,7 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { RotateCcw, X } from "lucide-react";
+import { useEffect, useState } from "react";
 import {
   useStore,
   CHAVES_TOKENS,
@@ -10,9 +9,8 @@ import {
   PARES_FONTE,
   RAIOS,
   DENSIDADES,
-  TOKENS_CLARO,
-  TOKENS_ESCURO,
   type ChaveToken,
+  type Tokens,
 } from "@/lib/store";
 import Link from "next/link";
 import { Botao, Campo, Entrada } from "@/components/ui";
@@ -206,43 +204,32 @@ const TOKEN_LABELS: Record<string, string> = {
 /* ------------------------------------------------------------------ */
 
 export default function PersonalizarPage() {
-  const { aparencia, setAparencia, setToken, tokensAtivos, tema } = useStore();
+  const { aparencia, setAparencia } = useStore();
 
   const [abaAtiva, setAbaAtiva] = useState<Aba>("identidade");
   const [salvando, setSalvando] = useState(false);
 
-  // hex text inputs keep their own string so the user can type char-by-char
-  const [hexInputs, setHexInputs] = useState<Record<string, string>>(
-    () => ({ ...tokensAtivos }),
-  );
+  // Cores reais do layout ativo — somente leitura, lidas de _astro/src/styles/tokens.css
+  // pela rota /api/aparencia/cores (ver A51/A52). Nunca um valor fixo/genérico.
+  const [coresReais, setCoresReais] = useState<Tokens | null>(null);
+  const [coresTema, setCoresTema] = useState<string | null>(null);
+  const [coresErro, setCoresErro] = useState<string | null>(null);
+  const [coresCarregando, setCoresCarregando] = useState(true);
 
-  const tokensDefault = tema === "escuro" ? TOKENS_ESCURO : TOKENS_CLARO;
-
-
-  const handleColorPicker = useCallback(
-    (chave: ChaveToken, valor: string) => {
-      setToken(chave, valor);
-      setHexInputs((prev) => ({ ...prev, [chave]: valor }));
-    },
-    [setToken],
-  );
-
-  const handleHexInput = useCallback(
-    (chave: ChaveToken, valor: string) => {
-      setHexInputs((prev) => ({ ...prev, [chave]: valor }));
-      if (/^#[0-9a-fA-F]{6}$/.test(valor)) setToken(chave, valor);
-    },
-    [setToken],
-  );
-
-  const restaurarToken = useCallback(
-    (chave: ChaveToken) => {
-      const cor = tokensDefault[chave];
-      setToken(chave, cor);
-      setHexInputs((prev) => ({ ...prev, [chave]: cor }));
-    },
-    [setToken, tokensDefault],
-  );
+  useEffect(() => {
+    fetch("/api/aparencia/cores")
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data.ok) {
+          setCoresErro(data.erro || "Não consegui ler as cores do layout.");
+          return;
+        }
+        setCoresReais(data.tokens as Tokens);
+        setCoresTema(data.tema as string);
+      })
+      .catch(() => setCoresErro("Não consegui ler as cores do layout."))
+      .finally(() => setCoresCarregando(false));
+  }, []);
 
   /* local state — espelha aparencia */
   // Nome e slogan vêm do site real (config/site.ts) e só se editam em Configurações › Identidade.
@@ -293,9 +280,13 @@ export default function PersonalizarPage() {
       {/* header sticky */}
       <div className="sticky top-[52px] z-10 flex items-center justify-between border-b border-line bg-surface px-6 py-3">
         <h1 className="text-[14px] font-semibold text-ink">Personalizar</h1>
-        <Botao variante="primario" tamanho="sm" onClick={salvar}>
-          {salvando ? "Salvando…" : "Salvar"}
-        </Botao>
+        {/* Cores é somente-leitura (A51/A52): não há onde gravar cor por cliente hoje,
+            a cor vem do layout escolhido em Aparência › Layout. */}
+        {abaAtiva !== "cores" && (
+          <Botao variante="primario" tamanho="sm" onClick={salvar}>
+            {salvando ? "Salvando…" : "Salvar"}
+          </Botao>
+        )}
       </div>
 
       <div className="grid flex-1 grid-cols-[520px_1fr] divide-x divide-line">
@@ -370,113 +361,91 @@ export default function PersonalizarPage() {
             {/* ── Cores ── */}
             {abaAtiva === "cores" && (
               <div className="space-y-1.5">
-                <div className="mb-2 flex items-center justify-between gap-3">
-                  <p className="text-[11.5px] text-ink-muted">
-                    Alterações de cor são aplicadas ao vivo mas exigem{" "}
-                    <span className="font-medium text-ink">Salvar</span> para persistir na sessão.
+                <p className="mb-2 text-[11.5px] text-ink-muted">
+                  As cores vêm do layout escolhido em{" "}
+                  <Link href="/aparencia/temas" className="font-medium text-primary underline">
+                    Aparência › Layout
+                  </Link>
+                  . Para mudar a paleta, troque de layout ou peça um ajuste ao Claude Code.
+                </p>
+
+                {coresCarregando && (
+                  <p className="rounded-[var(--radius)] border border-line bg-surface-2 px-3 py-2.5 text-[11.5px] text-ink-muted">
+                    Lendo as cores do site…
                   </p>
-                  <button
-                    onClick={() => {
-                      if (!confirm("Restaurar todas as cores do tema?")) return;
-                      (CHAVES_TOKENS as unknown as ChaveToken[]).forEach((chave) => {
-                        const cor = tokensDefault[chave];
-                        setToken(chave, cor);
-                        setHexInputs((prev) => ({ ...prev, [chave]: cor }));
-                      });
-                    }}
-                    className="shrink-0 rounded-[var(--radius)] border border-line bg-surface px-2.5 py-1 text-[11px] text-ink-muted transition-colors hover:text-ink"
-                  >
-                    Restaurar todas
-                  </button>
-                </div>
-                {(CHAVES_TOKENS as unknown as ChaveToken[]).map((chave) => {
-                  const valorAtual = tokensAtivos[chave] ?? "#000000";
-                  const hexInput = hexInputs[chave] ?? valorAtual;
-                  const info = avaliarToken(chave, tokensAtivos);
-                  const ratioStr = info.ratio.toFixed(1) + ":1";
-                  const alterado = valorAtual !== tokensDefault[chave];
+                )}
 
-                  return (
-                    <div
-                      key={chave}
-                      className="rounded-[var(--radius)] border border-line bg-surface-2 px-3 py-2.5"
-                    >
-                      <div className="flex items-center gap-3">
-                        {/* swatch + color picker nativo */}
-                        <div className="group relative shrink-0 cursor-pointer">
-                          <div
-                            className="h-8 w-8 rounded-full border-2 border-line transition-shadow group-hover:ring-2 group-hover:ring-primary/40 group-hover:ring-offset-1"
-                            style={{ background: valorAtual }}
-                          />
-                          <input
-                            type="color"
-                            value={valorAtual}
-                            onChange={(e) => handleColorPicker(chave, e.target.value)}
-                            className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                            title="Escolher cor"
-                          />
-                        </div>
+                {!coresCarregando && coresErro && (
+                  <p className="rounded-[var(--radius)] border border-line bg-surface-2 px-3 py-2.5 text-[11.5px] text-danger">
+                    {coresErro}
+                  </p>
+                )}
 
-                        {/* label + var */}
-                        <div className="min-w-0 flex-1">
-                          <p className="text-[12px] font-medium text-ink">
-                            {TOKEN_LABELS[chave] ?? chave}
-                          </p>
-                          <p className="font-mono text-[10px] text-ink-muted">--{chave}</p>
-                        </div>
+                {!coresCarregando && !coresErro && coresReais && (
+                  <>
+                    <p className="mb-1 font-mono text-[10.5px] text-ink-muted">
+                      Layout ativo: {coresTema ?? "—"}
+                    </p>
+                    {(CHAVES_TOKENS as unknown as ChaveToken[]).map((chave) => {
+                      const valorAtual = coresReais[chave];
+                      const info = avaliarToken(chave, coresReais);
+                      const ratioStr = info.ratio.toFixed(1) + ":1";
 
-                        {/* hex text input sincronizado */}
-                        <input
-                          type="text"
-                          value={hexInput}
-                          onChange={(e) => handleHexInput(chave, e.target.value)}
-                          onBlur={() =>
-                            setHexInputs((prev) => ({ ...prev, [chave]: valorAtual }))
-                          }
-                          maxLength={7}
-                          className="w-[82px] rounded border border-line bg-surface px-2 py-1 font-mono text-[11.5px] text-ink focus:border-primary focus:outline-none"
-                        />
-
-                        {/* restaurar */}
-                        {alterado && (
-                          <button
-                            onClick={() => restaurarToken(chave)}
-                            title="Restaurar cor do tema"
-                            className="shrink-0 rounded p-1 text-ink-muted transition-colors hover:bg-surface hover:text-ink"
-                          >
-                            <RotateCcw size={13} />
-                          </button>
-                        )}
-                        {!alterado && <div className="w-[21px] shrink-0" />}
-                      </div>
-
-                      {/* linha de contraste */}
-                      <div className="mt-1.5 flex items-center gap-1.5 pl-11">
-                        <span
-                          className={cn(
-                            "text-[10.5px] font-semibold tabular-nums",
-                            info.passa ? "text-success" : "text-danger",
-                          )}
+                      return (
+                        <div
+                          key={chave}
+                          className="rounded-[var(--radius)] border border-line bg-surface-2 px-3 py-2.5"
                         >
-                          {ratioStr}
-                        </span>
-                        <span className="text-[10.5px] text-ink-muted">·</span>
-                        <span className="text-[10.5px] text-ink-muted">{info.label}</span>
-                        <span className="text-[10.5px] text-ink-muted">·</span>
-                        <span
-                          className={cn(
-                            "text-[10.5px] font-medium",
-                            info.passa ? "text-success" : "text-danger",
-                          )}
-                        >
-                          {info.passa
-                            ? "passa AA"
-                            : `não passa (mín ${info.minRatio.toFixed(1)}:1)`}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
+                          <div className="flex items-center gap-3">
+                            {/* swatch — somente leitura */}
+                            <div
+                              className="h-8 w-8 shrink-0 rounded-full border-2 border-line"
+                              style={{ background: valorAtual }}
+                            />
+
+                            {/* label + var */}
+                            <div className="min-w-0 flex-1">
+                              <p className="text-[12px] font-medium text-ink">
+                                {TOKEN_LABELS[chave] ?? chave}
+                              </p>
+                              <p className="font-mono text-[10px] text-ink-muted">--{chave}</p>
+                            </div>
+
+                            {/* valor hex — somente leitura */}
+                            <span className="w-[82px] shrink-0 rounded border border-line bg-surface px-2 py-1 text-right font-mono text-[11.5px] text-ink-muted">
+                              {valorAtual}
+                            </span>
+                          </div>
+
+                          {/* linha de contraste */}
+                          <div className="mt-1.5 flex items-center gap-1.5 pl-11">
+                            <span
+                              className={cn(
+                                "text-[10.5px] font-semibold tabular-nums",
+                                info.passa ? "text-success" : "text-danger",
+                              )}
+                            >
+                              {ratioStr}
+                            </span>
+                            <span className="text-[10.5px] text-ink-muted">·</span>
+                            <span className="text-[10.5px] text-ink-muted">{info.label}</span>
+                            <span className="text-[10.5px] text-ink-muted">·</span>
+                            <span
+                              className={cn(
+                                "text-[10.5px] font-medium",
+                                info.passa ? "text-success" : "text-danger",
+                              )}
+                            >
+                              {info.passa
+                                ? "passa AA"
+                                : `não passa (mín ${info.minRatio.toFixed(1)}:1)`}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </>
+                )}
               </div>
             )}
 
@@ -630,14 +599,14 @@ export default function PersonalizarPage() {
             <SitePreview
               nomeSite={nomeSite}
               tagline={tagline}
-              tokens={tokensAtivos}
+              tokens={coresReais ?? {}}
               raioValor={raioValor}
               fonteDisplay={fonteDisplay}
               fonteCorpo={fonteCorpo}
             />
           </div>
           <p className="mt-3 text-[10.5px] text-ink-muted/60">
-            Prévia aproximada · cores e fonte refletem as seleções ao vivo
+            Prévia aproximada · cores do layout real ({coresTema ?? "carregando…"}), fonte reflete a seleção ao vivo
           </p>
         </div>
       </div>

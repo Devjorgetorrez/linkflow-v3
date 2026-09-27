@@ -111,7 +111,11 @@ function Previa({ valor, tipo, escuro }: { valor: string; tipo: "logo" | "favico
   // o valor gravado é um caminho (/midia/x.png); a URL para exibir vem da biblioteca
   const achada = valor ? midia.find((m) => caminhoDaMidia(m.url) === valor) : undefined;
   const src = achada?.url ?? (/^https?:\/\//i.test(valor) ? valor : "");
-  const caixa = escuro ? "bg-[var(--ink)] p-1" : "";
+  // A73: fundo FIXO (não var(--ink)) — este preview simula o fundo escuro do
+  // SITE do cliente onde o logo escuro é usado, não o tema do painel. Com
+  // var(--ink), o bloco virava claro quando o painel estava no tema escuro
+  // (--ink passa a ser uma cor clara nesse tema, feita para texto, não fundo).
+  const caixa = escuro ? "bg-[#0b1220] p-1" : "";
   if (!valor || !src || falhou === src) {
     return (
       <div className={cn("rounded border border-[var(--line)]", caixa)}>
