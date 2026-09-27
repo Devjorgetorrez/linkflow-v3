@@ -26,6 +26,16 @@ export const MATRIZ = {
   "posts/lixeira:GET": ADM_ED,
   "posts/lixeira:POST": ADM_ED,
   "posts/lixeira:DELETE": ADM_ED,
+  // Serviços: conteúdo institucional (não editorial como posts) — autor só lê,
+  // só administrador/editor publica no site (mesmo padrão de posts:DELETE).
+  "servicos:GET": TODOS,
+  "servicos:POST": ADM_ED,
+  "servicos/[slug]:GET": TODOS,
+  "servicos/[slug]:PATCH": ADM_ED,
+  "servicos/[slug]:DELETE": ADM_ED,
+  "servicos/lixeira:GET": ADM_ED,
+  "servicos/lixeira:POST": ADM_ED,
+  "servicos/lixeira:DELETE": ADM_ED,
   // Categorias e mídia: autor só lê (precisa para escolher no post).
   "categorias:GET": TODOS,
   "categorias:POST": ADM_ED,
@@ -48,11 +58,15 @@ export const MATRIZ = {
   // config: as telas (domínio, nome do site) leem para todos os papéis; só o admin altera.
   "config:GET": TODOS,
   "config:PATCH": ADM,
+  // Título/meta de home, sobre e contato — conteúdo institucional, mesmo padrão de servicos.
+  "config/paginas:GET": TODOS,
+  "config/paginas:PATCH": ADM_ED,
   // Publicar (build) = publicar posts: administrador e editor.
   "build:POST": ADM_ED,
   "build:GET": ADM_ED,
   // Aparência, SEO técnico, menus e redirects: só administrador.
   "layout:GET": ADM,
+  "aparencia/cores:GET": ADM,
   "menus:GET": ADM,
   "menus:PATCH": ADM,
   "robots:GET": ADM,

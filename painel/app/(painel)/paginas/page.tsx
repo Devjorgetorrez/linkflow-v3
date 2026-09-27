@@ -7,9 +7,9 @@
  * o HTML não traz esses dados, então a tela não os exibe.
  */
 
-import { ExternalLink, Search } from "lucide-react";
+import { ChevronDown, ExternalLink, Search } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Botao } from "@/components/ui";
 import { IndexacaoBadge } from "@/components/paginas/IndexacaoBadge";
@@ -47,6 +47,17 @@ export default function PaginasPage() {
   const [filtroIndexacao, setFiltroIndexacao] = useState<FiltroIndexacao>("todas");
   const [filtroTipo, setFiltroTipo] = useState<TipoPagina | "">("");
   const [busca, setBusca] = useState("");
+  const [menuAdicionarAberto, setMenuAdicionarAberto] = useState(false);
+  const menuAdicionarRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menuAdicionarAberto) return;
+    const fechar = (e: MouseEvent) => {
+      if (!menuAdicionarRef.current?.contains(e.target as Node)) setMenuAdicionarAberto(false);
+    };
+    document.addEventListener("mousedown", fechar);
+    return () => document.removeEventListener("mousedown", fechar);
+  }, [menuAdicionarAberto]);
 
   const visiveis = useMemo(() => {
     return paginas.filter((p) => {
@@ -88,13 +99,28 @@ export default function PaginasPage() {
               : `${paginas.length} páginas${origemRotulo ? ` · lido de: ${origemRotulo}` : ""}`}
           </p>
         </div>
-        <div className="group relative">
-          <Botao variante="secundario" tamanho="sm" disabled className="cursor-not-allowed opacity-50">
-            Adicionar página
+        <div ref={menuAdicionarRef} className="relative">
+          <Botao variante="secundario" tamanho="sm" onClick={() => setMenuAdicionarAberto((v) => !v)}>
+            Adicionar página <ChevronDown size={12} />
           </Botao>
-          <span className="pointer-events-none absolute right-0 top-full z-20 mt-1.5 hidden w-64 rounded-[var(--radius)] border border-line bg-surface-2 px-2.5 py-2 text-[11px] leading-relaxed text-ink-muted shadow-lg group-hover:block">
-            Páginas são criadas pelo construtor a partir da arquitetura do LinkFlow.
-          </span>
+          {menuAdicionarAberto && (
+            <div className="absolute right-0 top-full z-20 mt-1.5 w-72 overflow-hidden rounded-[var(--radius)] border border-line bg-surface-2 shadow-lg">
+              <Link
+                href="/servicos/novo"
+                onClick={() => setMenuAdicionarAberto(false)}
+                className="block px-3 py-2.5 text-[12px] text-ink hover:bg-secondary"
+              >
+                <span className="font-medium">Novo serviço</span>
+                <p className="mt-0.5 text-[10.5px] text-ink-muted">
+                  Uma página de oferta (Money Page) — título, meta e conteúdo próprios.
+                </p>
+              </Link>
+              <div className="border-t border-line px-3 py-2.5 text-[12px] text-ink-muted opacity-60">
+                <span className="font-medium">Página institucional livre</span>
+                <p className="mt-0.5 text-[10.5px]">Em breve — por enquanto, use Novo serviço.</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

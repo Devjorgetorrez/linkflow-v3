@@ -19,6 +19,7 @@ import { paginaPermitida } from "@/lib/permissoes-paginas";
  */
 const ROTAS_API_PROPRIAS = [
   "/api/posts",
+  "/api/servicos",
   "/api/config",
   "/api/build",
   "/api/usuarios",
@@ -37,6 +38,7 @@ const ROTAS_API_PROPRIAS = [
   "/api/categorias",
   "/api/layout",
   "/api/links-internos",
+  "/api/aparencia",
 ];
 
 function ehRotaApiPropria(pathname: string): boolean {

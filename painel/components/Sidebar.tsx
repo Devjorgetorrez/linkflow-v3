@@ -63,12 +63,21 @@ const GRUPOS: NavGroup[] = [
         ],
       },
       {
+        label: "Serviços",
+        icone: FileText,
+        subitens: [
+          { href: "/servicos", label: "Todos os serviços" },
+          { href: "/servicos/novo", label: "Adicionar serviço" },
+        ],
+      },
+      {
         label: "Páginas",
         icone: FolderTree,
         subitens: [
           { href: "/paginas", label: "Todas as páginas" },
           { href: "/paginas/estrutura", label: "Estrutura do site" },
           { href: "/paginas/menus", label: "Menus" },
+          { href: "/paginas-fixas", label: "Home, Sobre, Contato" },
         ],
       },
       {
