@@ -9,6 +9,15 @@
  * A61 do QA: banner configurado no painel não existia no site).
  */
 
+export interface CookieBannerConfig {
+  titulo?: string
+  descricao?: string
+  modalDescricao?: string
+  posicaoH?: 'left' | 'center' | 'right'
+  posicaoV?: 'top' | 'middle' | 'bottom'
+  registroConsentimento?: boolean
+}
+
 export interface SiteComoConfig {
   googleAnalyticsId?: string
   googleTagManagerId?: string
@@ -16,6 +25,7 @@ export interface SiteComoConfig {
   legal?: {
     cookies?: Array<{ categoria?: string; [k: string]: unknown }>
   }
+  cookieBanner?: CookieBannerConfig
 }
 
 export interface IntegracoesAtivas {

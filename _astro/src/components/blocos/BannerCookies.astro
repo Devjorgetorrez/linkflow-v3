@@ -33,16 +33,35 @@ const integ = integracoesAtivas(site)
 const temAnaliticos = integ.analiticos || categorias.some((c) => c.bucket === 'analiticos')
 const temMarketing = integ.marketing || categorias.some((c) => c.bucket === 'marketing')
 const temFuncionais = categorias.some((c) => c.bucket === 'funcionais')
+
+// site.cookieBanner (painel > Privacidade > Cookies): todos os campos são
+// opcionais — ausência = os mesmos padrões de sempre (sem regressão para
+// quem nunca mexeu na tela). posicaoH "center" + posicaoV "bottom" É o
+// padrão de sempre (faixa no rodapé, largura total); qualquer outra
+// combinação vira um cartão flutuante posicionado (data-card abaixo).
+const cfg = site.cookieBanner ?? {}
+const titulo = (cfg.titulo ?? '').trim()
+const descricao = (cfg.descricao ?? '').trim() ||
+  'Usamos cookies para o site funcionar e, com sua permissão, para medir audiência e anúncios.'
+const modalDescricao = (cfg.modalDescricao ?? '').trim() ||
+  'Escolha o que pode ser usado. Cookies necessários (sessão, proteção do formulário) sempre ficam ativos.'
+const posicaoH = cfg.posicaoH === 'left' || cfg.posicaoH === 'right' ? cfg.posicaoH : 'center'
+const posicaoV = cfg.posicaoV === 'top' || cfg.posicaoV === 'middle' ? cfg.posicaoV : 'bottom'
+const emCartao = posicaoH !== 'center' || posicaoV !== 'bottom'
+const registroConsentimento = cfg.registroConsentimento === true
 ---
 
 {precisa && (
   <div id="lf-banner-cookies" class="lf-cookies" role="region" aria-label="Preferências de cookies"
        data-ga={site.googleAnalyticsId || ''} data-gtm={site.googleTagManagerId || ''} data-pixel={site.metaPixelId || ''}
+       data-posh={posicaoH} data-posv={posicaoV} data-card={emCartao ? '1' : '0'}
+       data-registro={registroConsentimento ? '1' : '0'}
        hidden>
     <div class="lf-cookies__faixa">
+      {titulo && <p class="lf-cookies__titulo">{titulo}</p>}
       <p class="lf-cookies__texto">
-        Usamos cookies para o site funcionar e, com sua permissão, para medir audiência e anúncios.
-        Veja nossa <a href="/politica-de-privacidade">Política de Privacidade</a>.
+        {descricao}
+        {' '}Veja nossa <a href="/politica-de-privacidade">Política de Privacidade</a>.
       </p>
       <div class="lf-cookies__acoes">
         <button type="button" data-lf-personalizar class="lf-cookies__link">Personalizar</button>
@@ -52,7 +71,7 @@ const temFuncionais = categorias.some((c) => c.bucket === 'funcionais')
     </div>
 
     <div data-lf-painel class="lf-cookies__painel" hidden>
-      <p class="lf-cookies__painel-intro">Escolha o que pode ser usado. Cookies necessários (sessão, proteção do formulário) sempre ficam ativos.</p>
+      <p class="lf-cookies__painel-intro">{modalDescricao}</p>
       <ul class="lf-cookies__categorias">
         <li class="lf-cookies__categoria">
           <label>
@@ -95,6 +114,8 @@ const temFuncionais = categorias.some((c) => c.bucket === 'funcionais')
 <script>import '../../scripts/consentimento-ui.ts'</script>
 
 <style>
+  /* Padrão (posicaoH "center" + posicaoV "bottom"): faixa no rodapé, largura
+     total — o mesmo visual de sempre, sem regressão. */
   .lf-cookies {
     position: fixed;
     left: 0;
@@ -105,6 +126,42 @@ const temFuncionais = categorias.some((c) => c.bucket === 'funcionais')
     border-top: 1px solid var(--color-line, #E2E8F0);
     box-shadow: 0 -4px 18px rgb(0 0 0 / 0.12);
     padding: 1rem max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+  }
+
+  /* Qualquer outra posição: cartão flutuante (não é modal — não bloqueia a
+     página, não tem véu de fundo; só muda de faixa para cartão). */
+  .lf-cookies[data-card="1"] {
+    left: auto;
+    right: auto;
+    top: auto;
+    bottom: auto;
+    width: min(94vw, 420px);
+    border: 1px solid var(--color-line, #E2E8F0);
+    border-radius: var(--radius-lg, 14px);
+    box-shadow: 0 12px 32px rgb(0 0 0 / 0.18);
+    padding: 1.125rem;
+  }
+  .lf-cookies[data-card="1"][data-posv="top"] { top: max(1rem, env(safe-area-inset-top)); }
+  .lf-cookies[data-card="1"][data-posv="bottom"] { bottom: max(1rem, env(safe-area-inset-bottom)); }
+  .lf-cookies[data-card="1"][data-posv="middle"] { top: 50%; transform: translateY(-50%); }
+  .lf-cookies[data-card="1"][data-posh="left"] { left: max(1rem, env(safe-area-inset-left)); }
+  .lf-cookies[data-card="1"][data-posh="right"] { right: max(1rem, env(safe-area-inset-right)); }
+  .lf-cookies[data-card="1"][data-posh="center"] { left: 50%; transform: translateX(-50%); }
+  .lf-cookies[data-card="1"][data-posv="middle"][data-posh="center"] { transform: translate(-50%, -50%); }
+
+  .lf-cookies[data-card="1"] .lf-cookies__faixa {
+    display: block;
+    max-width: none;
+    margin: 0;
+  }
+  .lf-cookies[data-card="1"] .lf-cookies__texto { margin-bottom: 0.75rem; }
+  .lf-cookies[data-card="1"] .lf-cookies__acoes { justify-content: flex-start; }
+
+  .lf-cookies__titulo {
+    margin: 0 0 0.375rem;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--color-ink, #0F172A);
   }
 
   .lf-cookies__faixa {

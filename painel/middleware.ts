@@ -31,6 +31,7 @@ const ROTAS_API_PROPRIAS = [
   "/api/leads",
   "/api/formularios",
   "/api/submissao",
+  "/api/consentimentos",
   "/api/tarefas",
   "/api/redirects",
   "/api/paginas",

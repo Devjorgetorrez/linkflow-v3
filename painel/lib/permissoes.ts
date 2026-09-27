@@ -61,6 +61,9 @@ export const MATRIZ = {
   // Título/meta de home, sobre e contato — conteúdo institucional, mesmo padrão de servicos.
   "config/paginas:GET": TODOS,
   "config/paginas:PATCH": ADM_ED,
+  // Banner de cookies (título, descrição, posição, registro) — mesmo padrão de config/paginas.
+  "config/cookies:GET": TODOS,
+  "config/cookies:PATCH": ADM_ED,
   // Publicar (build) = publicar posts: administrador e editor.
   "build:POST": ADM_ED,
   "build:GET": ADM_ED,

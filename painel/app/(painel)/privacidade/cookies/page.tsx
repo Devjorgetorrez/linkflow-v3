@@ -184,11 +184,12 @@ export default function CookiesPage() {
   const [aba, setAba] = useState<"banner" | "modal">("banner");
   const [salvando, setSalvando] = useState(false);
   const [erroSalvar, setErroSalvar] = useState("");
+  const [carregado, setCarregado] = useState(false);
 
-  // Pré-preencher descrição do banner com nome do site real, e os textos
-  // de finalidade por categoria com o que já foi salvo em dados/legal.json
-  // (fonte de verdade — ver lib/legal.ts; entra também em legal.cookies[]
-  // do site, junto com a base legal/retenção definidas na tela Política).
+  // Pré-preencher descrição do banner com nome do site real, os textos de
+  // finalidade por categoria (dados/legal.json, via legalPainel — entra
+  // também em legal.cookies[] do site) e o que já está salvo de verdade em
+  // site.cookieBanner (título, descrição, posição, registro — /api/config/cookies).
   useEffect(() => {
     fetch("/api/config")
       .then((r) => r.json())
@@ -214,6 +215,32 @@ export default function CookiesPage() {
         }
       })
       .catch(console.error);
+
+    interface CookieBannerSalvo {
+      titulo?: string;
+      descricao?: string;
+      modalDescricao?: string;
+      posicaoH?: CookieConfig["posicaoH"];
+      posicaoV?: CookieConfig["posicaoV"];
+      registroConsentimento?: boolean;
+    }
+    fetch("/api/config/cookies")
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data.ok || !data.cookieBanner) return;
+        const cb = data.cookieBanner as CookieBannerSalvo;
+        setConfigState((prev) => ({
+          ...prev,
+          bannerTitulo: cb.titulo ?? prev.bannerTitulo,
+          bannerDescricao: cb.descricao ?? prev.bannerDescricao,
+          modalDescricao: cb.modalDescricao ?? prev.modalDescricao,
+          posicaoH: cb.posicaoH ?? prev.posicaoH,
+          posicaoV: cb.posicaoV ?? prev.posicaoV,
+          registroConsentimento: cb.registroConsentimento ?? prev.registroConsentimento,
+        }));
+      })
+      .catch(console.error)
+      .finally(() => setCarregado(true));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   function atualizar(patch: Partial<Omit<CookieConfig, "categorias">> & { categorias?: Partial<CookieConfig["categorias"]> }) {
@@ -470,7 +497,9 @@ export default function CookiesPage() {
               <li>• GA4/GTM/Meta Pixel só carregam depois do "Aceitar" (ou da categoria correspondente em "Personalizar") — nunca antes da escolha, e "Rejeitar" mantém tudo desligado.</li>
               <li>• A escolha fica salva no navegador do visitante por até 6 meses; passado esse prazo, o banner volta a aparecer.</li>
               <li>• Link "Preferências de cookies" no rodapé, em todas as páginas, para o visitante rever a escolha.</li>
-              <li>• Ainda não implementado nesta tela: título/descrição do banner, posição e modal de preferências configurados aqui não têm efeito no site publicado — o texto e o formato (faixa no rodapé) são fixos no motor por enquanto. O registro de consentimento (envio para um destino externo) também ainda não existe.</li>
+              <li>• Título, descrição, introdução do modal de preferências e a posição do banner (esquerda/centro/direita, topo/centro da tela/rodapé) configurados aqui têm efeito real no site publicado. Sem nada configurado, o banner sai igual a antes (texto e faixa no rodapé padrão).</li>
+              <li>• Com "Registro de consentimento" ligado, cada clique em Aceitar/Rejeitar/Salvar preferências grava data/hora, a escolha e as categorias no servidor (não há tela de listagem desses registros ainda — próximo passo).</li>
+              <li>• Ainda não implementado nesta tela: a aba "Modal preferências" ao lado é só uma prévia do visual — no site publicado, "Personalizar" sempre abre o mesmo painel dentro do banner (nunca uma janela separada com véu escurecendo a página), mesmo quando a posição escolhida é "Centro da tela".</li>
             </ul>
           </div>
 
@@ -494,7 +523,7 @@ export default function CookiesPage() {
 
           <button
             type="button"
-            disabled={!politicaPublicada || salvando}
+            disabled={!politicaPublicada || salvando || !carregado}
             onClick={async () => {
               salvarNoStore(config);
               setSalvando(true);
@@ -504,15 +533,41 @@ export default function CookiesPage() {
                   cookieMarketingFinalidade: config.categorias.marketing,
                   cookieFuncionaisFinalidade: config.categorias.funcionais,
                 };
-                const r = await fetch("/api/config", {
+                const rLegal = await fetch("/api/config", {
                   method: "PATCH",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ legalPainel }),
                 });
-                const data = await r.json();
-                setErroSalvar(data.ok ? "" : Object.values((data.erros ?? {}) as Record<string, string>).join(" ") || data.erro || "Não foi possível salvar.");
+                const dataLegal = await rLegal.json();
+
+                // Título, descrição, introdução do modal, posição e registro de
+                // consentimento: gravados de verdade em site.cookieBanner (o banner
+                // publicado passa a ler esses campos — ver BannerCookies.astro).
+                // Descrição vazia não é enviada: o motor usa o texto-padrão fixo
+                // em vez do texto gerado localmente aqui a partir das categorias.
+                const cookieBanner: Record<string, unknown> = {
+                  titulo: config.bannerTitulo.trim(),
+                  modalDescricao: config.modalDescricao.trim(),
+                  posicaoH: config.posicaoH,
+                  posicaoV: config.posicaoV,
+                  registroConsentimento: config.registroConsentimento,
+                };
+                if (config.bannerDescricao.trim()) cookieBanner.descricao = config.bannerDescricao.trim();
+                const rCookies = await fetch("/api/config/cookies", {
+                  method: "PATCH",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify(cookieBanner),
+                });
+                const dataCookies = await rCookies.json();
+
+                const erros = [
+                  !dataLegal.ok ? (Object.values((dataLegal.erros ?? {}) as Record<string, string>).join(" ") || dataLegal.erro) : "",
+                  !dataCookies.ok ? (Object.values((dataCookies.erros ?? {}) as Record<string, string>).join(" ") || dataCookies.erro) : "",
+                ].filter(Boolean);
+                setErroSalvar(erros.length ? erros.join(" ") : "");
               } catch (err) {
                 console.error("[privacidade/cookies] falha ao salvar:", err);
+                setErroSalvar("Sem conexão com o servidor. Tente salvar de novo.");
               } finally {
                 setSalvando(false);
               }
