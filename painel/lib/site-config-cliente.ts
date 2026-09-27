@@ -101,6 +101,17 @@ export function urlPreviaMidia(url: string): string {
   return caminho.startsWith("/midia/") ? `/api/midia/arquivo/${caminho.slice("/midia/".length)}` : url;
 }
 
+/**
+ * Miniatura (rota autenticada /api/midia/miniatura/) para grades e listas; o original só no detalhe.
+ * URL que não é da biblioteca (/midia/) fica como está.
+ */
+export function urlMiniaturaMidia(url: string, largura = 320): string {
+  const previa = urlPreviaMidia(url);
+  return previa.startsWith("/api/midia/arquivo/")
+    ? `/api/midia/miniatura/${previa.slice("/api/midia/arquivo/".length)}?w=${largura}`
+    : previa;
+}
+
 /** A API de mídia devolve URL absoluta; o site.ts guarda o CAMINHO (`/midia/logo.png`). */
 export function caminhoDaMidia(url: string): string {
   const t = url.trim();

@@ -11,7 +11,7 @@ import {
   type TextareaHTMLAttributes,
 } from "react";
 
-import { urlPreviaMidia } from "@/lib/site-config-cliente";
+import { urlMiniaturaMidia, urlPreviaMidia } from "@/lib/site-config-cliente";
 import { cn } from "@/lib/utils";
 
 /* ---------------------------------------------------------------- Botão */
@@ -417,6 +417,7 @@ export function Thumb({
   children,
   url,
   alt = "",
+  miniatura,
 }: {
   gradiente: string;
   className?: string;
@@ -424,6 +425,8 @@ export function Thumb({
   /** Imagem real; se ausente ou se falhar ao carregar, fica o gradiente. */
   url?: string;
   alt?: string;
+  /** Largura (px) da miniatura leve a carregar em vez do original (grades e listas). */
+  miniatura?: number;
 }) {
   const [falhou, setFalhou] = useState(false);
   useEffect(() => setFalhou(false), [url]);
@@ -435,7 +438,7 @@ export function Thumb({
       {url && !falhou && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={urlPreviaMidia(url)}
+          src={miniatura ? urlMiniaturaMidia(url, miniatura) : urlPreviaMidia(url)}
           alt={alt}
           loading="lazy"
           onError={() => setFalhou(true)}

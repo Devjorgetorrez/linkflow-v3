@@ -152,6 +152,10 @@ export interface Midia {
   tags: string[];
   usadaEm: string[];
   gradiente: string;
+  /** Data real do envio (ISO), do sidecar ou do mtime do arquivo. */
+  criadoEm?: string;
+  /** Quem enviou; nome "—" quando o arquivo é antigo e não tem registro. */
+  enviadoPor?: { id: string; nome: string };
 }
 
 export interface Redirect {

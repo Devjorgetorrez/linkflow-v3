@@ -8,6 +8,16 @@
 export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
 
+  // Migração única (copia, nunca move) da mídia gravada por versão anterior em /var/www/<slug>/midia.
+  // Em segundo plano, sem bloquear o boot; sem pasta legada é no-op silencioso.
+  if (process.env.LINKFLOW_DIR && process.env.NEXT_RUNTIME === "nodejs") {
+    setTimeout(() => {
+      import("./lib/midia-migracao")
+        .then((m) => m.migrarMidiaLegada())
+        .catch(() => undefined);
+    }, 0);
+  }
+
   const exigidas: [string, string][] = [
     ["LINKFLOW_DIR", "configure a pasta do site deste cliente no .env do painel."],
     ["NEXTAUTH_SECRET", "defina um segredo longo e aleatório no .env do painel (assina as sessões)."],

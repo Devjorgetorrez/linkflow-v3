@@ -15,6 +15,8 @@ import {
   gravarSemSobrescrever, sanitizarBase, sanitizarPasta,
 } from "@/lib/midia-upload";
 import { exigirPapel, obterAtor } from "@/lib/auth";
+import { criarMetaNova, dimensoesDoArquivo, gravarMetaAtomico, lerMeta, quemEnviou } from "@/lib/midia-meta";
+import { mapaDeUso } from "@/lib/midia-uso";
 import { MATRIZ } from "@/lib/permissoes";
 
 const FORMATOS_IMAGEM = ["jpg", "jpeg", "png", "webp", "gif", "avif"];
@@ -31,31 +33,10 @@ function getUrlBase(): string {
   }
 }
 
-function getImageDimensions(filePath: string): { largura: number; altura: number } {
-  // Leitura simplificada de dimensões para PNG e JPEG
-  try {
-    const buf = fs.readFileSync(filePath);
-    // PNG: largura em bytes 16-20, altura em bytes 20-24
-    if (buf[0] === 0x89 && buf[1] === 0x50) {
-      return {
-        largura: buf.readUInt32BE(16),
-        altura: buf.readUInt32BE(20),
-      };
-    }
-    // JPEG: procurar SOF marker
-    let i = 2;
-    while (i < buf.length - 4) {
-      if (buf[i] === 0xff && [0xc0, 0xc1, 0xc2].includes(buf[i + 1])) {
-        return {
-          largura: buf.readUInt16BE(i + 7),
-          altura: buf.readUInt16BE(i + 5),
-        };
-      }
-      i += 2 + buf.readUInt16BE(i + 2);
-    }
-  } catch { /* silencioso */ }
-  return { largura: 0, altura: 0 };
-}
+const LIMITE_LISTA_PADRAO = 500;
+const LIMITE_LISTA_MAX = 2000;
+
+interface Entrada { caminho: string; pasta: string; nome: string; tamanho: number; mtime: Date }
 
 // ─── GET ──────────────────────────────────────────────────────────────────────
 
@@ -66,76 +47,78 @@ export async function GET(req: NextRequest) {
   try {
     const midiaDir = getMidiaDir();
     if (!fs.existsSync(midiaDir)) {
-      return NextResponse.json({ ok: true, midia: [] });
+      return NextResponse.json({ ok: true, midia: [], total: 0, pagina: 1, limite: LIMITE_LISTA_PADRAO });
     }
 
     const urlBase = getUrlBase();
-    const arquivos: unknown[] = [];
+    const entradas: Entrada[] = [];
 
     function varrerDir(dir: string, pasta: string) {
-      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      let itens: fs.Dirent[];
+      try { itens = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+      for (const entry of itens) {
         if (entry.isDirectory()) {
           varrerDir(path.join(dir, entry.name), `${pasta}/${entry.name}`);
           continue;
         }
-
-        // Sidecar de metadados (criado pelo PATCH) não é item da biblioteca.
-        if (entry.name.endsWith(".meta.json")) continue;
-
-        const ext = entry.name.split(".").pop()?.toLowerCase() ?? "";
-        const filePath = path.join(dir, entry.name);
-        const stat = fs.statSync(filePath);
-        const { largura, altura } = FORMATOS_IMAGEM.includes(ext)
-          ? getImageDimensions(filePath)
-          : { largura: 0, altura: 0 };
-
-        const url = `${urlBase}/midia${pasta}/${entry.name}`;
-
-        // Ler metadados salvos se existirem
-        const metaPath = `${filePath}.meta.json`;
-        let meta = { alt: "", titulo: entry.name, legenda: "", credito: "", tags: [] as string[] };
-        if (fs.existsSync(metaPath)) {
-          try { meta = { ...meta, ...JSON.parse(fs.readFileSync(metaPath, "utf-8")) }; }
-          catch { /* silencioso */ }
-        }
-
-        // id = path relativo do arquivo dentro de /midia/
-        // Ex: "2024/foto.jpg" ou "foto.jpg"
-        const idRelativo = (pasta ? `${pasta.replace(/^\//, "")}/${entry.name}` : entry.name);
-
-        arquivos.push({
-          id: idRelativo,
-          arquivo: entry.name,
-          url,
-          alt: meta.alt,
-          titulo: meta.titulo,
-          legenda: meta.legenda,
-          credito: meta.credito,
-          largura,
-          altura,
-          bytes: stat.size,
-          formato: ext,
-          pasta: pasta || "/",
-          tags: meta.tags,
-          usadaEm: [],
-          gradiente: "from-slate-200 to-slate-300",
-          criadoEm: stat.birthtime.toISOString(),
-        });
+        // Sidecars de metadados e temporários não são itens da biblioteca.
+        if (!entry.isFile() || entry.name.endsWith(".meta.json") || entry.name.endsWith(".tmp")) continue;
+        try {
+          const caminho = path.join(dir, entry.name);
+          const stat = fs.statSync(caminho);
+          entradas.push({ caminho, pasta, nome: entry.name, tamanho: stat.size, mtime: stat.mtime });
+        } catch { /* arquivo sumiu/ilegível: não derruba a listagem */ }
       }
     }
-
     varrerDir(midiaDir, "");
-    // Ordenar por data de criação, mais recentes primeiro
-    arquivos.sort((a: unknown, b: unknown) => {
-      const da = (a as { criadoEm: string }).criadoEm;
-      const db = (b as { criadoEm: string }).criadoEm;
-      return db.localeCompare(da);
+
+    // Data real: criadoEm do sidecar; sem sidecar (arquivo antigo), o mtime do arquivo.
+    const comData = entradas.map((e) => {
+      const meta = lerMeta(e.caminho);
+      const dataMeta = typeof meta.criadoEm === "string" && !Number.isNaN(Date.parse(meta.criadoEm)) ? meta.criadoEm : null;
+      return { e, meta, criadoEm: dataMeta ?? e.mtime.toISOString() };
+    });
+    comData.sort((a, b) => b.criadoEm.localeCompare(a.criadoEm));
+
+    const total = comData.length;
+    const sp = req.nextUrl.searchParams;
+    const limite = Math.min(LIMITE_LISTA_MAX, Math.max(1, Number(sp.get("limite")) || LIMITE_LISTA_PADRAO));
+    const pagina = Math.max(1, Number(sp.get("pagina")) || 1);
+    const fatia = comData.slice((pagina - 1) * limite, pagina * limite);
+
+    const uso = mapaDeUso();
+    const midia = fatia.map(({ e, meta, criadoEm }) => {
+      const ext = e.nome.split(".").pop()?.toLowerCase() ?? "";
+      const { largura, altura } = FORMATOS_IMAGEM.includes(ext)
+        ? dimensoesDoArquivo(e.caminho)
+        : { largura: 0, altura: 0 };
+      const idRelativo = e.pasta ? `${e.pasta.replace(/^\//, "")}/${e.nome}` : e.nome;
+      const enviado = meta.enviadoPor && typeof meta.enviadoPor === "object" ? (meta.enviadoPor as { id?: string; nome?: string }) : null;
+      return {
+        id: idRelativo,
+        arquivo: e.nome,
+        url: `${urlBase}/midia${e.pasta}/${e.nome}`,
+        alt: typeof meta.alt === "string" ? meta.alt : "",
+        titulo: typeof meta.titulo === "string" && meta.titulo ? meta.titulo : e.nome,
+        legenda: typeof meta.legenda === "string" ? meta.legenda : "",
+        credito: typeof meta.credito === "string" ? meta.credito : "",
+        largura,
+        altura,
+        bytes: e.tamanho,
+        formato: ext,
+        pasta: e.pasta || "/",
+        tags: Array.isArray(meta.tags) ? meta.tags.filter((t): t is string => typeof t === "string") : [],
+        usadaEm: uso.get(idRelativo) ?? [],
+        gradiente: "from-slate-200 to-slate-300",
+        criadoEm,
+        enviadoPor: enviado?.nome ? { id: String(enviado.id ?? ""), nome: String(enviado.nome) } : { id: "", nome: "—" },
+      };
     });
 
-    return NextResponse.json({ ok: true, midia: arquivos });
+    return NextResponse.json({ ok: true, midia, total, pagina, limite, truncado: total > pagina * limite });
   } catch (err) {
     console.error("[api/midia GET]", err);
-    return NextResponse.json({ ok: false, erro: String(err) }, { status: 500 });
+    return NextResponse.json({ ok: false, erro: "Não foi possível listar a biblioteca." }, { status: 500 });
   }
 }
 
@@ -144,11 +127,15 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     // Recusa cedo pelo Content-Length, antes de ler o corpo inteiro.
-    const declarado = Number(req.headers.get("content-length") ?? 0);
-    if (declarado > LIMITE_OUTROS + 64 * 1024) {
+    const cl = req.headers.get("content-length");
+    if (cl === null) {
+      return NextResponse.json({ ok: false, erro: "Envio sem tamanho declarado." }, { status: 411 });
+    }
+    const declarado = Number(cl);
+    if (!Number.isFinite(declarado) || declarado <= 0 || declarado > LIMITE_OUTROS + 64 * 1024) {
       return NextResponse.json(
         { ok: false, erro: `Arquivo grande demais (máximo ${LIMITE_OUTROS / 1024 / 1024} MB).` },
-        { status: 413 },
+        { status: Number.isFinite(declarado) && declarado > 0 ? 413 : 400 },
       );
     }
 
@@ -228,6 +215,13 @@ export async function POST(req: NextRequest) {
     }
 
     const nome = gravarSemSobrescrever(dir, base, tipo.ext, buf);
+    const enviadoPor = await quemEnviou(req);
+    const meta = criarMetaNova(enviadoPor);
+    try {
+      gravarMetaAtomico(path.join(dir, nome), meta);
+    } catch (e) {
+      console.error("[api/midia POST] sidecar", e);
+    }
     const url = `${getUrlBase()}/midia${pasta ? `/${pasta}` : ""}/${nome}`;
     return NextResponse.json({
       ok: true,
@@ -237,6 +231,8 @@ export async function POST(req: NextRequest) {
       pasta: pasta ? `/${pasta}` : "/",
       bytes: buf.length,
       formato: tipo.ext,
+      criadoEm: meta.criadoEm,
+      enviadoPor,
     });
   } catch (err) {
     console.error("[api/midia POST]", err);

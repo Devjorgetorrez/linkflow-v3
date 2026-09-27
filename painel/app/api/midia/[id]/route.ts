@@ -12,6 +12,7 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import { getMidiaDir } from "@/lib/midia-upload";
+import { emFila, gravarMetaAtomico, lerMeta, validarPatch } from "@/lib/midia-meta";
 import { exigirPapel } from "@/lib/auth";
 import { MATRIZ } from "@/lib/permissoes";
 
@@ -49,7 +50,10 @@ export async function GET(
 
     return NextResponse.json({ ok: true, meta });
   } catch (err) {
-    return NextResponse.json({ ok: false, erro: String(err) }, { status: 500 });
+    if (err instanceof Error && (err.message === "Path inválido" || err instanceof URIError)) {
+      return NextResponse.json({ ok: false, erro: "Caminho inválido." }, { status: 400 });
+    }
+    return NextResponse.json({ ok: false, erro: "Erro ao processar o arquivo." }, { status: 500 });
   }
 }
 
@@ -68,23 +72,31 @@ export async function PATCH(
       return NextResponse.json({ ok: false, erro: "Arquivo não encontrado" }, { status: 404 });
     }
 
-    const body = await req.json();
-    const metaPath = `${filePath}.meta.json`;
-
-    let meta: Record<string, unknown> = {};
-    if (fs.existsSync(metaPath)) {
-      try { meta = JSON.parse(fs.readFileSync(metaPath, "utf-8")); } catch { /* silencioso */ }
+    let body: unknown;
+    try { body = await req.json(); } catch {
+      return NextResponse.json({ ok: false, erro: "Corpo inválido (esperado JSON)." }, { status: 400 });
     }
+    const v = validarPatch(body);
+    if (!v.ok) return NextResponse.json({ ok: false, erro: v.erro }, { status: 400 });
 
-    const permitidos = ["alt", "titulo", "legenda", "credito", "tags"];
-    for (const campo of permitidos) {
-      if (body[campo] !== undefined) meta[campo] = body[campo];
-    }
-
-    fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2), "utf-8");
-    return NextResponse.json({ ok: true });
+    // Fila por arquivo: salvamentos seguidos do mesmo arquivo rodam em ordem, sem corrida.
+    const meta = await emFila(filePath, () => {
+      const atual: Record<string, unknown> = lerMeta(filePath);
+      if (!atual.criadoEm) {
+        // Arquivo antigo, sem sidecar: fixa a data real (mtime) para não mudar depois.
+        atual.criadoEm = fs.statSync(filePath).mtime.toISOString();
+      }
+      Object.assign(atual, v.campos);
+      gravarMetaAtomico(filePath, atual);
+      return atual;
+    });
+    return NextResponse.json({ ok: true, meta });
   } catch (err) {
-    return NextResponse.json({ ok: false, erro: String(err) }, { status: 500 });
+    if (err instanceof Error && (err.message === "Path inválido" || err instanceof URIError)) {
+      return NextResponse.json({ ok: false, erro: "Caminho inválido." }, { status: 400 });
+    }
+    console.error("[api/midia PATCH]", err);
+    return NextResponse.json({ ok: false, erro: "Não foi possível salvar os metadados." }, { status: 500 });
   }
 }
 
@@ -110,6 +122,9 @@ export async function DELETE(
 
     return NextResponse.json({ ok: true });
   } catch (err) {
-    return NextResponse.json({ ok: false, erro: String(err) }, { status: 500 });
+    if (err instanceof Error && (err.message === "Path inválido" || err instanceof URIError)) {
+      return NextResponse.json({ ok: false, erro: "Caminho inválido." }, { status: 400 });
+    }
+    return NextResponse.json({ ok: false, erro: "Erro ao processar o arquivo." }, { status: 500 });
   }
 }

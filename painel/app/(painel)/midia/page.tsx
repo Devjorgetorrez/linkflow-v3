@@ -30,9 +30,17 @@ function formatarBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function extrairData(url: string): string {
-  const m = url.match(/\/(\d{4})\/(\d{2})\//);
-  return m ? `${m[1]}/${m[2]}` : "—";
+function formatarData(iso?: string, comHora = false): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleString("pt-BR", comHora
+    ? { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }
+    : { day: "2-digit", month: "2-digit", year: "numeric" });
+}
+
+function anoDe(iso?: string): string {
+  return iso && !Number.isNaN(new Date(iso).getTime()) ? String(new Date(iso).getFullYear()) : "";
 }
 
 const FORMATOS_IMAGEM = ["jpg", "jpeg", "png", "webp", "gif", "svg", "avif"];
@@ -81,7 +89,7 @@ function GradeMidia({
               {/* miniatura */}
               <div className="relative overflow-hidden rounded-t-[var(--radius)]">
                 {ehImagem ? (
-                  <Thumb gradiente={m.gradiente} url={m.url} alt={m.alt} className="aspect-square w-full" />
+                  <Thumb gradiente={m.gradiente} url={m.url} alt={m.alt} miniatura={320} className="aspect-square w-full" />
                 ) : (
                   <div className="flex aspect-square w-full items-center justify-center bg-secondary">
                     <FileText size={28} className="text-ink-muted" />
@@ -165,6 +173,7 @@ function ListaMidia({
             <th className="px-3 py-2.5 text-left font-medium text-ink-muted">Formato</th>
             <th className="px-3 py-2.5 text-center font-medium text-ink-muted">Usado em</th>
             <th className="px-3 py-2.5 text-left font-medium text-ink-muted">Data</th>
+            <th className="px-3 py-2.5 text-left font-medium text-ink-muted">Enviado por</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-line">
@@ -192,6 +201,7 @@ function ListaMidia({
                     gradiente={m.gradiente}
                     url={formatoEhImagem(m.formato) ? m.url : undefined}
                     alt={m.alt}
+                    miniatura={96}
                     className="h-8 w-8 shrink-0"
                   />
                 </td>
@@ -217,7 +227,8 @@ function ListaMidia({
                 <td className="px-3 py-2 text-ink-muted">{formatarBytes(m.bytes)}</td>
                 <td className="px-3 py-2 text-ink-muted">{m.formato}</td>
                 <td className="px-3 py-2 text-center text-ink-muted">{m.usadaEm.length}</td>
-                <td className="px-3 py-2 font-mono text-ink-muted">{extrairData(m.url)}</td>
+                <td className="px-3 py-2 font-mono text-ink-muted">{formatarData(m.criadoEm)}</td>
+                <td className="px-3 py-2 text-ink-muted">{m.enviadoPor?.nome ?? "—"}</td>
               </tr>
             );
           })}
@@ -236,7 +247,7 @@ function PainelDetalhe({
   onClose,
   onPrev,
   onNext,
-  onAtualizar,
+  onSalvar,
   onExcluir,
 }: {
   midia: Midia;
@@ -245,7 +256,8 @@ function PainelDetalhe({
   onClose: () => void;
   onPrev: () => void;
   onNext: () => void;
-  onAtualizar: (patch: Partial<Midia>) => void;
+  /** Grava no servidor; só resolve ok depois da resposta do PATCH. */
+  onSalvar: (patch: Partial<Midia>) => Promise<{ ok: boolean; erro?: string }>;
   onExcluir: () => void;
 }) {
   const [altLocal, setAltLocal] = useState(midia.alt);
@@ -253,19 +265,54 @@ function PainelDetalhe({
   const [legendaLocal, setLegendaLocal] = useState(midia.legenda);
   const [creditoLocal, setCreditoLocal] = useState(midia.credito);
 
+  const [estado, setEstado] = useState<"parado" | "salvando" | "salvo" | "erro">("parado");
+  const [erroSalvar, setErroSalvar] = useState("");
+  // Último valor CONFIRMADO pelo servidor (base para saber o que mudou) e fila de salvamentos.
+  const salvoRef = useRef({ alt: midia.alt, titulo: midia.titulo, legenda: midia.legenda, credito: midia.credito });
+  const filaRef = useRef<Promise<void>>(Promise.resolve());
+  const idRef = useRef(midia.id);
+  const valoresRef = useRef({ alt: altLocal, titulo: tituloLocal, legenda: legendaLocal, credito: creditoLocal });
+  valoresRef.current = { alt: altLocal, titulo: tituloLocal, legenda: legendaLocal, credito: creditoLocal };
+
   useEffect(() => {
+    idRef.current = midia.id;
+    salvoRef.current = { alt: midia.alt, titulo: midia.titulo, legenda: midia.legenda, credito: midia.credito };
     setAltLocal(midia.alt);
     setTituloLocal(midia.titulo);
     setLegendaLocal(midia.legenda);
     setCreditoLocal(midia.credito);
+    setEstado("parado");
+    setErroSalvar("");
   }, [midia.id]);
 
+  useEffect(() => {
+    if (estado !== "salvo") return;
+    const t = setTimeout(() => setEstado((e) => (e === "salvo" ? "parado" : e)), 2500);
+    return () => clearTimeout(t);
+  }, [estado]);
+
   function salvar() {
-    onAtualizar({
-      alt: altLocal,
-      titulo: tituloLocal,
-      legenda: legendaLocal,
-      credito: creditoLocal,
+    const idDaChamada = midia.id;
+    // Em fila: salvamentos seguidos rodam em ordem; cada um compara com o último confirmado.
+    filaRef.current = filaRef.current.then(async () => {
+      if (idRef.current !== idDaChamada) return;
+      const agora = valoresRef.current;
+      const patch: Partial<Midia> = {};
+      for (const c of ["alt", "titulo", "legenda", "credito"] as const) {
+        if (agora[c].trim() !== salvoRef.current[c]) patch[c] = agora[c].trim();
+      }
+      if (Object.keys(patch).length === 0) return;
+      setEstado("salvando");
+      setErroSalvar("");
+      const r = await onSalvar(patch);
+      if (idRef.current !== idDaChamada) return;
+      if (r.ok) {
+        salvoRef.current = { ...salvoRef.current, ...(patch as typeof salvoRef.current) };
+        setEstado("salvo");
+      } else {
+        setEstado("erro");
+        setErroSalvar(r.erro ?? "Não foi possível salvar.");
+      }
     });
   }
 
@@ -332,7 +379,13 @@ function PainelDetalhe({
             <Campo
               label="Texto alternativo"
               obrigatorio
-              dica={altLocal === "" ? "Obrigatório para acessibilidade" : undefined}
+              dica={
+                altLocal === ""
+                  ? midia.usadaEm.length > 0 && formatoEhImagem(midia.formato)
+                    ? "Sem texto alternativo — esta imagem está em uso no site"
+                    : "Obrigatório para acessibilidade"
+                  : undefined
+              }
             >
               <AreaTexto
                 value={altLocal}
@@ -367,6 +420,22 @@ function PainelDetalhe({
                 onBlur={salvar}
               />
             </Campo>
+            <p
+              role={estado === "erro" ? "alert" : "status"}
+              className={cn(
+                "min-h-[16px] text-[11px]",
+                estado === "erro" ? "text-danger" : "text-ink-muted",
+              )}
+            >
+              {estado === "salvando" && "Salvando…"}
+              {estado === "salvo" && "Salvo"}
+              {estado === "erro" && (
+                <>
+                  Não salvo: {erroSalvar}{" "}
+                  <button type="button" onClick={salvar} className="underline">Tentar de novo</button>
+                </>
+              )}
+            </p>
           </div>
 
           {/* metadados */}
@@ -412,11 +481,11 @@ function PainelDetalhe({
               )}
               <div className="flex items-baseline gap-2">
                 <dt className="w-20 shrink-0 text-ink-muted">Data</dt>
-                <dd className="text-ink">{extrairData(midia.url)}</dd>
+                <dd className="text-ink">{formatarData(midia.criadoEm, true)}</dd>
               </div>
               <div className="flex items-baseline gap-2">
                 <dt className="w-20 shrink-0 text-ink-muted">Enviado por</dt>
-                <dd className="text-ink">—</dd>
+                <dd className="text-ink">{midia.enviadoPor?.nome ?? "—"}</dd>
               </div>
             </dl>
           </div>
@@ -446,9 +515,6 @@ function PainelDetalhe({
 
         {/* footer sticky */}
         <div className="flex shrink-0 items-center gap-2 border-t border-line bg-surface-2 px-3 py-2.5">
-          <Botao variante="secundario" tamanho="sm">
-            Substituir arquivo
-          </Botao>
           <Botao variante="perigo" tamanho="sm" className="ml-auto" onClick={onExcluir}>
             {midia.usadaEm.length > 0
               ? `Excluir (usado em ${midia.usadaEm.length})`
@@ -469,6 +535,8 @@ export default function BibliotecaMidiaPage() {
   const podeEnviar = papelAtual === "administrador" || papelAtual === "editor";
   const [midia, setMidia] = useState<Midia[]>(midiaMock);
   const [carregando, setCarregando] = useState(true);
+  const [totalServidor, setTotalServidor] = useState(0);
+  const [ordem, setOrdem] = useState<"recentes" | "antigas">("recentes");
 
   // Carregar mídia real do servidor
   useEffect(() => {
@@ -492,7 +560,12 @@ export default function BibliotecaMidiaPage() {
             tags: Array.isArray(m.tags) ? m.tags : [],
             usadaEm: Array.isArray(m.usadaEm) ? m.usadaEm : [],
             gradiente: String(m.gradiente ?? "from-slate-200 to-slate-300"),
+            criadoEm: typeof m.criadoEm === "string" ? m.criadoEm : undefined,
+            enviadoPor: m.enviadoPor && typeof m.enviadoPor === "object"
+              ? { id: String((m.enviadoPor as { id?: unknown }).id ?? ""), nome: String((m.enviadoPor as { nome?: unknown }).nome ?? "—") }
+              : { id: "", nome: "—" },
           })));
+          setTotalServidor(Number(data.total ?? data.midia.length));
         }
       })
       .catch(console.error)
@@ -519,21 +592,25 @@ export default function BibliotecaMidiaPage() {
   const anos = useMemo(() => {
     const set = new Set<string>();
     for (const m of midia) {
-      const match = m.url.match(/\/(\d{4})\//);
-      if (match) set.add(match[1]);
+      const ano = anoDe(m.criadoEm);
+      if (ano) set.add(ano);
     }
     return [...set].sort().reverse();
   }, [midia]);
 
   const visiveis = useMemo(() => {
-    return midia.filter((m) => {
+    const ordenada = [...midia].sort((a, b) => {
+      const c = (b.criadoEm ?? "").localeCompare(a.criadoEm ?? "");
+      return ordem === "recentes" ? c : -c;
+    });
+    return ordenada.filter((m) => {
       const ehImagem = formatoEhImagem(m.formato);
       if (filtroTipo === "imagens" && !ehImagem) return false;
       if (filtroTipo === "documentos" && ehImagem) return false;
       if (filtroSemAlt && m.alt !== "") return false;
       if (filtroNaoUtilizadas && m.usadaEm.length > 0) return false;
       if (filtroPasta && m.pasta !== filtroPasta) return false;
-      if (filtroData && !m.url.includes(filtroData)) return false;
+      if (filtroData && anoDe(m.criadoEm) !== filtroData) return false;
       if (busca) {
         const q = busca.toLowerCase();
         return (
@@ -544,7 +621,7 @@ export default function BibliotecaMidiaPage() {
       }
       return true;
     });
-  }, [midia, filtroTipo, filtroSemAlt, filtroNaoUtilizadas, filtroPasta, filtroData, busca]);
+  }, [midia, ordem, filtroTipo, filtroSemAlt, filtroNaoUtilizadas, filtroPasta, filtroData, busca]);
 
   const semFiltrosAtivos =
     !filtroTipo && !filtroData && !filtroPasta && !filtroSemAlt && !filtroNaoUtilizadas && !busca;
@@ -651,7 +728,7 @@ ${usadas} deles está em uso em páginas do site.` : texto)) return;
           <h1 className="font-display text-[18px] font-semibold tracking-tight text-ink">
             Biblioteca de mídia
           </h1>
-          <p className="mt-0.5 text-[11.5px] text-ink-muted">{midia.length} arquivos</p>
+          <p className="mt-0.5 text-[11.5px] text-ink-muted">{totalServidor > midia.length ? `${midia.length} de ${totalServidor} arquivos (os mais recentes)` : `${midia.length} arquivos`}</p>
         </div>
         {podeEnviar && (
           <>
@@ -745,6 +822,16 @@ ${usadas} deles está em uso em páginas do site.` : texto)) return;
           ))}
         </select>
 
+        {/* ordem por data */}
+        <select
+          value={ordem}
+          onChange={(e) => setOrdem(e.target.value as "recentes" | "antigas")}
+          className="h-7 rounded-[var(--radius)] border border-line bg-surface-2 px-2 text-[12px] text-ink outline-none focus:border-primary"
+        >
+          <option value="recentes">Mais recentes primeiro</option>
+          <option value="antigas">Mais antigas primeiro</option>
+        </select>
+
         {/* sem alt */}
         <label className="flex cursor-pointer items-center gap-1.5 text-[12px] text-ink-muted hover:text-ink">
           <input
@@ -799,8 +886,6 @@ ${usadas} deles está em uso em páginas do site.` : texto)) return;
           <span className="text-[12px] text-ink-muted">
             {selecionados.size} selecionado{selecionados.size !== 1 ? "s" : ""}
           </span>
-          <Botao tamanho="sm" variante="secundario">Mover para pasta</Botao>
-          <Botao tamanho="sm" variante="secundario">Adicionar tag</Botao>
           {selecionados.size > 0 && (
             <Botao tamanho="sm" variante="perigo" onClick={() => excluirMidias([...selecionados])}>Excluir selecionados</Botao>
           )}
@@ -851,16 +936,28 @@ ${usadas} deles está em uso em páginas do site.` : texto)) return;
           onExcluir={() => excluirMidias([midiaAberta.id])}
           onPrev={irParaPrev}
           onNext={irParaNext}
-          onAtualizar={(patch) => {
-            atualizarMidia(midiaAberta.id, patch);
-            setMidia((lista) => lista.map((m) => (m.id === midiaAberta.id ? { ...m, ...patch } : m)));
-            setMidiaAberta((prev) => (prev ? { ...prev, ...patch } : null));
-            // Persistir metadados via API
-            fetch(`/api/midia/${encodeURIComponent(midiaAberta.id)}`, {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(patch),
-            }).catch(console.error);
+          onSalvar={async (patch) => {
+            const id = midiaAberta.id;
+            try {
+              const r = await fetch(`/api/midia/${encodeURIComponent(id)}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(patch),
+              });
+              const d = await r.json().catch(() => ({}));
+              if (!r.ok || !d.ok) {
+                if (r.status === 401) return { ok: false, erro: "sua sessão expirou. Entre de novo." };
+                if (r.status === 403) return { ok: false, erro: "seu papel não pode editar a biblioteca." };
+                return { ok: false, erro: d.erro ?? `erro ${r.status}` };
+              }
+              // Só agora, com o servidor confirmando, a tela passa a mostrar o valor novo.
+              atualizarMidia(id, patch);
+              setMidia((lista) => lista.map((m) => (m.id === id ? { ...m, ...patch } : m)));
+              setMidiaAberta((prev) => (prev && prev.id === id ? { ...prev, ...patch } : prev));
+              return { ok: true };
+            } catch {
+              return { ok: false, erro: "sem resposta do servidor." };
+            }
           }}
         />
       )}

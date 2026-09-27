@@ -205,7 +205,7 @@ export function SeletorMidia({
                     : "border-line hover:border-ink-muted",
                 )}
               >
-                <Thumb gradiente={m.gradiente} url={/^(jpe?g|png|webp|gif|avif)$/i.test(m.formato) ? m.url : undefined} alt={m.alt} className="aspect-[4/3] w-full">
+                <Thumb gradiente={m.gradiente} url={/^(jpe?g|png|webp|gif|avif)$/i.test(m.formato) ? m.url : undefined} alt={m.alt} miniatura={320} className="aspect-[4/3] w-full">
                   {!m.alt && (
                     <span className="absolute top-1 right-1">
                       <Badge tom="aviso">
