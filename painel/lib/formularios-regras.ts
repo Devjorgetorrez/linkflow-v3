@@ -26,7 +26,7 @@ export function formularioPadraoContato(): Formulario {
     ],
     msgSucesso: MSG_SUCESSO_PADRAO,
     msgErro: MSG_ERRO_PADRAO,
-    exigeLgpd: false,
+    exigeLgpd: true,
     lgpdTexto: LGPD_TEXTO_PADRAO,
     lgpdPoliticaUrl: "",
     usadoEm: [],

@@ -1,0 +1,18 @@
+---
+/**
+ * FormLgpd — caixa de consentimento (LGPD) de todo formulário de captação.
+ * Vem ANTES do botão de enviar. Não vem marcada. O script (scripts/form-contato.ts)
+ * a exige e envia `lgpdAceite` ao painel, que registra o aceite e a data no lead.
+ * A rota /politica-de-privacidade existe em todos os layouts (após a promoção o
+ * prefixo /tema-0X some). Texto sujeito a revisão jurídica do cliente.
+ */
+---
+
+<label class="flex cursor-pointer items-start gap-2.5 text-xs leading-relaxed text-ink-muted" data-lf-manter>
+  <input type="checkbox" name="lgpd" required
+         class="mt-0.5 h-4 w-4 shrink-0 rounded border-line accent-[var(--color-primary,currentColor)]" />
+  <span>
+    Li e concordo com o uso dos meus dados para retorno deste contato, conforme a
+    <a href="/politica-de-privacidade" target="_blank" rel="noopener" class="underline underline-offset-2 hover:text-ink">Política de Privacidade</a>.
+  </span>
+</label>

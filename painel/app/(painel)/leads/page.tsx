@@ -245,6 +245,19 @@ export default function LeadsPage() {
     void recarregarFormularios();
   }, [recarregarLeads, recarregarFormularios]);
 
+  // Leads chegam pelo site a qualquer hora: relê a cada 20 s com a aba visível e ao voltar para ela.
+  useEffect(() => {
+    const atualizar = () => { if (document.visibilityState === "visible") void recarregarLeads(); };
+    const timer = setInterval(atualizar, 20_000);
+    document.addEventListener("visibilitychange", atualizar);
+    window.addEventListener("focus", atualizar);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", atualizar);
+      window.removeEventListener("focus", atualizar);
+    };
+  }, [recarregarLeads]);
+
   const [busca, setBusca] = useState("");
   const [filtroFormulario, setFiltroFormulario] = useState("todos");
   const [filtroStatus, setFiltroStatus] = useState<"todos" | StatusLead>("todos");

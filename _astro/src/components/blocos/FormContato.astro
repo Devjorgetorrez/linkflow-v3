@@ -18,6 +18,7 @@
  */
 
 import FormExtras from './FormExtras.astro'
+import FormLgpd from './FormLgpd.astro'
 
 interface Props {
   variante?:   'padrao' | 'institucional' | 'cotacao'
@@ -121,6 +122,7 @@ const cidadeLinha   = [bairro, [cidade, uf].filter(Boolean).join(' — '), cep &
                       class="w-full rounded-[var(--radius-btn)] border border-line bg-surface-2 px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-muted/60 outline-none transition-colors focus:border-primary focus:bg-surface resize-y" />
           </div>
 
+          <FormLgpd />
           <button type="submit"
                   class="flex w-full items-center justify-center gap-2 rounded-[var(--radius-btn)] bg-primary px-6 py-3 text-sm font-semibold text-primary-ink transition-opacity hover:opacity-90">
             Enviar Mensagem
@@ -243,6 +245,7 @@ const cidadeLinha   = [bairro, [cidade, uf].filter(Boolean).join(' — '), cep &
                       class="w-full resize-y rounded-[var(--radius-card)] border border-line bg-surface px-5 py-3.5 text-sm text-ink placeholder:text-ink-muted/70 outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20" />
           </div>
 
+          <FormLgpd />
           <button type="submit"
                   class="rounded-[var(--radius-pill)] bg-primary px-8 py-3.5 text-sm font-bold uppercase tracking-wide text-primary-ink transition-opacity hover:opacity-90">
             Enviar mensagem
@@ -438,6 +441,7 @@ const cidadeLinha   = [bairro, [cidade, uf].filter(Boolean).join(' — '), cep &
             </fieldset>
           </div>
 
+          <FormLgpd />
           <button type="submit"
                   class="w-full rounded-[var(--radius-btn)] bg-accent px-6 py-3.5 text-sm font-bold uppercase tracking-wide text-white transition-opacity hover:opacity-90">
             Solicitar cotacao
