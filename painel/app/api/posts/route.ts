@@ -2,6 +2,11 @@
  * app/api/posts/route.ts
  * GET  /api/posts   → lista os posts do cliente (a lixeira fica em /api/posts/lixeira)
  * POST /api/posts   → cria um post novo (já válido para o site) ou duplica um existente
+ *
+ * GET também anexa `real` (JSON-LD REAL do HTML publicado do artigo, lido por
+ * lib/site-lido.ts + lib/html-pagina.ts — mesmo cache usado por /api/paginas).
+ * Artigo sem HTML publicado (rascunho, ou site ainda não gerado) fica com
+ * `real: null` — nada é inferido.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -13,6 +18,8 @@ import { ehPostDoUsuario } from "@/lib/usuarios-regras";
 import { buscarPorId, lerUsuarios } from "@/lib/usuarios";
 import { lerDados } from "@/lib/dados";
 import { postParaApi } from "@/lib/posts-api";
+import { lerPaginaCache, resolverOrigemSite } from "@/lib/site-lido";
+import { urlPost } from "@/lib/urls-publicas";
 import {
   ERRO_AUTOR_SEM_PERFIL, autorPadrao, camposDoCorpo, frontmatterInicial, hojeISO, validarCamposPost, validarCorpoRequisicao, validarVinculos,
 } from "@/lib/posts-campos";
@@ -22,7 +29,16 @@ import { caminhoPost, dirPosts, gravarNovoAtomico, slugLivre, slugOcupado } from
 import {
   SLUGS_RESERVADOS, TITULO_MAX, TITULO_PROVISORIO, normalizarCorpo, slugDoTitulo,
 } from "@/lib/posts-regras";
-import type { Categoria } from "@/mock/types";
+import type { Categoria, Post } from "@/mock/types";
+
+/** JSON-LD real do artigo publicado (URL plana: /<slug>/index.html), ou null se ainda não existe. */
+function realDoPost(dir: string | null, origem: "publicado" | "previa" | "nenhuma", slug: string): Post["real"] {
+  if (!dir || origem === "nenhuma") return null;
+  const arquivo = path.join(dir, urlPost(slug).replace(/^\//, ""), "index.html");
+  const lida = lerPaginaCache(arquivo);
+  if (!lida.dados) return null;
+  return { origem, jsonldBlocosDetalhe: lida.dados.jsonldBlocos };
+}
 
 export async function GET(req: NextRequest) {
   const auth = await exigirPapel(req, MATRIZ["posts:GET"]);
@@ -38,11 +54,14 @@ export async function GET(req: NextRequest) {
     const ator = await obterAtor(req);
     const eu = ator?.via === "sessao" && ator.papel === "autor" ? buscarPorId(ator.id) : null;
 
+    const o = resolverOrigemSite();
+
     const posts = arquivos
       .map((arquivo) => {
         const raw = lerArquivo(path.join(dir, arquivo));
         if (!raw) return null;
-        return postParaApi(arquivo.replace(/\.md$/, ""), raw, usuarios, categorias);
+        const post = postParaApi(arquivo.replace(/\.md$/, ""), raw, usuarios, categorias);
+        return { ...post, real: realDoPost(o.dir, o.origem, post.slug) };
       })
       .filter((p): p is NonNullable<typeof p> => p !== null);
 

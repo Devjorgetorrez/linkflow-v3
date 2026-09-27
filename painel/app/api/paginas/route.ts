@@ -12,7 +12,9 @@
  *
  * Por página (lib/html-pagina.ts): title completo, meta description, meta
  * robots (robots/googlebot), canonical, H1, JSON-LD real (todos os blocos,
- * tipos achatados), Open Graph, palavras do texto visível, imagens sem alt,
+ * tipos achatados, e o conteúdo bruto de cada bloco em
+ * `real.jsonldBlocosDetalhe` — o que o site realmente emite, não o
+ * "previsto"), Open Graph, palavras do texto visível, imagens sem alt,
  * links recebidos/enviados (grafo real de links) e nível = cliques a partir da
  * home. NADA é inferido: intenção de busca, composição, seções e "schema
  * previsto" não existem no HTML e por isso NÃO são devolvidos (a UI mostra "—"
@@ -141,6 +143,7 @@ export async function GET(req: NextRequest) {
           schemaTipos: d?.jsonld.tipos ?? [],
           jsonldBlocos: d?.jsonld.blocos ?? 0,
           jsonldInvalidos: d?.jsonld.invalidos ?? 0,
+          jsonldBlocosDetalhe: d?.jsonldBlocos ?? [],
           og: d?.og ?? { title: null, description: null, image: null, type: null },
           palavras: d?.palavras ?? 0,
           imagens: d?.imagens ?? { total: 0, semAlt: 0 },

@@ -12,30 +12,23 @@ import {
   Lock,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
-import { useSiteInfo } from "@/lib/useSiteInfo";
-import { urlAutor, urlCategoria, urlPost } from "@/lib/urls-publicas";
+import { urlPost } from "@/lib/urls-publicas";
 import { cn } from "@/lib/utils";
-import {
-  gerarGraphAutor,
-  gerarGraphCategoria,
-  gerarGraphPagina,
-  gerarGraphPost,
-  type SchemaGraph,
-} from "@/motor/schema-graph";
-import type { Autor, Categoria, Pagina, Post } from "@/mock/types";
+import type { JsonldBloco } from "@/lib/html-pagina";
+import type { Pagina, Post } from "@/mock/types";
 
 /* ------------------------------------------------------------------ */
 /* Tipos locais                                                         */
 /* ------------------------------------------------------------------ */
 
 type StatusItem = "completo" | "aviso" | "incompleto";
-type TipoEntidade = "pagina" | "post" | "categoria" | "autor";
+type TipoEntidade = "pagina" | "post";
 type StatusPasso = "ok" | "aviso" | "pendente";
+type NivelProblema = "erro" | "aviso";
 
-interface ProblemaValidacao {
+interface ProblemaBloco {
+  nivel: NivelProblema;
   mensagem: string;
-  href: string;
-  labelLink: string;
 }
 
 interface ItemAuditoria {
@@ -43,216 +36,142 @@ interface ItemAuditoria {
   titulo: string;
   url: string;
   tipoEntidade: TipoEntidade;
-  frase: string;
-  fraseTooltip: string;
+  origem: "publicado" | "previa" | null;
+  blocos: JsonldBloco[];
+  /** @type reais, união de todos os blocos válidos deste item */
+  tipos: string[];
   status: StatusItem;
-  problemas: ProblemaValidacao[];
-  graph: SchemaGraph;
+  problemas: ProblemaBloco[];
 }
 
 /* ------------------------------------------------------------------ */
-/* Derivação de frase em português                                     */
+/* Validação do que o site REALMENTE emite (não do "previsto")         */
 /* ------------------------------------------------------------------ */
 
-function listarTiposDoGraph(g: SchemaGraph): string[] {
-  return g["@graph"].map((n) =>
-    Array.isArray(n["@type"]) ? n["@type"][0] : n["@type"],
-  );
+/** Tipos cujo `name` + `address` fazem sentido cobrar (negócio/organização deste site). */
+const TIPOS_NEGOCIO = new Set([
+  "LocalBusiness",
+  "Organization",
+  "Psychologist",
+  "Physician",
+  "Dentist",
+  "LegalService",
+  "AccountingService",
+]);
+
+const ROTULOS_TIPO: Record<string, string> = {
+  BlogPosting: "artigo",
+  Article: "artigo",
+  Service: "serviço",
+  WebPage: "página",
+  FAQPage: "perguntas frequentes",
+  HowTo: "passo a passo",
+  CollectionPage: "coleção de conteúdos",
+  ContactPage: "página de contato",
+  AboutPage: "página institucional",
+  ProfilePage: "perfil de autor",
+  Person: "pessoa",
+  Organization: "organização",
+  LocalBusiness: "negócio local",
+  Psychologist: "psicólogo(a)",
+  Physician: "médico(a)",
+  Dentist: "dentista",
+  LegalService: "serviço jurídico",
+  AccountingService: "contador(a)",
+  WebSite: "site",
+  BreadcrumbList: "trilha de navegação",
+};
+
+function campoVazio(v: unknown): boolean {
+  if (v === undefined || v === null) return true;
+  if (typeof v === "string") return v.trim() === "";
+  if (Array.isArray(v)) return v.length === 0;
+  return false;
 }
 
-function frasePorTipos(
-  tipos: string[],
-  tipoEntidade: TipoEntidade,
-  schema?: string,
-  tipoPagina?: string,
-): { frase: string; tooltip: string } {
-  if (tipoEntidade === "autor") {
-    return {
-      frase: "Descrita como perfil de autor com credenciais profissionais",
-      tooltip: "ProfilePage + Person — página /autor/<slug>, referenciada pelos artigos",
-    };
+/** Achata @graph e arrays; devolve cada nó com @type junto do objeto (pra checar campos). */
+function nosComTipo(no: unknown, saida: { tipo: string; node: Record<string, unknown> }[]): void {
+  if (Array.isArray(no)) {
+    for (const n of no) nosComTipo(n, saida);
+    return;
   }
-  if (tipoEntidade === "categoria") {
-    return {
-      frase: "Descrita como coleção de conteúdos",
-      tooltip: "CollectionPage — resultado rico no Google",
-    };
+  if (!no || typeof no !== "object") return;
+  const obj = no as Record<string, unknown>;
+  const t = obj["@type"];
+  const lista = typeof t === "string" ? [t] : Array.isArray(t) ? t.filter((x): x is string => typeof x === "string") : [];
+  for (const tipo of lista) saida.push({ tipo, node: obj });
+  if (obj["@graph"] !== undefined) nosComTipo(obj["@graph"], saida);
+}
+
+/**
+ * Valida só o que dá para checar de forma genérica a partir do que o bloco
+ * realmente contém: JSON quebrado, @type ausente, e — apenas para os tipos
+ * abaixo, que já aparecem neste site — campos comumente exigidos ausentes.
+ * Nenhuma outra regra de schema.org é aplicada (evita tabela gigante e
+ * palpite sobre o que "deveria" ter).
+ */
+function validarBloco(bloco: JsonldBloco): ProblemaBloco[] {
+  if (!bloco.valido) {
+    return [
+      {
+        nivel: "erro",
+        mensagem: `JSON-LD inválido${bloco.erro ? ` — ${bloco.erro}` : ""}.`,
+      },
+    ];
   }
-  if (tipoEntidade === "post") {
-    const temFaq = tipos.includes("FAQPage");
-    const temHowTo = tipos.includes("HowTo");
-    if (temHowTo && temFaq) {
-      return {
-        frase: "Descrito como artigo com passo a passo e perguntas frequentes",
-        tooltip:
-          "BlogPosting + HowTo + FAQPage — HowTo sem resultado rico desde 09/2023; FAQPage sem resultado rico desde 07/2026; ambos ainda extraídos por IAs",
-      };
+  const nos: { tipo: string; node: Record<string, unknown> }[] = [];
+  nosComTipo(bloco.dado, nos);
+  if (nos.length === 0) {
+    return [{ nivel: "erro", mensagem: "Bloco de dados estruturados sem nenhum @type." }];
+  }
+  const problemas: ProblemaBloco[] = [];
+  for (const { tipo, node } of nos) {
+    if (/Article$/.test(tipo)) {
+      if (campoVazio(node.headline)) problemas.push({ nivel: "erro", mensagem: `${tipo}: falta o campo "headline".` });
+      if (campoVazio(node.datePublished)) problemas.push({ nivel: "erro", mensagem: `${tipo}: falta o campo "datePublished".` });
+    } else if (TIPOS_NEGOCIO.has(tipo)) {
+      if (campoVazio(node.name)) problemas.push({ nivel: "erro", mensagem: `${tipo}: falta o campo "name".` });
+      if (campoVazio(node.address)) problemas.push({ nivel: "erro", mensagem: `${tipo}: falta o campo "address".` });
+    } else if (tipo === "Person") {
+      if (campoVazio(node.name)) problemas.push({ nivel: "erro", mensagem: `Person: falta o campo "name".` });
+    } else if (tipo === "FAQPage") {
+      if (campoVazio(node.mainEntity)) problemas.push({ nivel: "erro", mensagem: `FAQPage: falta o campo "mainEntity".` });
+    } else if (tipo === "Product") {
+      if (campoVazio(node.name)) problemas.push({ nivel: "erro", mensagem: `Product: falta o campo "name".` });
     }
-    if (temHowTo) {
-      return {
-        frase: "Descrito como artigo com passo a passo",
-        tooltip:
-          "BlogPosting + HowTo — HowTo sem resultado rico desde 09/2023; ainda extraído por IAs (ChatGPT, Perplexity, Claude)",
-      };
-    }
-    if (temFaq) {
-      return {
-        frase: "Descrito como artigo com perguntas frequentes",
-        tooltip:
-          "BlogPosting + FAQPage — FAQPage sem resultado rico desde 07/2026; ainda extraído por IAs (ChatGPT, Perplexity, Claude)",
-      };
-    }
-    return {
-      frase: "Descrito como artigo, com autor e data de publicação",
-      tooltip: "BlogPosting — resultado rico no Google com autor e data",
-    };
   }
-
-  // pagina
-  const s = schema ?? "";
-  if (s.includes("Contact")) {
-    return {
-      frase: "Descrita como página de contato",
-      tooltip: "ContactPage — resultado rico no Google",
-    };
-  }
-  if (s.includes("About")) {
-    return {
-      frase: "Descrita como página institucional",
-      tooltip: "AboutPage — resultado rico no Google",
-    };
-  }
-  if (tipoPagina === "money" || s.includes("Service")) {
-    return {
-      frase: "Descrita como serviço oferecido pelo consultório",
-      tooltip: "Service — resultado rico no Google",
-    };
-  }
-  if (tipoPagina === "pilar") {
-    return {
-      frase: "Descrita como página de conteúdo principal",
-      tooltip: "WebPage",
-    };
-  }
-  if (s.includes("LocalBusiness") || s.includes("Psychologist") || s.includes("Physician")) {
-    return {
-      frase: "Descrita como a página principal do consultório",
-      tooltip: "LocalBusiness + Psychologist — resultado rico no Google",
-    };
-  }
-  return {
-    frase: "Descrita como página do site",
-    tooltip: "WebPage",
-  };
+  return problemas;
 }
 
-/* ------------------------------------------------------------------ */
-/* Validação em português                                              */
-/* ------------------------------------------------------------------ */
-
-function calcularStatusPagina(
-  p: Pagina,
-): { status: StatusItem; problemas: ProblemaValidacao[] } {
-  const problemas: ProblemaValidacao[] = [];
-  if (p.seoTitle.length < 3 || p.seoTitle.length > 70)
-    problemas.push({
-      mensagem: "O título está fora do tamanho ideal para busca (máx. 70 caracteres).",
-      href: "/paginas",
-      labelLink: "Abrir em Páginas",
-    });
-  if (p.metaDescription.length < 80 || p.metaDescription.length > 165)
-    problemas.push({
-      mensagem: "A descrição está fora do tamanho ideal (entre 80 e 165 caracteres).",
-      href: "/paginas",
-      labelLink: "Abrir em Páginas",
-    });
-  return { status: problemas.length > 0 ? "incompleto" : "completo", problemas };
-}
-
-function calcularStatusPost(
-  p: Post,
-): { status: StatusItem; problemas: ProblemaValidacao[] } {
-  const bloqueantes: ProblemaValidacao[] = [];
-  const tituloBusca = p.seoTitle || p.titulo; // título SEO vazio = o site usa o título do artigo
-  if (tituloBusca.length < 3 || tituloBusca.length > 70)
-    bloqueantes.push({
-      mensagem: "O título está fora do tamanho ideal para busca (máx. 70 caracteres).",
-      href: "/posts",
-      labelLink: "Abrir o editor",
-    });
-  if (p.metaDescription.length < 80 || p.metaDescription.length > 165)
-    bloqueantes.push({
-      mensagem: "A descrição está fora do tamanho ideal (entre 80 e 165 caracteres).",
-      href: "/posts",
-      labelLink: "Abrir o editor",
-    });
-  if (!p.capaAlt?.trim())
-    bloqueantes.push({
-      mensagem:
-        "Falta o texto alternativo da imagem de capa. Sem ele o Google não descreve a foto e o artigo perde pontos de acessibilidade.",
-      href: "/posts",
-      labelLink: "Abrir o editor",
-    });
-  if (bloqueantes.length > 0) return { status: "incompleto", problemas: bloqueantes };
-
-  if (p.schemaTipo === "FAQPage" && p.faq.length === 0) {
+function montarItem(
+  base: { id: string; titulo: string; url: string; tipoEntidade: TipoEntidade },
+  origem: "publicado" | "previa" | null,
+  blocos: JsonldBloco[],
+): ItemAuditoria {
+  if (blocos.length === 0) {
     return {
+      ...base,
+      origem,
+      blocos,
+      tipos: [],
       status: "aviso",
-      problemas: [
-        {
-          mensagem:
-            "O post está marcado como perguntas frequentes, mas não tem nenhuma pergunta cadastrada.",
-          href: "/posts",
-          labelLink: "Abrir o editor",
-        },
-      ],
+      problemas: [{ nivel: "aviso", mensagem: "Nenhum bloco de dados estruturados foi encontrado nesta página." }],
     };
   }
-  return { status: "completo", problemas: [] };
+  const problemas = blocos.flatMap(validarBloco);
+  const tipos = [...new Set(blocos.flatMap((b) => b.tipos))];
+  const status: StatusItem = problemas.some((p) => p.nivel === "erro") ? "incompleto" : "completo";
+  return { ...base, origem, blocos, tipos, status, problemas };
 }
 
-function calcularStatusCategoria(
-  c: Categoria,
-): { status: StatusItem; problemas: ProblemaValidacao[] } {
-  const problemas: ProblemaValidacao[] = [];
-  const seoTitle = c.seoTitle || c.nome;
-  if (seoTitle.length < 3 || seoTitle.length > 70)
-    problemas.push({
-      mensagem: "O título da categoria está fora do tamanho ideal para busca.",
-      href: "/categorias",
-      labelLink: "Ir para Categorias",
-    });
-  if (c.metaDescription.length < 80 || c.metaDescription.length > 165)
-    problemas.push({
-      mensagem: "A descrição da categoria está fora do tamanho ideal (entre 80 e 165 caracteres).",
-      href: "/categorias",
-      labelLink: "Ir para Categorias",
-    });
-  return { status: problemas.length > 0 ? "incompleto" : "completo", problemas };
-}
-
-function calcularStatusAutor(
-  a: Autor,
-): { status: StatusItem; problemas: ProblemaValidacao[] } {
-  const problemas: ProblemaValidacao[] = [];
-  if (!a.conselho?.trim() || !a.registro?.trim())
-    problemas.push({
-      mensagem:
-        "Credencial profissional incompleta. O Google usa o número do conselho para avaliar a autoridade do autor em saúde.",
-      href: "/usuarios",
-      labelLink: "Ver usuários",
-    });
-  if (a.bioCurta.length < 40)
-    problemas.push({
-      mensagem: "A bio curta está muito curta para aparecer bem nos resultados de busca.",
-      href: "/usuarios",
-      labelLink: "Ver usuários",
-    });
-  return { status: problemas.length > 0 ? "aviso" : "completo", problemas };
+function fraseDosTipos(tipos: string[]): string {
+  if (tipos.length === 0) return "Sem dados estruturados";
+  const labels = [...new Set(tipos.map((t) => ROTULOS_TIPO[t] ?? t))];
+  return `Descrita como ${labels.join(", ")}`;
 }
 
 /* ------------------------------------------------------------------ */
-/* Tipo profissional do site                                           */
+/* Tipo profissional do site (a partir do JSON-LD real da home)        */
 /* ------------------------------------------------------------------ */
 
 const TIPO_PT: Record<string, string> = {
@@ -264,12 +183,9 @@ const TIPO_PT: Record<string, string> = {
   LocalBusiness: "Negócio local",
 };
 
-function derivarTipoProfissional(
-  schemaHome?: string,
-): { pt: string; en: string } | null {
-  if (!schemaHome) return null;
+function derivarTipoProfissional(tipos: string[]): { pt: string; en: string } | null {
   for (const [en, pt] of Object.entries(TIPO_PT)) {
-    if (schemaHome.includes(en)) return { pt, en };
+    if (tipos.includes(en)) return { pt, en };
   }
   return null;
 }
@@ -316,28 +232,47 @@ function IconePasso({ status }: { status: StatusPasso }) {
 /* ------------------------------------------------------------------ */
 
 export default function DadosEstruturadosPage() {
-  const { paginas: paginasMock, posts: postsMock, autores, categorias, midia, aparencia } = useStore();
-  const [paginas, setPaginas] = useState<typeof paginasMock>([]);
-  const [posts, setPosts] = useState<typeof postsMock>([]);
+  const { autores, aparencia } = useStore();
+  const [paginas, setPaginas] = useState<Pagina[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [erroPaginas, setErroPaginas] = useState(false);
+  const [erroPosts, setErroPosts] = useState(false);
+  const [origemSite, setOrigemSite] = useState<{ origem: string; rotulo: string } | null>(null);
   const nomeSite = aparencia.nomeSite || "este site";
-  const siteInfo = useSiteInfo();
 
   useEffect(() => {
     fetch("/api/paginas")
-      .then(r => r.json())
-      .then(data => {
-        if (data.ok && Array.isArray(data.paginas)) setPaginas(data.paginas);
-        else setPaginas([]);
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.ok && Array.isArray(data.paginas)) {
+          setPaginas(data.paginas);
+          setOrigemSite({ origem: data.origem, rotulo: data.origemRotulo });
+          setErroPaginas(false);
+        } else {
+          setPaginas([]);
+          setErroPaginas(true);
+        }
       })
-      .catch(() => setPaginas([]));
+      .catch(() => {
+        setPaginas([]);
+        setErroPaginas(true);
+      });
     fetch("/api/posts")
-      .then(r => r.json())
-      .then(data => {
-        if (data.ok && Array.isArray(data.posts)) setPosts(data.posts);
-        else setPosts([]);
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.ok && Array.isArray(data.posts)) {
+          setPosts(data.posts);
+          setErroPosts(false);
+        } else {
+          setPosts([]);
+          setErroPosts(true);
+        }
       })
-      .catch(() => setPosts([]));
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+      .catch(() => {
+        setPosts([]);
+        setErroPosts(true);
+      });
+  }, []);
 
   const [expandido, setExpandido] = useState<{
     id: string;
@@ -355,7 +290,7 @@ export default function DadosEstruturadosPage() {
 
   /* ── Passo 1: tipo do site ── */
   const homePage = paginas.find((p) => p.url === "/");
-  const tipoProfissional = derivarTipoProfissional(homePage?.real ? homePage.real.schemaTipos.join(" ") : homePage?.schema);
+  const tipoProfissional = derivarTipoProfissional(homePage?.real?.schemaTipos ?? []);
   const passo1Status: StatusPasso = tipoProfissional ? "ok" : "pendente";
 
   /* ── Passo 2: autores e credenciais ── */
@@ -371,97 +306,40 @@ export default function DadosEstruturadosPage() {
   const passo2Status: StatusPasso =
     semCredencialComPost.length > 0 ? "aviso" : "ok";
 
-  /* ── Itens de auditoria ── */
+  /* ── Itens de auditoria: o que o HTML publicado REALMENTE emite ── */
   const itens: ItemAuditoria[] = useMemo(() => {
     const lista: ItemAuditoria[] = [];
-    const ativos = autores.filter((a) => a.ativo !== false);
-    const publicados = posts.filter((p) => p.status === "publicado");
 
-    for (const p of paginas.filter((pg) => pg.status === "publicado")) {
-      const graph = gerarGraphPagina(p, siteInfo);
-      const tipos = listarTiposDoGraph(graph);
-      const { frase, tooltip } = frasePorTipos(tipos, "pagina", p.schema, p.tipo);
-      const { status, problemas } = calcularStatusPagina(p);
-      lista.push({
-        id: `pag-${p.id}`,
-        titulo: p.titulo,
-        url: p.url,
-        tipoEntidade: "pagina",
-        frase,
-        fraseTooltip: tooltip,
-        status,
-        problemas,
-        graph,
-      });
+    for (const p of paginas) {
+      lista.push(
+        montarItem(
+          { id: `pag-${p.id}`, titulo: p.titulo || p.url, url: p.url, tipoEntidade: "pagina" },
+          p.real?.origem ?? null,
+          p.real?.jsonldBlocosDetalhe ?? [],
+        ),
+      );
     }
 
-    for (const p of publicados) {
-      const autor = autores.find((a) => a.id === p.autorId);
-      const imagemMidia = midia.find((m) => m.id === p.capa || m.id === p.ogImagem);
-      const imagemUrl = imagemMidia?.url ?? "";
-      const graph = gerarGraphPost(p, autor, categorias, imagemUrl, siteInfo);
-      const tipos = listarTiposDoGraph(graph);
-      const { frase, tooltip } = frasePorTipos(tipos, "post");
-      const { status, problemas } = calcularStatusPost(p);
-      lista.push({
-        id: `post-${p.id}`,
-        titulo: p.titulo,
-        url: urlPost(p.slug),
-        tipoEntidade: "post",
-        frase,
-        fraseTooltip: tooltip,
-        status,
-        problemas,
-        graph,
-      });
-    }
-
-    for (const c of categorias.filter((cat) => cat.slug)) {
-      const artigosDaCategoria = publicados.filter((p) => p.categoriaId === c.id);
-      const graph = gerarGraphCategoria(c, artigosDaCategoria, siteInfo);
-      const tipos = listarTiposDoGraph(graph);
-      const { frase, tooltip } = frasePorTipos(tipos, "categoria");
-      const { status, problemas } = calcularStatusCategoria(c);
-      lista.push({
-        id: `cat-${c.id}`,
-        titulo: c.nome,
-        url: urlCategoria(c.slug),
-        tipoEntidade: "categoria",
-        frase,
-        fraseTooltip: tooltip,
-        status,
-        problemas,
-        graph,
-      });
-    }
-
-    for (const a of ativos) {
-      const graph = gerarGraphAutor(a, siteInfo);
-      const tipos = listarTiposDoGraph(graph);
-      const { frase, tooltip } = frasePorTipos(tipos, "autor");
-      const { status, problemas } = calcularStatusAutor(a);
-      lista.push({
-        id: `autor-${a.id}`,
-        titulo: a.nome,
-        url: urlAutor(a.slug),
-        tipoEntidade: "autor",
-        frase,
-        fraseTooltip: tooltip,
-        status,
-        problemas,
-        graph,
-      });
+    for (const post of posts.filter((p) => p.status === "publicado")) {
+      lista.push(
+        montarItem(
+          { id: `post-${post.id}`, titulo: post.titulo, url: urlPost(post.slug), tipoEntidade: "post" },
+          post.real?.origem ?? null,
+          post.real?.jsonldBlocosDetalhe ?? [],
+        ),
+      );
     }
 
     return lista;
-  }, [paginas, posts, autores, categorias, midia, siteInfo]);
+  }, [paginas, posts]);
 
   /* ── Passo 3 ── */
   const totalIncompletos = itens.filter((i) => i.status === "incompleto").length;
+  const totalSemDados = itens.filter((i) => i.blocos.length === 0).length;
   const passo3Status: StatusPasso = totalIncompletos > 0 ? "aviso" : "ok";
 
-  function jsonLdStr(graph: SchemaGraph): string {
-    return `<script type="application/ld+json">\n${JSON.stringify(graph, null, 2)}\n</script>`;
+  function blocoParaTexto(b: JsonldBloco): string {
+    return b.valido ? JSON.stringify(b.dado, null, 2) : (b.bruto ?? "");
   }
 
   return (
@@ -474,6 +352,24 @@ export default function DadosEstruturadosPage() {
       </header>
 
       <main className="space-y-8 p-6">
+
+        {(erroPaginas || erroPosts) && (
+          <div className="flex items-start gap-2.5 rounded-[var(--radius)] border border-[color-mix(in_srgb,var(--danger)_30%,transparent)] bg-[color-mix(in_srgb,var(--danger)_8%,transparent)] px-4 py-3 text-[12.5px] text-[var(--danger)]">
+            <AlertCircle size={14} className="mt-0.5 shrink-0" />
+            <span>
+              Não foi possível carregar{" "}
+              {erroPaginas && erroPosts ? "as páginas e os artigos" : erroPaginas ? "as páginas" : "os artigos"}{" "}
+              do site. Recarregue a tela para tentar de novo.
+            </span>
+          </div>
+        )}
+
+        {!erroPaginas && origemSite?.origem === "nenhuma" && (
+          <div className="flex items-start gap-2.5 rounded-[var(--radius)] border border-[var(--line)] bg-[var(--surface-2)] px-4 py-3 text-[12.5px] text-[var(--ink-muted)]">
+            <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+            <span>O site ainda não foi publicado — ainda não há HTML para auditar dados estruturados.</span>
+          </div>
+        )}
 
         {/* ── B: Como o site se identifica ── */}
         <section className="space-y-3">
@@ -576,6 +472,12 @@ export default function DadosEstruturadosPage() {
                     </span>
                   ) : (
                     <span className="font-medium text-[var(--success)]">Todas completas.</span>
+                  )}
+                  {totalSemDados > 0 && (
+                    <span className="ml-1 text-[#d97706]">
+                      {totalSemDados}{" "}
+                      {totalSemDados === 1 ? "sem dados estruturados" : "sem dados estruturados"}.
+                    </span>
                   )}
                 </p>
               </div>
@@ -708,7 +610,7 @@ export default function DadosEstruturadosPage() {
           </div>
         </section>
 
-        {/* ── D: Auditoria por URL ── */}
+        {/* ── D: Auditoria por URL — o que o HTML publicado REALMENTE emite ── */}
         <section id="auditoria" className="space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-[13px] font-semibold text-[var(--ink)]">
@@ -716,6 +618,7 @@ export default function DadosEstruturadosPage() {
             </h2>
             <span className="text-[12px] text-[var(--ink-muted)]">
               {itens.length} endereços
+              {origemSite && origemSite.origem !== "nenhuma" && ` · lido de: ${origemSite.rotulo}`}
             </span>
           </div>
 
@@ -727,7 +630,7 @@ export default function DadosEstruturadosPage() {
                     Página
                   </th>
                   <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
-                    Como está descrita
+                    O que o HTML emite
                   </th>
                   <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
                     Validação
@@ -757,19 +660,19 @@ export default function DadosEstruturadosPage() {
                           </div>
                           <div
                             className="truncate font-mono text-[11px] text-[var(--ink-muted)]"
-                            title={item.url || "Sem página própria no site"}
+                            title={item.url}
                           >
-                            {item.url || "sem página própria — Person nos artigos"}
+                            {item.url}
                           </div>
                         </td>
 
-                        {/* Descrição em português */}
+                        {/* O que o HTML emite */}
                         <td className="max-w-[280px] px-4 py-3">
                           <span
                             className="cursor-help text-[12px] text-[var(--ink-muted)]"
-                            title={item.fraseTooltip}
+                            title={item.tipos.join(", ")}
                           >
-                            {item.frase}
+                            {fraseDosTipos(item.tipos)}
                           </span>
                         </td>
 
@@ -796,14 +699,16 @@ export default function DadosEstruturadosPage() {
                         <td className="px-4 py-3">
                           <button
                             onClick={() => toggleExpandido(item.id, "codigo")}
-                            className="flex items-center gap-1 rounded px-2 py-1 text-[11.5px] font-medium text-[var(--primary)] transition-colors hover:bg-[color-mix(in_srgb,var(--primary)_8%,transparent)]"
+                            disabled={item.blocos.length === 0}
+                            className="flex items-center gap-1 rounded px-2 py-1 text-[11.5px] font-medium text-[var(--primary)] transition-colors hover:bg-[color-mix(in_srgb,var(--primary)_8%,transparent)] disabled:cursor-not-allowed disabled:text-[var(--ink-muted)] disabled:hover:bg-transparent"
                           >
-                            {codigoAberto ? "Fechar" : "Ver código"}
-                            {codigoAberto ? (
-                              <ChevronUp size={12} />
-                            ) : (
-                              <ChevronDown size={12} />
-                            )}
+                            {item.blocos.length === 0
+                              ? "Sem blocos"
+                              : codigoAberto
+                                ? "Fechar"
+                                : "Ver código"}
+                            {item.blocos.length > 0 &&
+                              (codigoAberto ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
                           </button>
                         </td>
                       </tr>
@@ -815,21 +720,20 @@ export default function DadosEstruturadosPage() {
                             <div className="space-y-3">
                               {item.problemas.map((pr, i) => (
                                 <div key={i} className="flex items-start gap-2.5">
-                                  <AlertTriangle
-                                    size={13}
-                                    className="mt-0.5 shrink-0 text-[#d97706]"
-                                  />
-                                  <div>
-                                    <p className="text-[12px] text-[var(--ink)]">
-                                      {pr.mensagem}
-                                    </p>
-                                    <Link
-                                      href={pr.href}
-                                      className="mt-0.5 flex items-center gap-1 text-[11.5px] text-[var(--primary)] hover:underline"
-                                    >
-                                      {pr.labelLink} <ArrowRight size={10} />
-                                    </Link>
-                                  </div>
+                                  {pr.nivel === "erro" ? (
+                                    <AlertCircle
+                                      size={13}
+                                      className="mt-0.5 shrink-0 text-[var(--danger)]"
+                                    />
+                                  ) : (
+                                    <AlertTriangle
+                                      size={13}
+                                      className="mt-0.5 shrink-0 text-[#d97706]"
+                                    />
+                                  )}
+                                  <p className="text-[12px] text-[var(--ink)]">
+                                    {pr.mensagem}
+                                  </p>
                                 </div>
                               ))}
                             </div>
@@ -838,32 +742,41 @@ export default function DadosEstruturadosPage() {
                       )}
 
                       {/* Expansão: código */}
-                      {codigoAberto && (
+                      {codigoAberto && item.blocos.length > 0 && (
                         <tr className="border-b border-[var(--line)] bg-[var(--surface-2)]">
                           <td colSpan={4} className="px-5 py-4">
-                            <div className="space-y-2">
+                            <div className="space-y-3">
                               <p className="text-[10.5px] text-[var(--ink-muted)]">
-                                Emitido no{" "}
+                                Exatamente como emitido no{" "}
                                 <code className="rounded bg-[var(--surface)] px-1 font-mono">
                                   &lt;head&gt;
                                 </code>{" "}
-                                de{" "}
+                                / corpo de{" "}
                                 <code className="rounded bg-[var(--surface)] px-1 font-mono">
-                                  {item.url || "cada artigo deste autor"}
-                                </code>
-                                . Padrão @graph: todos os nodos são referenciados entre si
-                                por{" "}
-                                <code className="rounded bg-[var(--surface)] px-1 font-mono">
-                                  @id
-                                </code>
-                                , evitando duplicação — WebSite, Organization e
-                                BreadcrumbList estão presentes em todas as páginas.
+                                  {item.url}
+                                </code>{" "}
+                                — lido do HTML publicado, não gerado por aqui.
+                                {item.blocos.length > 1 && ` ${item.blocos.length} blocos encontrados.`}
                               </p>
-                              <div className="overflow-x-auto rounded border border-[var(--line)] bg-[var(--surface)] p-3">
-                                <pre className="whitespace-pre font-mono text-[11px] leading-relaxed text-[var(--ink)]">
-                                  {jsonLdStr(item.graph)}
-                                </pre>
-                              </div>
+                              {item.blocos.map((b, i) => (
+                                <div key={i} className="space-y-1">
+                                  <div className="flex items-center gap-2 text-[10.5px] text-[var(--ink-muted)]">
+                                    <span className="font-semibold text-[var(--ink)]">
+                                      Bloco {i + 1}
+                                    </span>
+                                    {b.valido ? (
+                                      <span>{b.tipos.length > 0 ? b.tipos.join(", ") : "sem @type"}</span>
+                                    ) : (
+                                      <span className="text-[var(--danger)]">JSON inválido</span>
+                                    )}
+                                  </div>
+                                  <div className="overflow-x-auto rounded border border-[var(--line)] bg-[var(--surface)] p-3">
+                                    <pre className="whitespace-pre font-mono text-[11px] leading-relaxed text-[var(--ink)]">
+                                      {`<script type="application/ld+json">\n${blocoParaTexto(b)}\n</script>`}
+                                    </pre>
+                                  </div>
+                                </div>
+                              ))}
                             </div>
                           </td>
                         </tr>

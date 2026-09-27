@@ -1,3 +1,5 @@
+import type { JsonldBloco } from "@/lib/html-pagina";
+
 export type StatusPost = "publicado" | "rascunho" | "revisao" | "agendado" | "lixeira";
 
 export type TipoPagina = "home" | "money" | "pilar" | "supporting" | "institucional";
@@ -95,6 +97,12 @@ export interface Post {
   autorReconhecido?: boolean;
   /** Marcador real no frontmatter (geradoPorIA: true): so ele liga o selo IA na lista. */
   geradoPorIA?: boolean;
+  /**
+   * JSON-LD REAL do HTML publicado deste artigo (lib/html-pagina.ts via
+   * /api/posts). null = o artigo ainda não tem HTML publicado (rascunho) ou
+   * o site ainda não foi gerado — não é erro, é ausência de origem.
+   */
+  real?: { origem: "publicado" | "previa"; jsonldBlocosDetalhe: JsonldBloco[] } | null;
 }
 
 export type CampoSecao =
@@ -130,6 +138,12 @@ export interface DadosPaginaReal {
   schemaTipos: string[];
   jsonldBlocos: number;
   jsonldInvalidos: number;
+  /**
+   * Cada bloco <script type="application/ld+json"> como o site REALMENTE
+   * emite (não é o "previsto" pelo painel): objeto completo (`dado`, com
+   * @graph intacto) quando válido, texto cru + motivo do erro quando não.
+   */
+  jsonldBlocosDetalhe: JsonldBloco[];
   og: { title: string | null; description: string | null; image: string | null; type: string | null };
   palavras: number;
   imagens: { total: number; semAlt: number };

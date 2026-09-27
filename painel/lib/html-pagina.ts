@@ -5,8 +5,10 @@
  *
  * Extrai: <title> completo (entidades decodificadas, sem cortar em hífen),
  * meta description, meta robots (inclusive `googlebot`), canonical, primeiro
- * H1, todos os blocos JSON-LD (tipos achatados, inclusive @graph), Open Graph
- * mínimo, nº de palavras do texto visível e imagens sem alt.
+ * H1, todos os blocos JSON-LD (tipos achatados, inclusive @graph, e também o
+ * conteúdo BRUTO de cada bloco — `jsonldBlocos` — para quem precisa do que o
+ * site realmente emite, não só a contagem), Open Graph mínimo, nº de palavras
+ * do texto visível e imagens sem alt.
  *
  * "Texto visível" = conteúdo de <body> sem <script>, <style>, <noscript>,
  * <template>, <svg> e comentários; conta todo o texto que o visitante vê
@@ -23,11 +25,30 @@ export interface DadosHtml {
   canonical: string | null;
   h1: string | null;
   jsonld: { blocos: number; invalidos: number; tipos: string[] };
+  /**
+   * Cada bloco <script type="application/ld+json"> como ele REALMENTE é no
+   * HTML: se o JSON é válido, `dado` traz o objeto inteiro (com @graph, sem
+   * achatar) e `tipos` os @type encontrados nele; se é inválido, `bruto` traz
+   * o texto cru e `erro` um motivo curto. Ordem = ordem no documento.
+   */
+  jsonldBlocos: JsonldBloco[];
   og: { title: string | null; description: string | null; image: string | null; type: string | null };
   palavras: number;
   imagens: { total: number; semAlt: number };
   /** rastreadores que o HTML realmente carrega (vazio = nenhum) */
   rastreadores: string[];
+}
+
+export interface JsonldBloco {
+  valido: boolean;
+  /** @type achatados (inclusive @graph) só deste bloco; vazio se inválido ou sem @type */
+  tipos: string[];
+  /** objeto parseado (com @graph intacto), só quando `valido` */
+  dado?: unknown;
+  /** texto cru do bloco, só quando inválido */
+  bruto?: string;
+  /** motivo curto do erro de parse, só quando inválido */
+  erro?: string;
 }
 
 const ENTIDADES: Record<string, string> = {
@@ -141,15 +162,22 @@ export function analisarHtml(html: string): DadosHtml {
 
   // JSON-LD (todos os blocos, em qualquer parte do documento)
   const tipos: string[] = [];
+  const jsonldBlocos: JsonldBloco[] = [];
   let blocos = 0;
   let invalidos = 0;
   for (const m of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi)) {
     if ((atributos(`<script ${m[1]}>`).type ?? "").toLowerCase() !== "application/ld+json") continue;
     blocos++;
+    const bruto = m[2].trim();
     try {
-      tiposDoNo(JSON.parse(m[2].trim()), tipos);
-    } catch {
+      const dado = JSON.parse(bruto);
+      const tiposBloco: string[] = [];
+      tiposDoNo(dado, tiposBloco);
+      for (const t of tiposBloco) tipos.push(t);
+      jsonldBlocos.push({ valido: true, tipos: [...new Set(tiposBloco)], dado });
+    } catch (e) {
       invalidos++;
+      jsonldBlocos.push({ valido: false, tipos: [], bruto, erro: e instanceof Error ? e.message : String(e) });
     }
   }
 
@@ -180,6 +208,7 @@ export function analisarHtml(html: string): DadosHtml {
     canonical,
     h1,
     jsonld: { blocos, invalidos, tipos: [...new Set(tipos)] },
+    jsonldBlocos,
     og,
     palavras,
     imagens: { total, semAlt },
