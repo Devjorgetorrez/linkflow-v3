@@ -58,6 +58,9 @@ export interface AutorResolvido {
   linkedin?: string
   instagram?: string
   email?: string
+  redes: Record<string, string>   // todas as redes preenchidas (chave = rede)
+  especialidades: string[]
+  formacao: string[]
   sameAs: string[]       // redes, para o JSON-LD
 }
 
@@ -91,7 +94,14 @@ export function resolverAutor(
   if (entrada) {
     const d = entrada.data
     const redes = Object.values(d.redes ?? {}).filter((v): v is string => Boolean(v))
-    const credencial = [d.conselho, d.registro].filter(Boolean).join(' ').trim()
+    // O painel grava "Nenhum" quando o autor não tem conselho profissional: isso NÃO é credencial.
+    const conselho = /^(nenhum|nenhuma|n\/a|-|—)?$/i.test((d.conselho ?? '').trim()) ? '' : (d.conselho ?? '').trim()
+    const credencial = conselho ? [conselho, d.registro].filter(Boolean).join(' ').trim() : ''
+    const redesCheias = Object.fromEntries(
+      Object.entries(d.redes ?? {}).filter((par): par is [string, string] => Boolean(par[1])),
+    )
+    if (!redesCheias.linkedin && post.autorLinkedin) redesCheias.linkedin = post.autorLinkedin
+    if (!redesCheias.instagram && post.autorInstagram) redesCheias.instagram = post.autorInstagram
     const ativo = d.ativo !== false
     return {
       slug: entrada.id,
@@ -105,6 +115,9 @@ export function resolverAutor(
       linkedin: d.redes?.linkedin || post.autorLinkedin,
       instagram: d.redes?.instagram || post.autorInstagram,
       email: d.email || post.autorEmail,
+      redes: redesCheias,
+      especialidades: d.especialidades ?? [],
+      formacao: d.formacao ?? [],
       sameAs: redes,
     }
   }
@@ -121,6 +134,11 @@ export function resolverAutor(
     linkedin: post.autorLinkedin,
     instagram: post.autorInstagram,
     email: post.autorEmail,
+    redes: Object.fromEntries(
+      Object.entries({ linkedin: post.autorLinkedin, instagram: post.autorInstagram }).filter((par): par is [string, string] => Boolean(par[1])),
+    ),
+    especialidades: [],
+    formacao: [],
     sameAs: [post.autorLinkedin, post.autorInstagram].filter((v): v is string => Boolean(v)),
   }
 }
