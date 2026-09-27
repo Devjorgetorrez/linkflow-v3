@@ -229,10 +229,23 @@ server {
         try_files \$uri \$uri/ \$uri.html =404;
     }
 
-    location /midia/ {
+    # Mídia enviada pelo painel (fora do root do site: o deploy do site nunca a apaga).
+    # ^~ = prefixo que IMPEDE a location regex de imagens abaixo de capturar /midia/
+    # (sem ^~, uma regex vence o prefixo simples e a imagem cairia no root = 404).
+    # if + return dentro da location é o uso seguro de "if" (não mistura com outras
+    # diretivas); alias com prefixo termina em / dos dois lados. Os arquivos .meta.json
+    # (metadados do painel) e qualquer nome oculto (começa com ponto) dão 404.
+    location ^~ /midia/ {
         alias $CLIENTE_DIR/midia/;
-        expires 1y;
-        add_header Cache-Control "public, immutable";
+        autoindex off;
+        if (\$uri ~* "(^|/)\.|\.meta\.json\$") {
+            return 404;
+        }
+        # 30 dias, não 1 ano; immutable é seguro porque o painel nunca sobrescreve
+        # um nome (cria -1, -2...). Sem try_files: com alias ele usa o URI original (bug
+        # conhecido) e quebraria o arquivo; arquivo ausente já dá 404 sozinho.
+        add_header Cache-Control "public, max-age=2592000, immutable" always;
+        add_header X-Content-Type-Options "nosniff" always;
     }
 
     location ~* \.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|webp|avif)$ {
@@ -251,6 +264,9 @@ server {
     listen 80;
     server_name $DOMINIO_PAINEL;
 
+    # Uploads do painel: imagens até 5 MB, PDF/vídeo até 10 MB (+ margem do multipart).
+    client_max_body_size 12m;
+
     location / {
         proxy_pass http://localhost:$PORTA;
         proxy_http_version 1.1;
@@ -261,7 +277,8 @@ server {
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
         proxy_cache_bypass \$http_upgrade;
-        proxy_read_timeout 60s;
+        proxy_read_timeout 120s;
+        proxy_send_timeout 120s;
     }
 }
 EOF

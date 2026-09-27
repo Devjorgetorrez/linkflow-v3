@@ -291,6 +291,10 @@ ssh -p [vps_porta] root@[vps_ip] << REMOTE
 REMOTE
 ```
 
+> A mídia do painel fica em `[vps_cliente_dir]/midia` (fora de `[vps_site_dir]`) e o Nginx
+> a serve por `alias`. Este `cp -r` (sem `--delete`) nunca a toca. Nunca acrescentar
+> `--delete`/`rm` sobre `[vps_cliente_dir]/midia`.
+
 Se o build falhar no servidor, mesma regra: até 3 tentativas, nunca
 publicar build quebrado.
 

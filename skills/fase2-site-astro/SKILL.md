@@ -458,11 +458,18 @@ no Marco 3.
 
 ### 5.2 Subir a prévia e fazer UM pedido
 
-Servir o build local (o que ele vê é exatamente o que será publicado):
+Servir o site local com o servidor de desenvolvimento (não use `npm run preview`:
+ele não serve `/midia/*`, e as fotos/PDFs enviados pelo painel local não apareceriam):
 
 ```bash
-cd [SITE_LOCAL]/_astro && npm run preview -- --port 4321 --host 127.0.0.1
+cd [SITE_LOCAL]/_astro && npm run dev -- --port 4321 --host 127.0.0.1
 ```
+
+O plugin `integracoes/midia-dev.mjs` (já ligado no `astro.config.mjs`) serve
+`/midia/*` a partir de `[SITE_LOCAL]/midia/` (a pasta que o `preparar_site_local.py`
+cria ao lado de `_astro/`), só na prévia — nada disso vai para o build nem para o servidor.
+Se o painel local for aberto, subir com `LINKFLOW_DIR=[SITE_LOCAL]`, para ele gravar as
+mídias nessa mesma pasta (`[SITE_LOCAL]/midia`).
 
 (rodar em segundo plano; se a porta estiver ocupada, usar 4325 e dizer o endereço certo.)
 

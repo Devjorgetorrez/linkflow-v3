@@ -249,6 +249,36 @@ no PASSO 7 (nesse caso, pular o PASSO 7 de criar as chaves, já existem).
 
 ---
 
+### Mídia (fotos, PDFs, vídeos) — onde fica e como migrar
+
+Regras para o agente (não é para o usuário final):
+
+- A mídia enviada pelo painel vive em `/opt/linkflow/clientes/[SLUG]/midia/`, **fora**
+  da pasta do site (`/var/www/[SLUG]`). O Nginx serve `/midia/` dessa pasta
+  (`location ^~ /midia/` com `alias`; o `^~` é o que impede a regra de imagens do
+  site de "roubar" a URL). Arquivos `.meta.json` e nomes ocultos dão 404.
+- Por isso o deploy do site (`cp -r dist/. /var/www/[SLUG]/`, sem `--delete`) **não
+  apaga** a mídia. Nenhum passo desta skill nem de `site-atualizar`/`site-publicar` apaga
+  `/opt/linkflow/clientes/[SLUG]/midia`; se algum dia surgir `rsync --delete` ou `rm`
+  nessa pasta, é defeito a corrigir.
+- Cliente antigo que já tinha mídia em `/var/www/[SLUG]/midia` (versão anterior do
+  painel) precisa ter a pasta **copiada** para o lugar novo:
+
+```bash
+scp -P [porta] scripts/vps/migrar-midia.sh root@[IP]:/root/
+ssh -p [porta] root@[IP] "bash /root/migrar-midia.sh [SLUG]"
+```
+
+  O script só copia (nunca apaga a origem), pode rodar de novo sem problema, não
+  sobrescreve arquivo já existente, ajusta dono/permissões e imprime quantos
+  arquivos copiou (`MIDIA_COPIADOS=N`). `migrar-para-multicliente.sh` já o chama sozinho.
+  O painel novo também faz essa cópia uma vez ao iniciar; rodar o script é a conferência.
+- Cliente já criado antes desta versão: o bloco Nginx dele ainda é o antigo (sem `^~`).
+  Atualizar `/etc/nginx/sites-available/site-[SLUG]` com o bloco `location ^~ /midia/`
+  que o `novo-cliente.sh` gera hoje, e rodar `nginx -t && systemctl reload nginx`.
+
+---
+
 ## PASSO 5B — Configurar DNS na Hostgator (Parte B — é o ÚNICO pedido desta resposta)
 
 **Antes de testar se o site está no ar, o DNS precisa apontar para o IP do VPS.**

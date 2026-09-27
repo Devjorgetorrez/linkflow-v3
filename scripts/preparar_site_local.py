@@ -11,7 +11,10 @@ O que faz, nesta ordem:
      os outros layouts somem só da cópia; o motor de referência nunca é tocado;
   3. apaga o conteúdo de demonstração das coleções (igual ao novo-cliente.sh do
      servidor), para o site do cliente começar vazio;
-  4. instala as dependências (npm ci) se ainda não estiverem lá.
+  4. instala as dependências (npm ci) se ainda não estiverem lá;
+  5. cria projetos/<slug>/site/midia/ (ao lado de _astro/): é onde o painel LOCAL
+     grava as mídias enviadas (rodar o painel com LINKFLOW_DIR = a pasta do site
+     local) e de onde a prévia serve /midia/*.
 
 Trocar de layout na prévia = rodar de novo com outro --tema: a cópia é refeita
 do zero (src, public, config), mas o node_modules é preservado. O conteúdo do
@@ -116,6 +119,11 @@ def main():
         erro("a promoção do layout falhou (mensagem acima)")
 
     apagados = apagar_demo(astro_dir)
+
+    # Pasta de mídia do painel local: fica ao lado de _astro/ (LINKFLOW_DIR do
+    # painel local = destino_raiz). O plugin integracoes/midia-dev.mjs serve
+    # /midia/* dela na prévia (dev). Nunca é apagada ao refazer o site.
+    (destino_raiz / "midia").mkdir(parents=True, exist_ok=True)
 
     if not args.sem_instalar and not (astro_dir / "node_modules").is_dir():
         print("[preparar_site_local] instalando dependências (npm ci)...")

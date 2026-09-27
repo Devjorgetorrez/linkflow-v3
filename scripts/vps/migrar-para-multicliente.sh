@@ -56,6 +56,10 @@ if [ -d "$DIR_ANTIGO/_astro/src/config" ]; then
   echo "  ✅ config Astro migrado"
 fi
 
+# Mídia da versão anterior do painel (/var/www/<slug>/midia) -> $CLIENTE_DIR/midia.
+# Só COPIA (a origem nunca é apagada) e é idempotente. Ver migrar-midia.sh.
+bash "$(dirname "$0")/migrar-midia.sh" "$SLUG" || echo "  ⚠️  migração de mídia falhou — rode migrar-midia.sh $SLUG manualmente"
+
 # Copiar skills e scripts para a raiz nova
 if [ -d "$DIR_ANTIGO/skills" ]; then
   cp -r "$DIR_ANTIGO/skills" "$LINKFLOW_DIR/"
