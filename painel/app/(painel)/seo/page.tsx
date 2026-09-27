@@ -386,7 +386,7 @@ export default function SeoVisaoGeral() {
   return (
     <div className="min-h-screen bg-[var(--surface)]">
       {/* Cabeçalho */}
-      <div className="sticky top-0 z-20 border-b border-[var(--line)] bg-[var(--surface)] px-6 py-4">
+      <div className="sticky top-[52px] z-10 border-b border-[var(--line)] bg-[var(--surface)] px-6 py-4">
         <h1 className="text-base font-semibold text-[var(--ink)]">SEO — Visão geral</h1>
         <p className="text-xs text-[var(--ink-muted)]">
           {carregando

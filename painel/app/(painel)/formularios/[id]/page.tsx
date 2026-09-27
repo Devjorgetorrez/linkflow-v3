@@ -306,7 +306,7 @@ export default function FormularioEditorPage() {
   return (
     <div className="flex min-h-full flex-col gap-0">
       {/* cabeçalho sticky */}
-      <div className="sticky top-0 z-10 flex items-center justify-between border-b border-line bg-surface px-6 py-3">
+      <div className="sticky top-[52px] z-10 flex items-center justify-between border-b border-line bg-surface px-6 py-3">
         <div className="flex items-center gap-2">
           <Link
             href="/formularios"

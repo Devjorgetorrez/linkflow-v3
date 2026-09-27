@@ -234,7 +234,7 @@ export default function CookiesPage() {
   return (
     <div className="flex min-h-screen flex-col bg-[var(--surface)]">
       {/* Cabeçalho */}
-      <header className="sticky top-0 z-20 flex h-14 items-center gap-2 border-b border-[var(--line)] bg-[var(--surface)] px-6">
+      <header className="sticky top-[52px] z-10 flex h-14 items-center gap-2 border-b border-[var(--line)] bg-[var(--surface)] px-6">
         <Shield size={15} className="text-[var(--primary)]" />
         <h1 className="text-[15px] font-semibold text-[var(--ink)]">Banner de cookies</h1>
       </header>

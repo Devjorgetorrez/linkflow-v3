@@ -467,7 +467,7 @@ export default function DadosEstruturadosPage() {
   return (
     <div className="flex min-h-full flex-col">
       {/* Header */}
-      <header className="sticky top-0 z-20 flex h-14 items-center border-b border-[var(--line)] bg-[var(--surface)] px-6">
+      <header className="sticky top-[52px] z-10 flex h-14 items-center border-b border-[var(--line)] bg-[var(--surface)] px-6">
         <h1 className="text-[15px] font-semibold text-[var(--ink)]">
           Dados estruturados
         </h1>

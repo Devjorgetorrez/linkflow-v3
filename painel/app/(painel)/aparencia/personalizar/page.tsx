@@ -291,7 +291,7 @@ export default function PersonalizarPage() {
   return (
     <div className="flex min-h-full flex-col">
       {/* header sticky */}
-      <div className="sticky top-0 z-10 flex items-center justify-between border-b border-line bg-surface px-6 py-3">
+      <div className="sticky top-[52px] z-10 flex items-center justify-between border-b border-line bg-surface px-6 py-3">
         <h1 className="text-[14px] font-semibold text-ink">Personalizar</h1>
         <Botao variante="primario" tamanho="sm" onClick={salvar}>
           {salvando ? "Salvando…" : "Salvar"}
