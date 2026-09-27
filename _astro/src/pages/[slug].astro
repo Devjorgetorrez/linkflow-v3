@@ -23,6 +23,7 @@ import { getCollection } from 'astro:content'
 import { ehPublicado } from '../lib/publicacao.ts'
 import { resolverAutor } from '../lib/autores.ts'
 import { artigosDaCategoria } from '../lib/categorias.ts'
+import { seoDoPost, faqJsonLd } from '../lib/post-seo.ts'
 
 export async function getStaticPaths() {
   // Slugs de páginas fixas — fora deste arquivo, mas que colidiriam com a
@@ -104,6 +105,7 @@ let noindex: boolean
 let nodeId: string
 let jsonLd: object | undefined
 const canonical = `${site.dominio}/${entry.id}`
+let canonicalFinal = canonical   // post pode declarar `canonical` próprio (lib/post-seo.ts)
 
 if (tipo === 'servico') {
   titulo = `${entry.data.titulo} — ${site.nome}`
@@ -154,10 +156,13 @@ if (tipo === 'servico') {
     ],
   }
 } else {
-  titulo = `${entry.data.titulo} — ${site.nome}`
-  metaDescription = entry.data.metaDescription
-  noindex = false
+  const seo = seoDoPost(entry.data, site.nome, canonical)
+  titulo = seo.titulo
+  metaDescription = seo.metaDescription
+  canonicalFinal = seo.canonical
+  noindex = seo.noindex
   nodeId = 'post'
+  const faqNode = faqJsonLd(seo.faq, canonical)
 
   // JSON-LD do artigo (o tema base não emitia nenhum). O autor aponta para a
   // página dele (/autor/<slug>) com o mesmo @id que a página de autor usa.
@@ -176,11 +181,12 @@ if (tipo === 'servico') {
   jsonLd = {
     '@context': 'https://schema.org',
     '@graph': [
+      ...(faqNode ? [faqNode] : []),
       {
         '@type': 'BlogPosting',
         '@id': `${canonical}#article`,
         headline: entry.data.titulo,
-        description: entry.data.metaDescription,
+        description: metaDescription,
         datePublished: entry.data.publicadoEm,
         dateModified: entry.data.publicadoEm,
         inLanguage: 'pt-BR',
@@ -206,7 +212,7 @@ if (tipo === 'servico') {
 <ThemeBase
   titulo={titulo}
   metaDescription={metaDescription}
-  canonical={canonical}
+  canonical={canonicalFinal}
   nodeId={nodeId}
   noindex={noindex}
   jsonLd={jsonLd}

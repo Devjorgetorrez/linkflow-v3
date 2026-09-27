@@ -3,6 +3,8 @@ import Footer     from '../../components/blocos/Footer.astro'
 import Header     from '../../components/blocos/Header.astro'
 import { site }   from '../../config/site.ts'
 import { textoCredencial } from '../../lib/schema.ts'
+import { faqDoPost } from '../../lib/post-seo.ts'
+import PostFaq from '../blocos/PostFaq.astro'
 import { getCollection, render } from 'astro:content'
 import { ehPublicado } from '../../lib/publicacao.ts'
 import { resolverAutor, nomeAutor } from '../../lib/autores.ts'
@@ -14,6 +16,7 @@ interface Props {
 
 const { entry } = Astro.props
 const { Content } = await render(entry)
+const faq = faqDoPost(entry.data)
 const canonical = `${site.dominio}/${entry.id}`
 
 const dataFormatada = new Intl.DateTimeFormat('pt-BR', {
@@ -38,6 +41,7 @@ const relacionados = todosPosts
     titulo:      p.data.titulo,
     categoria:   nomeCategoria(p.data.categoria, categorias),
     imagemCapa:  p.data.imagemCapa,
+    resumo:      p.data.resumo,
     publicadoEm: p.data.publicadoEm,
     autor:       nomeAutor(p.data, autores),
     href:        `/${p.id}`,
@@ -123,7 +127,7 @@ const shareText = encodeURIComponent(entry.data.titulo)
       <div class="container-wide max-w-[760px] -mb-2 pt-10">
         <div class="overflow-hidden rounded-[var(--radius-card)]">
           <img src={entry.data.imagemCapa}
-               alt={entry.data.imagemCapaAlt ?? entry.data.titulo}
+               alt={entry.data.imagemCapaAlt ?? ''}
                width="760" height="420"
                class="w-full object-cover max-h-[420px]"
                loading="eager" />
@@ -136,6 +140,8 @@ const shareText = encodeURIComponent(entry.data.titulo)
       <div class="article-body">
         <Content />
       </div>
+
+      <PostFaq faq={faq} />
 
       {/* Compartilhar */}
       <div class="mt-10 pt-8 border-t border-line">

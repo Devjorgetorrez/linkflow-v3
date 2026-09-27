@@ -35,7 +35,7 @@ const card = (p: (typeof posts)[number]) => ({
   publicadoEm:   p.data.publicadoEm,
   categoria:     nomeCategoria(p.data.categoria, categorias),
   imagemCapa:    p.data.imagemCapa,
-  imagemCapaAlt: p.data.imagemCapaAlt,
+  imagemCapaAlt: p.data.imagemCapaAlt, resumo: p.data.resumo,
   autor:         d.nome,
   href:          `/tema-07/${p.id}`,
 })

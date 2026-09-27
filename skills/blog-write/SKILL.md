@@ -241,6 +241,13 @@ tags: ["keyword1", "keyword2", "keyword3"]
 If the platform uses a different field name (e.g., `image`, `hero`, `thumbnail`),
 adapt to match the project's existing frontmatter convention.
 
+**Site Astro do Link Flow:** o artigo gerado aqui é convertido pelo
+`site-publicar`, que grava `geradoPorIA: true` (selo "IA" do painel) e os
+campos opcionais `seoTitle`, `resumo` e `faq`. Para isso funcionar, entregue
+no frontmatter/rascunho: um resumo de 1-2 frases do artigo (até 300 caracteres)
+e a seção FAQ com as perguntas e respostas reais. Nunca invente pergunta só
+para preencher o campo.
+
 #### 5b. Key Takeaways / Summary Box — DO NOT GENERATE
 
 **Do not generate** a Key Takeaways, "Resumo rápido", "Pontos Essenciais", "TL;DR",

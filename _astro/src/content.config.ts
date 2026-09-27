@@ -53,6 +53,14 @@ const posts = defineCollection({
     categoria:       z.string().optional(),
     imagemCapa:      z.string().optional(),
     imagemCapaAlt:   z.string().optional(),
+    /* Campos de SEO/editor do painel — todos opcionais; ver lib/post-seo.ts */
+    seoTitle:        z.string().max(70).optional(),
+    resumo:          z.string().max(300).optional(),
+    canonical:       z.string().optional(),      // URL absoluta; valor inválido é ignorado em lib/post-seo.ts
+    noindex:         z.boolean().default(false),
+    faq:             z.array(z.object({ pergunta: z.string(), resposta: z.string() })).default([]),
+    kwSecundarias:   z.array(z.string()).default([]),   // uso interno, nunca renderizado
+    geradoPorIA:     z.boolean().optional(),
     autor:           z.string().optional(),
     autorFoto:       z.string().optional(),
     destaque:        z.boolean().default(false),
@@ -63,7 +71,10 @@ const posts = defineCollection({
     // aqui porque o promover_tema.py recria este arquivo sem imports extras.
     const foraDoAr = ['rascunho', 'revisao', 'revisão', 'agendado', 'lixeira']
       .includes(String(d.status ?? '').trim().toLowerCase())
-    if (!foraDoAr && d.metaDescription.length < 80) {
+    // metaDescription vazia é aceita quando o resumo (mín. 80) a substitui — ver lib/post-seo.ts.
+    const semMeta = d.metaDescription.trim().length < 80
+    const resumoServe = d.metaDescription.trim() === '' && (d.resumo ?? '').trim().length >= 80
+    if (!foraDoAr && semMeta && !resumoServe) {
       ctx.addIssue({
         code: 'custom',
         path: ['metaDescription'],
@@ -131,6 +142,14 @@ const postsT3 = defineCollection({
     categoria:       z.string().optional(),
     imagemCapa:      z.string().optional(),
     imagemCapaAlt:   z.string().optional(),
+    /* Campos de SEO/editor do painel — todos opcionais; ver lib/post-seo.ts */
+    seoTitle:        z.string().max(70).optional(),
+    resumo:          z.string().max(300).optional(),
+    canonical:       z.string().optional(),      // URL absoluta; valor inválido é ignorado em lib/post-seo.ts
+    noindex:         z.boolean().default(false),
+    faq:             z.array(z.object({ pergunta: z.string(), resposta: z.string() })).default([]),
+    kwSecundarias:   z.array(z.string()).default([]),   // uso interno, nunca renderizado
+    geradoPorIA:     z.boolean().optional(),
     /* Assinatura completa — item C da composição */
     autor:           z.string().optional(),
     autorFoto:       z.string().optional(),
@@ -145,7 +164,10 @@ const postsT3 = defineCollection({
     // aqui porque o promover_tema.py recria este arquivo sem imports extras.
     const foraDoAr = ['rascunho', 'revisao', 'revisão', 'agendado', 'lixeira']
       .includes(String(d.status ?? '').trim().toLowerCase())
-    if (!foraDoAr && d.metaDescription.length < 80) {
+    // metaDescription vazia é aceita quando o resumo (mín. 80) a substitui — ver lib/post-seo.ts.
+    const semMeta = d.metaDescription.trim().length < 80
+    const resumoServe = d.metaDescription.trim() === '' && (d.resumo ?? '').trim().length >= 80
+    if (!foraDoAr && semMeta && !resumoServe) {
       ctx.addIssue({
         code: 'custom',
         path: ['metaDescription'],
@@ -216,6 +238,14 @@ const postsT4 = defineCollection({
     categoria:       z.string().optional(),
     imagemCapa:      z.string().optional(),
     imagemCapaAlt:   z.string().optional(),
+    /* Campos de SEO/editor do painel — todos opcionais; ver lib/post-seo.ts */
+    seoTitle:        z.string().max(70).optional(),
+    resumo:          z.string().max(300).optional(),
+    canonical:       z.string().optional(),      // URL absoluta; valor inválido é ignorado em lib/post-seo.ts
+    noindex:         z.boolean().default(false),
+    faq:             z.array(z.object({ pergunta: z.string(), resposta: z.string() })).default([]),
+    kwSecundarias:   z.array(z.string()).default([]),   // uso interno, nunca renderizado
+    geradoPorIA:     z.boolean().optional(),
     autor:           z.string().optional(),
     autorFoto:       z.string().optional(),
     autorCargo:      z.string().optional(),
@@ -229,7 +259,10 @@ const postsT4 = defineCollection({
     // aqui porque o promover_tema.py recria este arquivo sem imports extras.
     const foraDoAr = ['rascunho', 'revisao', 'revisão', 'agendado', 'lixeira']
       .includes(String(d.status ?? '').trim().toLowerCase())
-    if (!foraDoAr && d.metaDescription.length < 80) {
+    // metaDescription vazia é aceita quando o resumo (mín. 80) a substitui — ver lib/post-seo.ts.
+    const semMeta = d.metaDescription.trim().length < 80
+    const resumoServe = d.metaDescription.trim() === '' && (d.resumo ?? '').trim().length >= 80
+    if (!foraDoAr && semMeta && !resumoServe) {
       ctx.addIssue({
         code: 'custom',
         path: ['metaDescription'],
@@ -456,6 +489,14 @@ const postsT5 = defineCollection({
     categoria:       z.string().optional(),
     imagemCapa:      z.string().optional(),
     imagemCapaAlt:   z.string().optional(),
+    /* Campos de SEO/editor do painel — todos opcionais; ver lib/post-seo.ts */
+    seoTitle:        z.string().max(70).optional(),
+    resumo:          z.string().max(300).optional(),
+    canonical:       z.string().optional(),      // URL absoluta; valor inválido é ignorado em lib/post-seo.ts
+    noindex:         z.boolean().default(false),
+    faq:             z.array(z.object({ pergunta: z.string(), resposta: z.string() })).default([]),
+    kwSecundarias:   z.array(z.string()).default([]),   // uso interno, nunca renderizado
+    geradoPorIA:     z.boolean().optional(),
     /* Assinatura completa — item C da composição */
     autor:           z.string().optional(),
     autorFoto:       z.string().optional(),
@@ -470,7 +511,10 @@ const postsT5 = defineCollection({
     // aqui porque o promover_tema.py recria este arquivo sem imports extras.
     const foraDoAr = ['rascunho', 'revisao', 'revisão', 'agendado', 'lixeira']
       .includes(String(d.status ?? '').trim().toLowerCase())
-    if (!foraDoAr && d.metaDescription.length < 80) {
+    // metaDescription vazia é aceita quando o resumo (mín. 80) a substitui — ver lib/post-seo.ts.
+    const semMeta = d.metaDescription.trim().length < 80
+    const resumoServe = d.metaDescription.trim() === '' && (d.resumo ?? '').trim().length >= 80
+    if (!foraDoAr && semMeta && !resumoServe) {
       ctx.addIssue({
         code: 'custom',
         path: ['metaDescription'],
@@ -594,6 +638,14 @@ const postsT6 = defineCollection({
     categoria:       z.string().optional(),
     imagemCapa:      z.string().optional(),
     imagemCapaAlt:   z.string().optional(),
+    /* Campos de SEO/editor do painel — todos opcionais; ver lib/post-seo.ts */
+    seoTitle:        z.string().max(70).optional(),
+    resumo:          z.string().max(300).optional(),
+    canonical:       z.string().optional(),      // URL absoluta; valor inválido é ignorado em lib/post-seo.ts
+    noindex:         z.boolean().default(false),
+    faq:             z.array(z.object({ pergunta: z.string(), resposta: z.string() })).default([]),
+    kwSecundarias:   z.array(z.string()).default([]),   // uso interno, nunca renderizado
+    geradoPorIA:     z.boolean().optional(),
     /* Assinatura completa — item C da composição */
     autor:           z.string().optional(),
     autorFoto:       z.string().optional(),
@@ -609,7 +661,10 @@ const postsT6 = defineCollection({
     // aqui porque o promover_tema.py recria este arquivo sem imports extras.
     const foraDoAr = ['rascunho', 'revisao', 'revisão', 'agendado', 'lixeira']
       .includes(String(d.status ?? '').trim().toLowerCase())
-    if (!foraDoAr && d.metaDescription.length < 80) {
+    // metaDescription vazia é aceita quando o resumo (mín. 80) a substitui — ver lib/post-seo.ts.
+    const semMeta = d.metaDescription.trim().length < 80
+    const resumoServe = d.metaDescription.trim() === '' && (d.resumo ?? '').trim().length >= 80
+    if (!foraDoAr && semMeta && !resumoServe) {
       ctx.addIssue({
         code: 'custom',
         path: ['metaDescription'],
@@ -735,6 +790,14 @@ const postsT7 = defineCollection({
     categoria:       z.string().optional(),
     imagemCapa:      z.string().optional(),
     imagemCapaAlt:   z.string().optional(),
+    /* Campos de SEO/editor do painel — todos opcionais; ver lib/post-seo.ts */
+    seoTitle:        z.string().max(70).optional(),
+    resumo:          z.string().max(300).optional(),
+    canonical:       z.string().optional(),      // URL absoluta; valor inválido é ignorado em lib/post-seo.ts
+    noindex:         z.boolean().default(false),
+    faq:             z.array(z.object({ pergunta: z.string(), resposta: z.string() })).default([]),
+    kwSecundarias:   z.array(z.string()).default([]),   // uso interno, nunca renderizado
+    geradoPorIA:     z.boolean().optional(),
     /* Assinatura completa — item C da composição */
     autor:           z.string().optional(),
     autorFoto:       z.string().optional(),
@@ -749,7 +812,10 @@ const postsT7 = defineCollection({
     // aqui porque o promover_tema.py recria este arquivo sem imports extras.
     const foraDoAr = ['rascunho', 'revisao', 'revisão', 'agendado', 'lixeira']
       .includes(String(d.status ?? '').trim().toLowerCase())
-    if (!foraDoAr && d.metaDescription.length < 80) {
+    // metaDescription vazia é aceita quando o resumo (mín. 80) a substitui — ver lib/post-seo.ts.
+    const semMeta = d.metaDescription.trim().length < 80
+    const resumoServe = d.metaDescription.trim() === '' && (d.resumo ?? '').trim().length >= 80
+    if (!foraDoAr && semMeta && !resumoServe) {
       ctx.addIssue({
         code: 'custom',
         path: ['metaDescription'],

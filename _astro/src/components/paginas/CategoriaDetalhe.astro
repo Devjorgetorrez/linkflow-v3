@@ -33,7 +33,7 @@ const cards = artigos.map(p => ({
   publicadoEm:   p.data.publicadoEm,
   categoria:     d.nome,
   imagemCapa:    p.data.imagemCapa,
-  imagemCapaAlt: p.data.imagemCapaAlt,
+  imagemCapaAlt: p.data.imagemCapaAlt, resumo: p.data.resumo,
   autor:         nomeAutor(p.data, autores),
   href:          `/${p.id}`,
 }))

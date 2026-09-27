@@ -12,6 +12,8 @@ import Cta         from '../../components/blocos/Cta.astro'
 import Footer      from '../../components/blocos/Footer.astro'
 import { site }    from '../../config/tema-06.ts'
 import { textoCredencial } from '../../lib/schema.ts'
+import { seoDoPost, faqJsonLd } from '../../lib/post-seo.ts'
+import PostFaq from '../blocos/PostFaq.astro'
 import { getCollection, render } from 'astro:content'
 import { ehPublicado } from '../../lib/publicacao.ts'
 import { resolverAutor, nomeAutor } from '../../lib/autores.ts'
@@ -24,6 +26,8 @@ interface Props {
 const { entry }   = Astro.props
 const { Content } = await render(entry)
 const canonical   = `${site.dominio}/${entry.id}`
+const seo         = seoDoPost(entry.data, site.nome, canonical)
+const faqNode     = faqJsonLd(seo.faq, canonical)
 const wa          = `https://wa.me/${site.nap.whatsapp}`
 
 const dataFormatada = new Intl.DateTimeFormat('pt-BR', {
@@ -55,7 +59,7 @@ const relacionados = (await getCollection('postsT6', ehPublicado))
   .map(p => ({
     titulo: p.data.titulo, publicadoEm: p.data.publicadoEm,
     categoria: nomeCategoria(p.data.categoria, categorias),
-    imagemCapa: p.data.imagemCapa, imagemCapaAlt: p.data.imagemCapaAlt,
+    imagemCapa: p.data.imagemCapa, imagemCapaAlt: p.data.imagemCapaAlt, resumo: p.data.resumo,
     autor: nomeAutor(p.data, autores), href: `/tema-06/${p.id}`,
   }))
 
@@ -65,9 +69,10 @@ const shareText = encodeURIComponent(entry.data.titulo)
 const jsonLd = {
   '@context': 'https://schema.org',
   '@graph': [
+    ...(faqNode ? [faqNode] : []),
     {
       '@type': 'BlogPosting', '@id': `${canonical}#article`,
-      headline: entry.data.titulo, description: entry.data.metaDescription,
+      headline: entry.data.titulo, description: seo.metaDescription,
       datePublished: entry.data.publicadoEm, dateModified: entry.data.publicadoEm,
       inLanguage: 'pt-BR', image: entry.data.imagemCapa, articleSection: categoria?.nome,
       ...(autorJsonLd ? { author: autorJsonLd } : {}),
@@ -87,9 +92,10 @@ const jsonLd = {
 ---
 
 <Tema06Base
-  titulo={`${entry.data.titulo} — ${site.nome}`}
-  metaDescription={entry.data.metaDescription}
-  canonical={canonical}
+  titulo={seo.titulo}
+  metaDescription={seo.metaDescription}
+  canonical={seo.canonical}
+  noindex={seo.noindex}
   jsonLd={jsonLd}
   nodeId="post"
 >
@@ -150,7 +156,7 @@ const jsonLd = {
       <div class="container-wide max-w-[760px] pt-10">
         <div class="overflow-hidden rounded-[var(--radius-card)]">
           <img src={entry.data.imagemCapa}
-               alt={entry.data.imagemCapaAlt ?? entry.data.titulo}
+               alt={entry.data.imagemCapaAlt ?? ''}
                width="760" height="420" class="max-h-[420px] w-full object-cover" loading="eager" />
         </div>
       </div>
@@ -158,6 +164,8 @@ const jsonLd = {
 
     <div class="container-wide max-w-[760px] py-12">
       <div class="article-body"><Content /></div>
+
+      <PostFaq faq={seo.faq} />
 
       <div class="mt-10 border-t border-line pt-8">
         <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-ink-muted">Compartilhar</p>

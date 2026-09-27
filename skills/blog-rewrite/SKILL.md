@@ -151,6 +151,11 @@ Apply changes in this order:
   - Or generate custom SVG cover via `blog-chart` (text-on-gradient with key stat)
   - Or generate custom AI image via `blog-image` sub-skill (if nanobanana-mcp configured)
 - Verify tags/categories are appropriate
+- Site Astro do Link Flow: se o artigo reescrito ficou com texto do agente,
+  o `.md` final leva `geradoPorIA: true` (gravado pelo `site-publicar`); artigo
+  que o usuário escreveu e o agente só revisou por pedido dele NAO recebe o
+  campo. Preencha `resumo`/`seoTitle`/`faq` (ver `site-publicar`, passo 2.3)
+  só com dado que já esteja no artigo, nunca inventado.
 
 #### 4c. Apply Answer-First Formatting
 Every H2 section MUST open with a 40-60 word paragraph containing:

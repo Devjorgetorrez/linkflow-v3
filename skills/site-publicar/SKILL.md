@@ -100,6 +100,9 @@ quebrar antes por usar `descricao`/`imagemHero` em vez do campo real):
 - `focuskw` → `palavraChave`
 - `coverImage` → `imagemCapa` (nunca `imagemHero` — se existir)
 - data de publicação → `publicadoEm`
+- resumo curto do artigo (se o gerador entregou) → `resumo`
+- título de SEO diferente do H1 (se existir) → `seoTitle`
+- perguntas e respostas da seção FAQ do artigo → `faq` (ver 2.3)
 
 ### 2.2 Converter HTML para Markdown (se necessário)
 
@@ -143,10 +146,40 @@ status: pronto
 destaque: false
 imagemCapa: "[coverImage se existir, senão omitir]"
 imagemCapaAlt: "[descrição da imagem, se houver imagemCapa]"
+geradoPorIA: true
 ---
 
 [conteúdo do artigo em Markdown]
 ```
+
+**`geradoPorIA: true` é obrigatório** neste arquivo: todo artigo que passa
+por aqui foi gerado pelo agente (regra 1: vem do blog-write). O painel usa o
+campo para mostrar o selo "IA". Nunca gravar `geradoPorIA` em artigo que o
+usuário escreveu (esses nascem no painel, sem o campo).
+
+**Campos opcionais do post** (schema `posts`; omitir o que não houver, nunca
+inventar; o site ignora campo ausente):
+
+| Campo | O que é | Regra |
+|---|---|---|
+| `seoTitle` | título da aba/Google, usado como está (sem o nome do site) | até 70 caracteres; só se for diferente do `titulo` |
+| `resumo` | texto do card do blog; também vale de meta description se ela vier vazia | até 300 caracteres; frase real do artigo, não copiar chamada de venda |
+| `canonical` | URL canônica absoluta | só quando o artigo republica conteúdo de outra URL do cliente; padrão é omitir |
+| `noindex` | `true` esconde do Google e do sitemap | omitir (padrão `false`); só `true` se o operador pedir |
+| `faq` | lista de `{ pergunta, resposta }` | SOMENTE as perguntas e respostas que já estão na seção FAQ do artigo; sem FAQ real, omitir. O site gera o FAQPage (JSON-LD) e a seção visível |
+| `kwSecundarias` | lista de strings, uso interno (não aparece no site) | palavras-chave secundárias do briefing, se houver |
+
+Exemplo de `faq` no frontmatter:
+
+```yaml
+faq:
+  - pergunta: "Pergunta exatamente como no artigo?"
+    resposta: "Resposta exatamente como no artigo."
+```
+
+Se `faq` for gravado, remover a seção FAQ do corpo em Markdown para não
+duplicar (o site já a renderiza no fim do artigo); se preferir manter o FAQ
+no corpo, omitir `faq`.
 
 Nomes de campo são os do schema do site (`_astro/src/content.config.ts`):
 `metaDescription` (nunca `descricao`) e `imagemCapa` (nunca `imagemHero`).
