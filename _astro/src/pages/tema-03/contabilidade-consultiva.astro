@@ -17,6 +17,7 @@ import Cta         from '../../components/blocos/Cta.astro'
 import BuscasFrequentes from '../../components/blocos/BuscasFrequentes.astro'
 import Footer      from '../../components/blocos/Footer.astro'
 import { site }    from '../../config/tema-03.ts'
+import { tituloOuPadrao, metaOuPadrao } from '../../lib/paginaFixa.ts'
 import { textoCredencial } from '../../lib/schema.ts'
 import { getCollection } from 'astro:content'
 import { ehPublicado } from '../../lib/publicacao.ts'
@@ -102,8 +103,8 @@ const jsonLd = {
 ---
 
 <Tema03Base
-  titulo={`Contabilidade Consultiva em Londrina — ${site.nome}`}
-  metaDescription="O que é contabilidade consultiva na prática: relatório gerencial mensal, revisão anual de regime tributário e contador responsável com contato direto. Veja como funciona."
+  titulo={tituloOuPadrao(site, 'guia', `Contabilidade Consultiva em Londrina — ${site.nome}`)}
+  metaDescription={metaOuPadrao(site, 'guia', "O que é contabilidade consultiva na prática: relatório gerencial mensal, revisão anual de regime tributário e contador responsável com contato direto. Veja como funciona.")}
   canonical={canonical}
   jsonLd={jsonLd}
   nodeId="pilar"

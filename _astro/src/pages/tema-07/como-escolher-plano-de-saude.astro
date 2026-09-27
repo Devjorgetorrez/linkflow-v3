@@ -16,6 +16,7 @@ import Cta          from '../../components/blocos/Cta.astro'
 import BuscasFrequentes from '../../components/blocos/BuscasFrequentes.astro'
 import Footer       from '../../components/blocos/Footer.astro'
 import { site }     from '../../config/tema-07.ts'
+import { tituloOuPadrao, metaOuPadrao } from '../../lib/paginaFixa.ts'
 import { textoCredencial, areaLista } from '../../lib/schema.ts'
 import { getCollection } from 'astro:content'
 import { ehPublicado } from '../../lib/publicacao.ts'
@@ -69,8 +70,8 @@ const jsonLd = {
 ---
 
 <Tema07Base
-  titulo="Como escolher um plano de saúde: guia por critério"
-  metaDescription="Os cinco critérios que decidem a escolha de um plano de saúde — rede, abrangência, carência, coparticipação e reajuste — e a ordem certa de olhar para eles."
+  titulo={tituloOuPadrao(site, 'guia', "Como escolher um plano de saúde: guia por critério")}
+  metaDescription={metaOuPadrao(site, 'guia', "Os cinco critérios que decidem a escolha de um plano de saúde — rede, abrangência, carência, coparticipação e reajuste — e a ordem certa de olhar para eles.")}
   canonical={canonical}
   jsonLd={jsonLd}
   nodeId="pilar"

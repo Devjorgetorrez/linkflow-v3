@@ -109,6 +109,20 @@ export default function PaginaDetalhe() {
     return () => { ativo = false; };
   }, [pagina, postCorrespondente]);
 
+  // Home/sobre/contato e a página-guia (pilar do layout, quando existe) têm título/meta
+  // editáveis em Páginas fixas — o resto do texto delas continua com o agente.
+  const [ehPaginaFixa, setEhPaginaFixa] = useState(false);
+  useEffect(() => {
+    if (!pagina) { setEhPaginaFixa(false); return; }
+    if (["/", "/sobre", "/contato"].includes(pagina.url)) { setEhPaginaFixa(true); return; }
+    let ativo = true;
+    fetch("/api/config/paginas", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => { if (ativo && d?.ok && d.guiaSlug && pagina.url === `/${d.guiaSlug}`) setEhPaginaFixa(true); })
+      .catch(() => {});
+    return () => { ativo = false; };
+  }, [pagina]);
+
   if (carregando) {
     return (
       <div className="flex h-64 items-center justify-center">
@@ -298,7 +312,17 @@ export default function PaginaDetalhe() {
                       do tema e das configurações do cliente. Diferente de um WordPress, não há
                       editor visual — o conteúdo e a estrutura são controlados pelo agente.
                     </p>
-                    <p>Para alterar esta página, acione o agente com um dos comandos (<code>&lt;slug&gt;</code> é o nome do projeto do cliente):</p>
+                    {ehPaginaFixa && (
+                      <p>
+                        O <span className="font-medium text-ink">título e a meta description</span> desta página já
+                        podem ser editados sem o agente, em{" "}
+                        <Botao variante="secundario" tamanho="sm" onClick={() => router.push("/paginas-fixas")}>
+                          Páginas fixas
+                        </Botao>
+                        . O restante do texto continua abaixo.
+                      </p>
+                    )}
+                    <p>Para alterar o restante desta página, acione o agente com um dos comandos (<code>&lt;slug&gt;</code> é o nome do projeto do cliente):</p>
                     <ul className="mt-2 space-y-1.5">
                       <li className="flex items-center gap-2">
                         <code className="rounded bg-surface-2 px-1.5 py-0.5 font-mono text-[11px] text-ink">

@@ -1,17 +1,19 @@
 "use client";
 
 /**
- * Páginas fixas (home, sobre, contato) — título/meta description de SEO
- * dessas três páginas (Etapa B da Fase 6, A06/A13). Os outros campos delas
- * (nome, slogan, NAP, horários…) já são editados em Configurações — aqui é
- * só o que faltava: `site.paginas.<pagina>.{titulo,metaDescription}`,
- * criado por /api/config/paginas em cima de lib/site-config.ts.
+ * Páginas fixas (home, sobre, contato e, quando o layout tiver, a
+ * página-guia) — título/meta description de SEO dessas páginas (Etapa B da
+ * Fase 6, A06/A13). Os outros campos delas (nome, slogan, NAP, horários…) já
+ * são editados em Configurações — aqui é só o que faltava: `site.paginas.
+ * <pagina>.{titulo,metaDescription}`, criado por /api/config/paginas em cima
+ * de lib/site-config.ts.
  *
- * IMPORTANTE (documentado também no relatório da tarefa): o motor Astro
- * ainda NÃO lê este bloco — os títulos/meta de home/sobre/contato continuam
- * fixos nos .astro de cada tema até alguém ligar a leitura de
- * `site.paginas.*` lá. Esta tela grava o dado; a próxima etapa (fora deste
- * escopo) é o motor consumir.
+ * O motor Astro já lê este bloco (_astro/src/lib/paginaFixa.ts) — campo
+ * vazio cai no texto fixo que a página já tinha, nunca fica sem título/meta.
+ *
+ * Guia: só 4 dos 6 layouts têm essa página pilar própria (ex.: tema-04 →
+ * "Higienização de Estofados"). O card só aparece quando `guiaSlug` vem
+ * preenchido no GET — nos outros layouts a página nem existe.
  */
 
 import { AlertCircle, Info, Save } from "lucide-react";
@@ -20,12 +22,12 @@ import { useSession } from "next-auth/react";
 
 import { Botao, Campo, Contador, Painel, PainelRecolhivel } from "@/components/ui";
 
-const PAGINAS = [
+const PAGINAS_BASE = [
   { id: "home", label: "Home" },
   { id: "sobre", label: "Sobre" },
   { id: "contato", label: "Contato" },
 ] as const;
-type PaginaId = (typeof PAGINAS)[number]["id"];
+type PaginaId = (typeof PAGINAS_BASE)[number]["id"] | "guia";
 
 const TITULO_MAX = 70;
 const META_MAX = 165;
@@ -37,7 +39,8 @@ export default function PaginasFixasPage() {
   const papel = (sessao?.user as { papel?: string } | undefined)?.papel;
   const podeEditar = papel === "administrador" || papel === "editor";
 
-  const [dados, setDados] = useState<Record<PaginaId, CampoPagina> | null>(null);
+  const [dados, setDados] = useState<Partial<Record<PaginaId, CampoPagina>> | null>(null);
+  const [guiaSlug, setGuiaSlug] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
   const [salvandoId, setSalvandoId] = useState<PaginaId | null>(null);
@@ -47,12 +50,18 @@ export default function PaginasFixasPage() {
     fetch("/api/config/paginas", { cache: "no-store" })
       .then((r) => r.json())
       .then((data) => {
-        if (data.ok) setDados(data.paginas);
-        else setErro(data.erro || "Não consegui carregar.");
+        if (data.ok) {
+          setDados(data.paginas);
+          setGuiaSlug(data.guiaSlug ?? null);
+        } else setErro(data.erro || "Não consegui carregar.");
       })
       .catch(() => setErro("Não consegui carregar."))
       .finally(() => setCarregando(false));
   }, []);
+
+  const PAGINAS = guiaSlug
+    ? [...PAGINAS_BASE, { id: "guia" as const, label: "Guia (página pilar do layout)" }]
+    : PAGINAS_BASE;
 
   const editarCampo = (id: PaginaId, campo: keyof CampoPagina, valor: string) => {
     setDados((d) => (d ? { ...d, [id]: { ...d[id], [campo]: valor } } : d));
@@ -60,14 +69,15 @@ export default function PaginasFixasPage() {
   };
 
   const salvar = async (id: PaginaId) => {
-    if (!dados || !podeEditar) return;
+    const v = dados?.[id];
+    if (!v || !podeEditar) return;
     setSalvandoId(id);
     setErro("");
     try {
       const res = await fetch("/api/config/paginas", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pagina: id, titulo: dados[id].titulo, metaDescription: dados[id].metaDescription }),
+        body: JSON.stringify({ pagina: id, titulo: v.titulo, metaDescription: v.metaDescription }),
       });
       const data = await res.json();
       if (!data.ok) {
@@ -88,7 +98,7 @@ export default function PaginasFixasPage() {
       <div className="mb-4">
         <h1 className="font-display text-[18px] font-semibold tracking-tight text-ink">Páginas fixas</h1>
         <p className="mt-0.5 text-[11.5px] text-ink-muted">
-          Título e meta description de busca da home, do sobre e do contato.
+          Título e meta description de busca da home, do sobre{guiaSlug ? ", do contato e do guia" : " e do contato"}.
         </p>
       </div>
 
@@ -98,6 +108,13 @@ export default function PaginasFixasPage() {
           Os outros campos dessas páginas (nome do negócio, endereço, horários, redes sociais…) ficam em{" "}
           <span className="font-medium text-ink">Configurações</span>. Aqui é só o título e a descrição que aparecem
           no resultado de busca do Google para cada uma.
+          {guiaSlug && (
+            <>
+              {" "}O corpo do texto do <span className="font-medium text-ink">Guia</span> (introdução, passos, FAQ)
+              não tem campo aqui — é conteúdo mais longo, próprio do layout, e continua sendo escrito pelo agente
+              (<code className="rounded bg-surface px-1 py-0.5 font-mono text-[10.5px] text-ink">/link-flow conteudo &lt;slug&gt;</code>).
+            </>
+          )}
         </p>
       </div>
 
@@ -114,7 +131,7 @@ export default function PaginasFixasPage() {
       ) : (
         <div className="space-y-2.5">
           {PAGINAS.map(({ id, label }) => {
-            const v = dados[id];
+            const v = dados[id] ?? { titulo: "", metaDescription: "" };
             const tituloForaDaFaixa = v.titulo.length > TITULO_MAX;
             const metaForaDaFaixa = v.metaDescription.length > META_MAX;
             return (

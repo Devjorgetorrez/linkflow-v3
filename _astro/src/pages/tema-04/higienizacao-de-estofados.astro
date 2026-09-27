@@ -16,6 +16,7 @@ import Cta          from '../../components/blocos/Cta.astro'
 import BuscasFrequentes from '../../components/blocos/BuscasFrequentes.astro'
 import Footer       from '../../components/blocos/Footer.astro'
 import { site }     from '../../config/tema-04.ts'
+import { tituloOuPadrao, metaOuPadrao } from '../../lib/paginaFixa.ts'
 import { textoCredencial, areaLista } from '../../lib/schema.ts'
 import { getCollection } from 'astro:content'
 import { ehPublicado } from '../../lib/publicacao.ts'
@@ -69,8 +70,8 @@ const jsonLd = {
 ---
 
 <Tema04Base
-  titulo={`Higienização de Estofados em ${site.nap.cidade} — Guia Completo`}
-  metaDescription="Como funciona a higienização de estofados: diferença para a limpeza caseira, o processo com extratora, tempo de secagem real e de quanto em quanto tempo refazer."
+  titulo={tituloOuPadrao(site, 'guia', `Higienização de Estofados em ${site.nap.cidade} — Guia Completo`)}
+  metaDescription={metaOuPadrao(site, 'guia', "Como funciona a higienização de estofados: diferença para a limpeza caseira, o processo com extratora, tempo de secagem real e de quanto em quanto tempo refazer.")}
   canonical={canonical}
   jsonLd={jsonLd}
   nodeId="pilar"

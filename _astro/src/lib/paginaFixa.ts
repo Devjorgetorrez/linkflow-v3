@@ -11,7 +11,7 @@
  * qualquer config/site.ts (com ou sem o bloco) é aceito aqui sem erro de tipo.
  */
 
-export type PaginaFixaChave = 'home' | 'sobre' | 'contato'
+export type PaginaFixaChave = 'home' | 'sobre' | 'contato' | 'guia'
 
 export interface SiteComPaginas {
   paginas?: Partial<Record<PaginaFixaChave, { titulo?: string; metaDescription?: string }>>

@@ -15,6 +15,7 @@ import Cta          from '../../components/blocos/Cta.astro'
 import BuscasFrequentes from '../../components/blocos/BuscasFrequentes.astro'
 import Footer       from '../../components/blocos/Footer.astro'
 import { site }     from '../../config/tema-05.ts'
+import { tituloOuPadrao, metaOuPadrao } from '../../lib/paginaFixa.ts'
 import { textoCredencial } from '../../lib/schema.ts'
 import { getCollection } from 'astro:content'
 import { ehPublicado } from '../../lib/publicacao.ts'
@@ -67,8 +68,8 @@ const jsonLd = {
 ---
 
 <Tema05Base
-  titulo="Direito Previdenciário: como funciona o processo no INSS"
-  metaDescription="Guia sobre direito previdenciário: diferença entre via administrativa e judicial, prazos de recurso, o papel da perícia e o que fazer quando o INSS indefere."
+  titulo={tituloOuPadrao(site, 'guia', "Direito Previdenciário: como funciona o processo no INSS")}
+  metaDescription={metaOuPadrao(site, 'guia', "Guia sobre direito previdenciário: diferença entre via administrativa e judicial, prazos de recurso, o papel da perícia e o que fazer quando o INSS indefere.")}
   canonical={canonical}
   jsonLd={jsonLd}
   nodeId="pilar"
