@@ -1,14 +1,14 @@
 /**
  * app/api/formularios/[id]/route.ts
- * PATCH  /api/formularios/:id  → atualiza formulário
- * DELETE /api/formularios/:id  → remove formulário
+ * PATCH  /api/formularios/:id  → atualiza formulário (validado; o id nunca muda)
+ * DELETE /api/formularios/:id  → remove o formulário (os leads já recebidos ficam)
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { lerDados, salvarDados } from "@/lib/dados";
 import { exigirPapel } from "@/lib/auth";
 import { MATRIZ } from "@/lib/permissoes";
-import type { Formulario } from "@/mock/types";
+import { gravarFormularios, lerFormularios } from "@/lib/formularios-dados";
+import { validarFormulario } from "@/lib/formularios-regras";
 
 export async function PATCH(
   req: NextRequest,
@@ -17,22 +17,38 @@ export async function PATCH(
   const auth = await exigirPapel(req, MATRIZ["formularios/[id]:PATCH"]);
   if (auth) return auth;
 
+  const { id } = await params;
+  let body: unknown;
   try {
-    const { id } = await params;
-    const body = await req.json();
-    const formularios = lerDados<Formulario[]>("formularios.json", []);
-    const idx = formularios.findIndex((f) => f.id === id);
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ ok: false, erro: "Corpo da requisição inválido." }, { status: 400 });
+  }
 
+  try {
+    const formularios = lerFormularios();
+    const idx = formularios.findIndex((f) => f.id === id);
     if (idx === -1) {
       return NextResponse.json({ ok: false, erro: "Formulário não encontrado" }, { status: 404 });
     }
-
-    formularios[idx] = { ...formularios[idx], ...body };
-    salvarDados("formularios.json", formularios);
-
+    // Mescla com o atual e valida o conjunto: um PATCH parcial não pode deixar o formulário inválido.
+    const v = validarFormulario({ ...formularios[idx], ...(body as object) });
+    if (!v.ok || !v.valor) {
+      return NextResponse.json({ ok: false, erro: v.erro, campos: v.erros }, { status: 400 });
+    }
+    const dup = formularios.find((f, i) => i !== idx && f.nome.trim().toLowerCase() === v.valor!.nome.toLowerCase());
+    if (dup) {
+      return NextResponse.json(
+        { ok: false, erro: `Já existe um formulário chamado "${dup.nome}".`, campos: { nome: "Já existe um formulário com este nome." } },
+        { status: 409 },
+      );
+    }
+    formularios[idx] = { ...formularios[idx], ...v.valor, id: formularios[idx].id };
+    gravarFormularios(formularios);
     return NextResponse.json({ ok: true, formulario: formularios[idx] });
   } catch (err) {
-    return NextResponse.json({ ok: false, erro: String(err) }, { status: 500 });
+    console.error("[api/formularios PATCH]", err);
+    return NextResponse.json({ ok: false, erro: "Não foi possível salvar o formulário." }, { status: 500 });
   }
 }
 
@@ -45,18 +61,16 @@ export async function DELETE(
 
   try {
     const { id } = await params;
-    const formularios = lerDados<Formulario[]>("formularios.json", []);
+    const formularios = lerFormularios();
     const idx = formularios.findIndex((f) => f.id === id);
-
     if (idx === -1) {
       return NextResponse.json({ ok: false, erro: "Formulário não encontrado" }, { status: 404 });
     }
-
     formularios.splice(idx, 1);
-    salvarDados("formularios.json", formularios);
-
+    gravarFormularios(formularios);
     return NextResponse.json({ ok: true });
   } catch (err) {
-    return NextResponse.json({ ok: false, erro: String(err) }, { status: 500 });
+    console.error("[api/formularios DELETE]", err);
+    return NextResponse.json({ ok: false, erro: "Não foi possível excluir o formulário." }, { status: 500 });
   }
 }

@@ -1,84 +1,109 @@
 /**
  * app/api/submissao/route.ts
- * POST /api/submissao  → endpoint público que o formulário do site chama
+ * POST /api/submissao  → endpoint público que o formulário do SITE chama.
  *
- * Não exige autenticação — é chamado pelo visitante do site.
- * Proteções: honeypot, limite de tamanho por campo, rate limit básico por IP.
+ * Contrato (JSON): { formularioId, nome, email, telefone, mensagem, _hp,
+ *   paginaOrigem, utm_source/medium/campaign/term/content, lgpdAceite, camposExtras }
+ * Resposta: { ok:true, mensagem } | { ok:false, erro, campos? }
+ *
+ * Sem sessão (o visitante não tem login). Proteções: CORS restrito ao domínio do
+ * site, honeypot silencioso, limite de tamanho, validação, limite por IP e global.
  */
 
+import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { lerDados, salvarDados } from "@/lib/dados";
-import type { Formulario, Lead } from "@/mock/types";
+import { lerFormularios, origensPermitidas } from "@/lib/formularios-dados";
+import { validarSubmissao } from "@/lib/formularios-regras";
+import { criarLimiteSubmissao, ipDoCliente } from "@/lib/limite-submissao";
+import type { Lead } from "@/mock/types";
 
-// ─── Rate limit simples em memória ────────────────────────────────────────────
-// Mapa: IP → { contagem, janela }. Reseta a cada hora.
-const rateMap = new Map<string, { count: number; reset: number }>();
-const RATE_LIMIT = 5;        // máx 5 submissões por IP
-const RATE_JANELA = 60 * 60 * 1000; // por hora
+const MAX_CORPO = 20 * 1024;
+const limite = criarLimiteSubmissao();
 
-function checarRateLimit(ip: string): boolean {
-  const agora = Date.now();
-  const entry = rateMap.get(ip);
-  if (!entry || agora > entry.reset) {
-    rateMap.set(ip, { count: 1, reset: agora + RATE_JANELA });
-    return true; // ok
-  }
-  if (entry.count >= RATE_LIMIT) return false; // bloqueado
-  entry.count++;
-  return true;
+function cabecalhosCors(req: NextRequest): Record<string, string> {
+  const h: Record<string, string> = {
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Max-Age": "600",
+    Vary: "Origin",
+  };
+  const origem = req.headers.get("origin");
+  if (origem && origensPermitidas().includes(origem)) h["Access-Control-Allow-Origin"] = origem;
+  return h;
 }
 
-// ─── Headers CORS ─────────────────────────────────────────────────────────────
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
-};
-
-function jsonCors(body: unknown, status = 200) {
-  return NextResponse.json(body, { status, headers: CORS_HEADERS });
+/** Origem presente e fora da lista = bloqueada. Sem Origin (curl, servidor) passa. */
+function origemBloqueada(req: NextRequest): boolean {
+  const origem = req.headers.get("origin");
+  return !!origem && !origensPermitidas().includes(origem);
 }
 
-// ─── Sanitização de string com limite de tamanho ──────────────────────────────
-function campo(val: unknown, max = 500): string {
-  return String(val ?? "").slice(0, max);
+function resp(req: NextRequest, corpo: unknown, status = 200) {
+  return NextResponse.json(corpo, { status, headers: cabecalhosCors(req) });
 }
 
-// ─── POST ─────────────────────────────────────────────────────────────────────
+const campo = (v: unknown, max: number) => String(v ?? "").trim().slice(0, max);
 
 export async function POST(req: NextRequest) {
   try {
-    // Rate limit por IP
-    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
-      ?? req.headers.get("x-real-ip")
-      ?? "unknown";
-
-    if (!checarRateLimit(ip)) {
-      return jsonCors({ ok: false, erro: "Muitas tentativas. Tente novamente mais tarde." }, 429);
+    if (origemBloqueada(req)) {
+      return resp(req, { ok: false, erro: "Origem não autorizada a enviar este formulário." }, 403);
     }
 
-    const body = await req.json();
+    const bloqueio = limite.tentar(ipDoCliente(req.headers.get("x-forwarded-for"), req.headers.get("x-real-ip")));
+    if (bloqueio) return resp(req, { ok: false, erro: bloqueio }, 429);
 
-    // Anti-spam: honeypot
-    if (body._hp) {
-      return jsonCors({ ok: true }); // silencioso
+    const declarado = Number(req.headers.get("content-length") ?? 0);
+    if (declarado > MAX_CORPO) return resp(req, { ok: false, erro: "Mensagem grande demais." }, 413);
+    const texto = await req.text();
+    if (Buffer.byteLength(texto, "utf-8") > MAX_CORPO) {
+      return resp(req, { ok: false, erro: "Mensagem grande demais." }, 413);
     }
+
+    let body: Record<string, unknown>;
+    try {
+      const j = JSON.parse(texto);
+      if (!j || typeof j !== "object" || Array.isArray(j)) throw new Error("formato");
+      body = j as Record<string, unknown>;
+    } catch {
+      return resp(req, { ok: false, erro: "Não entendi os dados enviados." }, 400);
+    }
+
+    // Anti-spam: honeypot silencioso (parece sucesso, não grava nada).
+    if (body._hp) return resp(req, { ok: true, mensagem: "Mensagem enviada com sucesso." });
 
     const formularioId = campo(body.formularioId, 50) || "contato";
-    const formularios = lerDados<Formulario[]>("formularios.json", []);
-    const formulario = formularios.find((f) => f.id === formularioId);
+    const formulario = lerFormularios().find((f) => f.id === formularioId);
+    if (!formulario) return resp(req, { ok: false, erro: "Formulário não encontrado." }, 404);
+    if (!formulario.ativo) {
+      return resp(req, { ok: false, erro: "Este formulário está desativado no momento." }, 400);
+    }
 
-    // Criar o lead com campos sanitizados e limitados em tamanho
+    const v = validarSubmissao(body, formulario);
+    if (!v.ok) {
+      return resp(req, { ok: false, erro: Object.values(v.erros)[0], campos: v.erros }, 400);
+    }
+    if (formulario.exigeLgpd && body.lgpdAceite !== true) {
+      return resp(req, {
+        ok: false,
+        erro: "É preciso aceitar o uso dos dados para enviar.",
+        campos: { lgpdAceite: "Marque a caixa de consentimento para enviar." },
+      }, 400);
+    }
+
+    const aceite = body.lgpdAceite === true;
+    const agora = new Date().toISOString();
     const lead: Lead = {
-      id: `lead-${Date.now()}-${Math.random().toString(16).slice(2, 6)}`,
+      id: `lead-${Date.now()}-${crypto.randomBytes(4).toString("hex")}`,
       formularioId,
-      formularioNome: formulario?.nome ?? "Contato",
-      nome: campo(body.nome, 100),
-      email: campo(body.email, 200),
-      telefone: campo(body.telefone, 30),
-      mensagem: campo(body.mensagem, 2000),
+      formularioNome: formulario.nome,
+      nome: v.valor.nome,
+      email: v.valor.email,
+      telefone: v.valor.telefone,
+      mensagem: v.valor.mensagem,
       paginaOrigem: campo(body.paginaOrigem ?? req.headers.get("referer"), 300),
-      data: new Date().toISOString(),
+      data: agora,
       status: "novo",
       utm: {
         source: campo(body.utm_source, 100),
@@ -87,42 +112,37 @@ export async function POST(req: NextRequest) {
         term: campo(body.utm_term, 100),
         content: campo(body.utm_content, 100),
       },
-      lgpdAceite: Boolean(body.lgpdAceite),
-      lgpdData: body.lgpdAceite ? new Date().toISOString() : "",
-      // camposExtras: limitar chaves e valores
-      camposExtras: Object.fromEntries(
-        Object.entries(body.camposExtras ?? {})
-          .slice(0, 20)
-          .map(([k, v]) => [campo(k, 50), campo(v, 500)])
-      ),
+      lgpdAceite: aceite,
+      lgpdData: aceite ? agora : "",
+      camposExtras: v.valor.camposExtras,
     };
 
+    // Leitura → alteração → gravação SEM await no meio: no Node isso é atômico dentro
+    // do processo (não há intercalação), e salvarDados troca o arquivo de uma vez.
     const leads = lerDados<Lead[]>("leads.json", []);
     leads.unshift(lead);
     salvarDados("leads.json", leads);
+    // envios30d é derivado dos leads na leitura (GET /api/formularios); nada a gravar aqui.
 
-    // Atualizar contador — calculado a partir dos dados reais (últimos 30 dias)
-    if (formulario) {
-      const idx = formularios.findIndex((f) => f.id === formularioId);
-      const trintaDiasAtras = Date.now() - 30 * 24 * 60 * 60 * 1000;
-      formularios[idx].envios30d = leads.filter(
-        (l) => l.formularioId === formularioId && new Date(l.data).getTime() > trintaDiasAtras
-      ).length;
-      salvarDados("formularios.json", formularios);
-    }
-
-    return jsonCors({
-      ok: true,
-      mensagem: formulario?.msgSucesso ?? "Mensagem enviada com sucesso!",
-    });
+    return resp(req, { ok: true, mensagem: formulario.msgSucesso });
   } catch (err) {
     console.error("[api/submissao]", err);
-    return jsonCors({ ok: false, erro: "Erro interno" }, 500);
+    return resp(req, { ok: false, erro: "Erro interno. Tente novamente em instantes." }, 500);
   }
 }
 
-// ─── OPTIONS — preflight CORS ─────────────────────────────────────────────────
+// GET só para a tela do painel/teste: devolve o formulário público (campos e textos).
+export async function GET(req: NextRequest) {
+  const id = campo(req.nextUrl.searchParams.get("formularioId"), 50) || "contato";
+  const f = lerFormularios().find((x) => x.id === id && x.ativo);
+  if (!f) return resp(req, { ok: false, erro: "Formulário não encontrado." }, 404);
+  return resp(req, {
+    ok: true,
+    formulario: { id: f.id, nome: f.nome, campos: f.campos, exigeLgpd: f.exigeLgpd, lgpdTexto: f.lgpdTexto, lgpdPoliticaUrl: f.lgpdPoliticaUrl },
+  });
+}
 
-export async function OPTIONS() {
-  return new NextResponse(null, { headers: CORS_HEADERS });
+export async function OPTIONS(req: NextRequest) {
+  if (origemBloqueada(req)) return new NextResponse(null, { status: 403 });
+  return new NextResponse(null, { status: 204, headers: cabecalhosCors(req) });
 }

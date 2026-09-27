@@ -8,8 +8,9 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
+import { BotaoCopiar } from "@/components/BotaoCopiar";
 import {
   Alternador,
   AreaTexto,
@@ -19,8 +20,8 @@ import {
   PainelRecolhivel,
   Vazio,
 } from "@/components/ui";
+import { validarFormulario } from "@/lib/formularios-regras";
 import { useStore } from "@/lib/store";
-import { cn } from "@/lib/utils";
 import type { CampoFormulario, Formulario, TipoCampo } from "@/mock/types";
 
 /* ---------------------------------------------------------------- catálogo */
@@ -42,17 +43,12 @@ function gerarId() {
 }
 
 const BLANK: Formulario = {
-  id: "novo",
+  id: "",
   nome: "",
   campos: [],
-  destinoEmail: { ativo: false, endereco: "", assunto: "Novo contato pelo site" },
-  destinoWhatsApp: { ativo: false, numero: "" },
-  destinoWebhook: { ativo: false, url: "" },
   msgSucesso: "Mensagem enviada com sucesso. Entraremos em contato em breve.",
-  msgErro: "Erro ao enviar. Tente novamente.",
-  paginaObrigado: "",
-  honeypot: true,
-  confirmarMarcacao: false,
+  msgErro: "Não foi possível enviar sua mensagem. Tente novamente em instantes.",
+  exigeLgpd: false,
   lgpdTexto:
     "Concordo com o uso dos meus dados para resposta a esta mensagem, conforme a Política de Privacidade.",
   lgpdPoliticaUrl: "",
@@ -160,7 +156,7 @@ function PreviewFormulario({ dados }: { dados: Formulario }) {
             {dados.campos.map((c) => <PreviewCampo key={c.id} campo={c} />)}
           </div>
         )}
-        {dados.lgpdTexto && (
+        {dados.exigeLgpd && dados.lgpdTexto && (
           <div className="mt-3 flex items-start gap-2">
             <input type="checkbox" disabled className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded border-gray-300" />
             <span className="text-[11px] text-gray-500">{dados.lgpdTexto}</span>
@@ -182,68 +178,112 @@ function PreviewFormulario({ dados }: { dados: Formulario }) {
 export default function FormularioEditorPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { formularios, paginas, criarFormulario, atualizarFormulario } = useStore();
+  const { formularios, formulariosCarregados, paginas, recarregarFormularios } = useStore();
 
   const NOVO = id === "novo";
   const formularioExistente = formularios.find((f) => f.id === id);
 
-  const [dados, setDados] = useState<Formulario>(() =>
-    NOVO ? { ...BLANK } : (formularioExistente ?? { ...BLANK }),
-  );
+  const [painelUrl, setPainelUrl] = useState("");
+  const [dados, setDados] = useState<Formulario>(() => (NOVO ? { ...BLANK } : (formularioExistente ?? { ...BLANK })));
+  const [carregado, setCarregado] = useState(NOVO || !!formularioExistente);
   const [adicionandoCampo, setAdicionandoCampo] = useState(false);
   const [salvando, setSalvando] = useState(false);
+  const [salvo, setSalvo] = useState(false);
   const [erro, setErro] = useState("");
+  const [errosCampo, setErrosCampo] = useState<Record<string, string>>({});
+  const [confirmarExcluir, setConfirmarExcluir] = useState(false);
 
+  // Sempre relê ao abrir a tela.
+  useEffect(() => { void recarregarFormularios(); }, [recarregarFormularios]);
   useEffect(() => {
-    if (!NOVO && formularioExistente) setDados(formularioExistente);
-  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
+    fetch("/api/config", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => setPainelUrl(String(d?.config?.painelUrl ?? "")))
+      .catch(() => setPainelUrl(""));
+  }, []);
 
-  if (!NOVO && !formularioExistente) {
-    return (
-      <div className="flex flex-col items-center justify-center gap-3 py-24">
-        <Vazio titulo="Formulário não encontrado." />
-        <Link href="/formularios" className="text-[12px] text-primary hover:underline">
-          ← Voltar para formulários
-        </Link>
-      </div>
-    );
+  // Preenche o editor quando o formulário chega da API (a tela não aceita edição antes disso).
+  useEffect(() => {
+    if (NOVO || carregado) return;
+    if (formularioExistente) { setDados(formularioExistente); setCarregado(true); }
+  }, [NOVO, carregado, formularioExistente]);
+
+  const endpoint = useMemo(() => `${painelUrl || "<endereço do painel>"}/api/submissao`, [painelUrl]);
+
+  if (!NOVO && !carregado) {
+    if (formulariosCarregados && !formularioExistente) {
+      return (
+        <div className="flex flex-col items-center justify-center gap-3 py-24">
+          <Vazio titulo="Formulário não encontrado." />
+          <Link href="/formularios" className="text-[12px] text-primary hover:underline">
+            ← Voltar para formulários
+          </Link>
+        </div>
+      );
+    }
+    return <div className="px-6 py-10 text-[12px] text-ink-muted">Carregando formulário…</div>;
   }
 
   function patch<K extends keyof Formulario>(chave: K, valor: Formulario[K]) {
+    setSalvo(false);
     setDados((d) => ({ ...d, [chave]: valor }));
   }
 
-  function salvar() {
-    if (!dados.nome.trim()) {
-      setErro("Dê um nome ao formulário antes de salvar.");
-      return;
+  async function salvar() {
+    setSalvo(false);
+    const v = validarFormulario(dados);
+    if (!v.ok) { setErro(v.erro); setErrosCampo(v.erros); return; }
+    setErro("");
+    setErrosCampo({});
+    setSalvando(true);
+    try {
+      const res = await fetch(NOVO ? "/api/formularios" : `/api/formularios/${encodeURIComponent(dados.id)}`, {
+        method: NOVO ? "POST" : "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(dados),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) {
+        setErro(data.erro || `Não foi possível salvar (erro ${res.status}).`);
+        setErrosCampo(data.campos ?? {});
+        return;
+      }
+      await recarregarFormularios();
+      setSalvo(true);
+      if (NOVO) router.replace(`/formularios/${data.formulario.id}`);
+      else setDados(data.formulario);
+    } catch {
+      setErro("Não consegui falar com o servidor. Nada foi salvo; tente de novo.");
+    } finally {
+      setSalvando(false);
     }
-    if (dados.campos.length === 0) {
-      setErro("Adicione ao menos um campo ao formulário antes de salvar.");
-      return;
-    }
+  }
+
+  async function excluir() {
     setErro("");
     setSalvando(true);
-    if (NOVO) {
-      const novoId = `fm${Date.now()}`;
-      criarFormulario({ ...dados, id: novoId });
-      setTimeout(() => {
-        setSalvando(false);
-        router.replace(`/formularios/${novoId}`);
-      }, 600);
-    } else {
-      atualizarFormulario(dados.id, dados);
-      setTimeout(() => setSalvando(false), 800);
+    try {
+      const res = await fetch(`/api/formularios/${encodeURIComponent(dados.id)}`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) { setErro(data.erro || "Não foi possível excluir."); setConfirmarExcluir(false); return; }
+      await recarregarFormularios();
+      router.replace("/formularios");
+    } catch {
+      setErro("Não consegui falar com o servidor. Tente de novo.");
+    } finally {
+      setSalvando(false);
     }
   }
 
   /* ---- campos ---- */
 
   function atualizarCampo(campoId: string, p: Partial<CampoFormulario>) {
+    setSalvo(false);
     setDados((d) => ({ ...d, campos: d.campos.map((c) => (c.id === campoId ? { ...c, ...p } : c)) }));
   }
 
   function removerCampo(campoId: string) {
+    setSalvo(false);
     setDados((d) => ({ ...d, campos: d.campos.filter((c) => c.id !== campoId) }));
   }
 
@@ -256,6 +296,7 @@ export default function FormularioEditorPage() {
       ajuda: "",
       opcoes: tipo === "selecao" ? ["Opção 1", "Opção 2"] : undefined,
     };
+    setSalvo(false);
     setDados((d) => ({ ...d, campos: [...d.campos, novo] }));
     setAdicionandoCampo(false);
   }
@@ -280,8 +321,23 @@ export default function FormularioEditorPage() {
           </span>
         </div>
         <div className="flex items-center gap-2">
+          {salvo && <span className="text-[11.5px] text-success">Salvo</span>}
           <Alternador ativo={dados.ativo} label="Ativo" onChange={(v) => patch("ativo", v)} />
-          <Botao variante="primario" tamanho="sm" onClick={salvar}>
+          {!NOVO && (
+            confirmarExcluir ? (
+              <span className="flex items-center gap-1.5 text-[11.5px] text-ink-muted">
+                Excluir? Os leads ficam.
+                <Botao variante="secundario" tamanho="sm" onClick={() => void excluir()} disabled={salvando}>Sim, excluir</Botao>
+                <Botao variante="secundario" tamanho="sm" onClick={() => setConfirmarExcluir(false)}>Não</Botao>
+              </span>
+            ) : (
+              <Botao variante="secundario" tamanho="sm" onClick={() => setConfirmarExcluir(true)} disabled={salvando}>
+                <Trash2 size={13} />
+                Excluir
+              </Botao>
+            )
+          )}
+          <Botao variante="primario" tamanho="sm" onClick={() => void salvar()} disabled={salvando}>
             {salvando ? "Salvando…" : NOVO ? "Criar formulário" : "Salvar"}
           </Botao>
         </div>
@@ -307,7 +363,9 @@ export default function FormularioEditorPage() {
                 value={dados.nome}
                 onChange={(e) => patch("nome", e.target.value)}
                 placeholder="Ex: Formulário de contato"
+                maxLength={80}
               />
+              {errosCampo.nome && <p className="mt-1 text-[11px] text-danger">{errosCampo.nome}</p>}
             </Campo>
           </PainelRecolhivel>
 
@@ -315,23 +373,29 @@ export default function FormularioEditorPage() {
           <PainelRecolhivel id="campos" inicialAberto titulo={`Campos (${dados.campos.length})`}>
             <div className="space-y-2">
               {dados.campos.length === 0 && (
-                <p className="text-[12px] text-ink-muted">Nenhum campo adicionado.</p>
+                <p className={errosCampo.campos ? "text-[12px] text-danger" : "text-[12px] text-ink-muted"}>
+                  {errosCampo.campos || "Nenhum campo adicionado."}
+                </p>
               )}
 
-              {dados.campos.map((campo) => (
+              {dados.campos.map((campo, i) => (
                 <div
                   key={campo.id}
                   className="flex gap-2 rounded-[var(--radius)] border border-line bg-surface-2 p-3"
                 >
-                  <GripVertical size={14} className="mt-0.5 shrink-0 cursor-grab text-ink-muted/40" />
+                  <GripVertical size={14} className="mt-0.5 shrink-0 text-ink-muted/40" />
                   <div className="flex-1 space-y-2">
                     <div className="flex items-center gap-2">
                       <div className="flex-1">
                         <Campo label="Rótulo">
                           <Entrada
                             value={campo.rotulo}
+                            maxLength={60}
                             onChange={(e) => atualizarCampo(campo.id, { rotulo: e.target.value })}
                           />
+                          {errosCampo[`campos.${i}.rotulo`] && (
+                            <p className="mt-1 text-[11px] text-danger">{errosCampo[`campos.${i}.rotulo`]}</p>
+                          )}
                         </Campo>
                       </div>
                       <div className="shrink-0 pt-4">
@@ -354,10 +418,13 @@ export default function FormularioEditorPage() {
                         <AreaTexto
                           value={(campo.opcoes ?? []).join("\n")}
                           onChange={(e) =>
-                            atualizarCampo(campo.id, { opcoes: e.target.value.split("\n").filter(Boolean) })
+                            atualizarCampo(campo.id, { opcoes: e.target.value.split("\n") })
                           }
                           rows={4}
                         />
+                        {errosCampo[`campos.${i}.opcoes`] && (
+                          <p className="mt-1 text-[11px] text-danger">{errosCampo[`campos.${i}.opcoes`]}</p>
+                        )}
                       </Campo>
                     )}
                     <p className="text-[11px] text-ink-muted/60">
@@ -408,79 +475,7 @@ export default function FormularioEditorPage() {
             </div>
           </PainelRecolhivel>
 
-          {/* 3 — destinos */}
-          <PainelRecolhivel id="destinos" inicialAberto titulo="Destinos">
-            <div className="space-y-4">
-
-              <div className="space-y-2 rounded-[var(--radius)] border border-line bg-surface-2 p-3">
-                <Alternador
-                  ativo={dados.destinoEmail.ativo}
-                  label="E-mail"
-                  onChange={(v) => patch("destinoEmail", { ...dados.destinoEmail, ativo: v })}
-                />
-                {dados.destinoEmail.ativo && (
-                  <div className="space-y-2 pt-1">
-                    <Campo label="Endereço de destino">
-                      <Entrada
-                        type="email"
-                        value={dados.destinoEmail.endereco}
-                        onChange={(e) => patch("destinoEmail", { ...dados.destinoEmail, endereco: e.target.value })}
-                        placeholder="email@seudominio.com.br"
-                      />
-                    </Campo>
-                    <Campo label="Assunto do e-mail">
-                      <Entrada
-                        value={dados.destinoEmail.assunto}
-                        onChange={(e) => patch("destinoEmail", { ...dados.destinoEmail, assunto: e.target.value })}
-                        placeholder="Novo contato pelo site"
-                      />
-                    </Campo>
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-2 rounded-[var(--radius)] border border-line bg-surface-2 p-3">
-                <Alternador
-                  ativo={dados.destinoWhatsApp.ativo}
-                  label="WhatsApp"
-                  onChange={(v) => patch("destinoWhatsApp", { ...dados.destinoWhatsApp, ativo: v })}
-                />
-                {dados.destinoWhatsApp.ativo && (
-                  <div className="pt-1">
-                    <Campo label="Número (com DDI e DDD)">
-                      <Entrada
-                        value={dados.destinoWhatsApp.numero}
-                        onChange={(e) => patch("destinoWhatsApp", { ...dados.destinoWhatsApp, numero: e.target.value })}
-                        placeholder="+55 11 99999-0000"
-                      />
-                    </Campo>
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-2 rounded-[var(--radius)] border border-line bg-surface-2 p-3">
-                <Alternador
-                  ativo={dados.destinoWebhook.ativo}
-                  label="Webhook"
-                  onChange={(v) => patch("destinoWebhook", { ...dados.destinoWebhook, ativo: v })}
-                />
-                {dados.destinoWebhook.ativo && (
-                  <div className="pt-1">
-                    <Campo label="URL do endpoint">
-                      <Entrada
-                        value={dados.destinoWebhook.url}
-                        onChange={(e) => patch("destinoWebhook", { ...dados.destinoWebhook, url: e.target.value })}
-                        placeholder="https://n8n.exemplo.com/webhook/…"
-                      />
-                    </Campo>
-                  </div>
-                )}
-              </div>
-
-            </div>
-          </PainelRecolhivel>
-
-          {/* 4 — depois do envio */}
+          {/* 3 — depois do envio */}
           <PainelRecolhivel id="depois-envio" titulo="Depois do envio">
             <div className="space-y-3">
               <Campo label="Mensagem de sucesso">
@@ -490,6 +485,7 @@ export default function FormularioEditorPage() {
                   rows={3}
                   placeholder="Obrigado pelo contato! Retornaremos em breve."
                 />
+                {errosCampo.msgSucesso && <p className="mt-1 text-[11px] text-danger">{errosCampo.msgSucesso}</p>}
               </Campo>
               <Campo label="Mensagem de erro">
                 <Entrada
@@ -497,48 +493,29 @@ export default function FormularioEditorPage() {
                   onChange={(e) => patch("msgErro", e.target.value)}
                   placeholder="Algo deu errado. Tente novamente."
                 />
-              </Campo>
-              <Campo label="Redirecionar para página (opcional)">
-                <select
-                  value={dados.paginaObrigado}
-                  onChange={(e) => patch("paginaObrigado", e.target.value)}
-                  className="w-full rounded-[var(--radius)] border border-line bg-surface px-3 py-1.5 text-[12px] text-ink focus:border-primary focus:outline-none"
-                >
-                  <option value="">— exibir mensagem de sucesso —</option>
-                  {paginasPublicadas.map((p) => (
-                    <option key={p.id} value={p.url}>
-                      {p.titulo} ({p.url})
-                    </option>
-                  ))}
-                </select>
-                <p className="mt-1 text-[11px] text-ink-muted">
-                  Se selecionada, o visitante é redirecionado após o envio e a mensagem de sucesso é ignorada.
-                </p>
+                {errosCampo.msgErro && <p className="mt-1 text-[11px] text-danger">{errosCampo.msgErro}</p>}
               </Campo>
             </div>
           </PainelRecolhivel>
 
-          {/* 5 — anti-spam */}
+          {/* 4 — anti-spam */}
           <PainelRecolhivel id="anti-spam" titulo="Anti-spam">
-            <div className="space-y-3">
-              <Alternador
-                ativo={dados.honeypot}
-                label="Honeypot"
-                descricao="Campo oculto que bots preenchem. Bloqueia envios automáticos sem fricção para o usuário."
-                onChange={(v) => patch("honeypot", v)}
-              />
-              <Alternador
-                ativo={dados.confirmarMarcacao}
-                label="Confirmar por marcação"
-                descricao='Exibe uma pergunta simples ("Você é humano?") antes do envio.'
-                onChange={(v) => patch("confirmarMarcacao", v)}
-              />
-            </div>
+            <p className="text-[12px] text-ink-muted">
+              A proteção contra robôs (campo oculto &ldquo;honeypot&rdquo; e limite de envios por visitante e por hora)
+              é sempre ativa no servidor, para todos os formulários. O formulário do site envia o campo
+              oculto <code className="font-mono">_hp</code> vazio.
+            </p>
           </PainelRecolhivel>
 
-          {/* 6 — lgpd */}
+          {/* 5 — lgpd */}
           <PainelRecolhivel id="lgpd" titulo="LGPD">
             <div className="space-y-3">
+              <Alternador
+                ativo={dados.exigeLgpd}
+                label="Exigir aceite do visitante"
+                descricao="Se ligado, o servidor recusa envios sem o aceite (lgpdAceite) e o site precisa exibir a caixa de seleção."
+                onChange={(v) => patch("exigeLgpd", v)}
+              />
               <Campo label="Texto de consentimento">
                 <AreaTexto
                   value={dados.lgpdTexto}
@@ -546,6 +523,7 @@ export default function FormularioEditorPage() {
                   rows={3}
                   placeholder="Ao enviar, você concorda com nossa política de privacidade."
                 />
+                {errosCampo.lgpdTexto && <p className="mt-1 text-[11px] text-danger">{errosCampo.lgpdTexto}</p>}
               </Campo>
               <Campo label="Página da política de privacidade">
                 <select
@@ -562,43 +540,45 @@ export default function FormularioEditorPage() {
                 </select>
               </Campo>
               <p className="text-[11px] text-ink-muted">
-                Uma caixa de seleção com esse texto é exibida antes do botão de envio. O aceite e a data são registrados em cada lead.
+                Cada lead grava se houve aceite e a data.
               </p>
             </div>
           </PainelRecolhivel>
 
+          {/* 6 — como o site envia */}
+          {!NOVO && (
+            <PainelRecolhivel id="uso-no-site" inicialAberto titulo="Como o site envia este formulário">
+              <div className="space-y-3 text-[12px] text-ink-muted">
+                <div>
+                  <p className="mb-1 font-medium text-ink">ID do formulário (formularioId)</p>
+                  <div className="flex items-center gap-2">
+                    <code className="rounded bg-secondary px-2 py-1 font-mono text-[12px] text-ink">{dados.id}</code>
+                    <BotaoCopiar texto={dados.id} />
+                  </div>
+                </div>
+                <div>
+                  <p className="mb-1 font-medium text-ink">Endereço que recebe os envios (POST, JSON)</p>
+                  <div className="flex items-center gap-2">
+                    <code className="min-w-0 truncate rounded bg-secondary px-2 py-1 font-mono text-[12px] text-ink">{endpoint}</code>
+                    {painelUrl && <BotaoCopiar texto={endpoint} />}
+                  </div>
+                  {!painelUrl && <p className="mt-1">O endereço do painel ainda não está configurado neste servidor.</p>}
+                </div>
+                <p>
+                  O site envia <code className="font-mono">formularioId</code>, nome, e-mail, telefone, mensagem
+                  e, se exigido, <code className="font-mono">lgpdAceite</code>. Cada envio válido aparece em Leads.
+                </p>
+              </div>
+            </PainelRecolhivel>
+          )}
+
         </div>
 
-        {/* ---- coluna direita: preview + usado em ---- */}
+        {/* ---- coluna direita: preview ---- */}
         <div className="p-6">
           <div className="sticky top-[57px]">
             <p className="mb-2 text-[11.5px] font-medium text-ink-muted">Pré-visualização</p>
             <PreviewFormulario dados={dados} />
-            <div className="mt-4">
-              <p className="mb-1.5 text-[11.5px] font-medium text-ink-muted">Usado em</p>
-              {dados.usadoEm.length === 0 ? (
-                <p className="text-[11.5px] text-ink-muted/50">
-                  {NOVO
-                    ? "Salve o formulário para vinculá-lo a páginas."
-                    : "Este formulário ainda não está em nenhuma página."}
-                </p>
-              ) : (
-                <ul className="space-y-1">
-                  {dados.usadoEm.map((url) => (
-                    <li key={url}>
-                      <a
-                        href={url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={cn("text-[12px] text-ink-muted hover:text-primary hover:underline")}
-                      >
-                        {url}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
           </div>
         </div>
 

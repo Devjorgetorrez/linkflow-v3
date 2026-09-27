@@ -200,20 +200,18 @@ export interface CampoFormulario {
 }
 
 export interface Formulario {
+  /** Identificador estável = `formularioId` que o site envia em /api/submissao. */
   id: string;
   nome: string;
   campos: CampoFormulario[];
-  destinoEmail: { ativo: boolean; endereco: string; assunto: string };
-  destinoWhatsApp: { ativo: boolean; numero: string };
-  destinoWebhook: { ativo: boolean; url: string };
   msgSucesso: string;
   msgErro: string;
-  paginaObrigado: string;
-  honeypot: boolean;
-  confirmarMarcacao: boolean;
+  /** Se true, o envio exige `lgpdAceite: true` (o site precisa exibir a caixa). */
+  exigeLgpd: boolean;
   lgpdTexto: string;
   lgpdPoliticaUrl: string;
   usadoEm: string[];
+  /** Calculado a partir dos leads reais (últimos 30 dias). */
   envios30d: number;
   ativo: boolean;
 }

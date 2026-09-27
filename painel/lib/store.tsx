@@ -363,10 +363,13 @@ interface Estado {
   atualizarTarefa: (id: string, patch: Partial<Tarefa>) => void;
 
   formularios: Formulario[];
-  criarFormulario: (f: Formulario) => void;
-  atualizarFormulario: (id: string, patch: Partial<Formulario>) => void;
+  /** false até a 1ª resposta da API: as telas desabilitam ações até carregar. */
+  formulariosCarregados: boolean;
+  /** Relê da API (após criar/editar/excluir e ao abrir a tela). true = leu. */
+  recarregarFormularios: () => Promise<boolean>;
   leads: Lead[];
-  atualizarLead: (id: string, patch: Partial<Lead>) => void;
+  leadsCarregados: boolean;
+  recarregarLeads: () => Promise<boolean>;
   menus: Menu[];
   atualizarMenu: (id: string, patch: Partial<Menu>) => void;
 
@@ -660,6 +663,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [tarefas, setTarefas] = useState<Tarefa[]>([]);
   const [formulariosList, setFormularios] = useState<Formulario[]>([]);
   const [leadsList, setLeads] = useState<Lead[]>([]);
+  const [formulariosCarregados, setFormulariosCarregados] = useState(false);
+  const [leadsCarregados, setLeadsCarregados] = useState(false);
   const [menusList, setMenus] = useState<Menu[]>([]);
   const [robots, setRobots] = useState(ROBOTS_INICIAL);
   const [llms, setLlms] = useState(LLMS_INICIAL);
@@ -695,6 +700,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setTarefas([]);
     setFormularios([]);
     setLeads([]);
+    setFormulariosCarregados(false);
+    setLeadsCarregados(false);
     setUsuarios([]);
     setPendentes(0);
     setNuncaPublicado(false);
@@ -752,8 +759,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     carregarLista<Midia>("/api/midia", "midia").then((l) => l && vale() && setMidia(l));
     carregarLista<Redirect>("/api/redirects", "redirects").then((l) => l && vale() && setRedirects(l));
     carregarLista<Tarefa>("/api/tarefas", "tarefas").then((l) => l && vale() && setTarefas(l));
-    carregarLista<Formulario>("/api/formularios", "formularios").then((l) => l && vale() && setFormularios(l));
-    carregarLista<Lead>("/api/leads", "leads").then((l) => l && vale() && setLeads(l));
+    carregarLista<Formulario>("/api/formularios", "formularios").then((l) => { if (vale()) { if (l) setFormularios(l); setFormulariosCarregados(true); } });
+    carregarLista<Lead>("/api/leads", "leads").then((l) => { if (vale()) { if (l) setLeads(l); setLeadsCarregados(true); } });
     carregarLista<Usuario>("/api/usuarios", "usuarios").then((l) => l && vale() && setUsuarios(l));
     void recarregarPendentesRef.current();
 
@@ -1141,6 +1148,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     };
   }, [enviarPost]);
 
+  const recarregarFormularios = useCallback(async () => {
+    const l = await carregarLista<Formulario>("/api/formularios", "formularios");
+    if (l) setFormularios(l);
+    setFormulariosCarregados(true);
+    return l !== null;
+  }, []);
+  const recarregarLeads = useCallback(async () => {
+    const l = await carregarLista<Lead>("/api/leads", "leads");
+    if (l) setLeads(l);
+    setLeadsCarregados(true);
+    return l !== null;
+  }, []);
+
   const valor: Estado = useMemo(
     () => ({
       usuario: {
@@ -1172,12 +1192,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setTarefas((lista) => lista.map((t) => (t.id === id ? { ...t, ...patch } : t))),
 
       formularios: formulariosList,
-      criarFormulario: (f) => setFormularios((lista) => [f, ...lista]),
-      atualizarFormulario: (id, patch) =>
-        setFormularios((lista) => lista.map((f) => f.id === id ? { ...f, ...patch } : f)),
+      formulariosCarregados,
+      recarregarFormularios,
       leads: leadsList,
-      atualizarLead: (id, patch) =>
-        setLeads((lista) => lista.map((l) => l.id === id ? { ...l, ...patch } : l)),
+      leadsCarregados,
+      recarregarLeads,
       menus: menusList,
       atualizarMenu: (id, patch) =>
         setMenus((lista) => lista.map((m) => m.id === id ? { ...m, ...patch } : m)),
@@ -1299,6 +1318,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       midiaLista,
       redirects,
       tarefas,
+      formulariosList,
+      formulariosCarregados,
+      recarregarFormularios,
+      leadsList,
+      leadsCarregados,
+      recarregarLeads,
+      menusList,
       robots,
       llms,
       pendentes,

@@ -1,20 +1,23 @@
 /**
  * app/api/formularios/route.ts
- * GET  /api/formularios  → lista formulários do site
- * POST /api/formularios  → cria formulário
+ * GET  /api/formularios  → lista formulários (semeia o "contato" na primeira leitura)
+ * POST /api/formularios  → cria formulário (validado; id único a partir do nome)
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { lerDados, salvarDados } from "@/lib/dados";
+import { lerDados } from "@/lib/dados";
 import { exigirPapel } from "@/lib/auth";
 import { MATRIZ } from "@/lib/permissoes";
-import type { Formulario } from "@/mock/types";
+import { slugify } from "@/lib/fs";
+import { comContadores, gravarFormularios, lerFormularios } from "@/lib/formularios-dados";
+import { idUnico, validarFormulario } from "@/lib/formularios-regras";
+import type { Formulario, Lead } from "@/mock/types";
 
 export async function GET(req: NextRequest) {
   const auth = await exigirPapel(req, MATRIZ["formularios:GET"]);
   if (auth) return auth;
 
-  const formularios = lerDados<Formulario[]>("formularios.json", []);
+  const formularios = comContadores(lerFormularios(), lerDados<Lead[]>("leads.json", []));
   return NextResponse.json({ ok: true, formularios });
 }
 
@@ -22,34 +25,38 @@ export async function POST(req: NextRequest) {
   const auth = await exigirPapel(req, MATRIZ["formularios:POST"]);
   if (auth) return auth;
 
+  let body: unknown;
   try {
-    const body = await req.json();
-    const formularios = lerDados<Formulario[]>("formularios.json", []);
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ ok: false, erro: "Corpo da requisição inválido." }, { status: 400 });
+  }
+  const v = validarFormulario(body);
+  if (!v.ok || !v.valor) {
+    return NextResponse.json({ ok: false, erro: v.erro, campos: v.erros }, { status: 400 });
+  }
 
+  try {
+    // ler → alterar → gravar sem await no meio (sem corrida dentro do processo)
+    const formularios = lerFormularios();
+    const dup = formularios.find((f) => f.nome.trim().toLowerCase() === v.valor!.nome.toLowerCase());
+    if (dup) {
+      return NextResponse.json(
+        { ok: false, erro: `Já existe um formulário chamado "${dup.nome}".`, campos: { nome: "Já existe um formulário com este nome." } },
+        { status: 409 },
+      );
+    }
     const novo: Formulario = {
-      id: `form-${Date.now()}`,
-      nome: body.nome ?? "Novo formulário",
-      campos: body.campos ?? [],
-      destinoEmail: body.destinoEmail ?? { ativo: false, endereco: "", assunto: "" },
-      destinoWhatsApp: body.destinoWhatsApp ?? { ativo: false, numero: "" },
-      destinoWebhook: body.destinoWebhook ?? { ativo: false, url: "" },
-      msgSucesso: body.msgSucesso ?? "Mensagem enviada com sucesso!",
-      msgErro: body.msgErro ?? "Erro ao enviar. Tente novamente.",
-      paginaObrigado: body.paginaObrigado ?? "",
-      honeypot: body.honeypot ?? true,
-      confirmarMarcacao: body.confirmarMarcacao ?? false,
-      lgpdTexto: body.lgpdTexto ?? "",
-      lgpdPoliticaUrl: body.lgpdPoliticaUrl ?? "",
-      usadoEm: body.usadoEm ?? [],
+      id: idUnico(v.valor.nome, formularios.map((f) => f.id), slugify),
+      ...v.valor,
+      usadoEm: [],
       envios30d: 0,
-      ativo: body.ativo ?? true,
     };
-
     formularios.push(novo);
-    salvarDados("formularios.json", formularios);
-
+    gravarFormularios(formularios);
     return NextResponse.json({ ok: true, formulario: novo });
   } catch (err) {
-    return NextResponse.json({ ok: false, erro: String(err) }, { status: 500 });
+    console.error("[api/formularios POST]", err);
+    return NextResponse.json({ ok: false, erro: "Não foi possível salvar o formulário." }, { status: 500 });
   }
 }

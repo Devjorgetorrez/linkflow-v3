@@ -33,7 +33,11 @@ export async function PATCH(
       return NextResponse.json({ ok: false, erro: "Status inválido" }, { status: 400 });
     }
 
-    leads[idx] = { ...leads[idx], ...body };
+    // Só o status é editável (nada de sobrescrever nome, contato ou aceite LGPD por PATCH).
+    if (!body.status) {
+      return NextResponse.json({ ok: false, erro: "Informe o status." }, { status: 400 });
+    }
+    leads[idx] = { ...leads[idx], status: body.status };
     salvarDados("leads.json", leads);
 
     return NextResponse.json({ ok: true, lead: leads[idx] });
