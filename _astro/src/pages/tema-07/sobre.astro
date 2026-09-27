@@ -11,6 +11,7 @@ import Depoimentos  from '../../components/blocos/Depoimentos.astro'
 import Cta          from '../../components/blocos/Cta.astro'
 import Footer       from '../../components/blocos/Footer.astro'
 import { site }     from '../../config/tema-07.ts'
+import { tituloOuPadrao, metaOuPadrao } from '../../lib/paginaFixa.ts'
 import { textoCredencial } from '../../lib/schema.ts'
 import { getCollection } from 'astro:content'
 
@@ -42,8 +43,8 @@ const jsonLd = {
 ---
 
 <Tema07Base
-  titulo={`Quem somos — ${site.nomeLongo}`}
-  metaDescription="Conheça a Vereda Corretora: dezesseis anos de corretagem em Sorocaba, nove operadoras na carteira e suporte que continua depois da contratação."
+  titulo={tituloOuPadrao(site, 'sobre', `Quem somos — ${site.nomeLongo}`)}
+  metaDescription={metaOuPadrao(site, 'sobre', "Conheça a Vereda Corretora: dezesseis anos de corretagem em Sorocaba, nove operadoras na carteira e suporte que continua depois da contratação.")}
   canonical={canonical}
   jsonLd={jsonLd}
   nodeId="sobre"

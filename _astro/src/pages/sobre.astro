@@ -10,6 +10,7 @@ import Footer      from '../components/blocos/Footer.astro'
 import { site }    from '../config/site.ts'
 import { textoCredencial } from '../lib/schema.ts'
 import { getCollection } from 'astro:content'
+import { tituloOuPadrao, metaOuPadrao } from '../lib/paginaFixa.ts'
 
 const todosDepoi = await getCollection('depoimentos')
 const depoimentos = todosDepoi
@@ -25,8 +26,8 @@ const canonical = `${site.dominio}/sobre`
 ---
 
 <ThemeBase
-  titulo={`Sobre — ${site.nome}`}
-  metaDescription="Conheça a VitalCare Saúde: nossa missão, valores, trajetória desde 2014 e a equipe que transforma o cuidado com a saúde em São Paulo."
+  titulo={tituloOuPadrao(site, 'sobre', `Sobre — ${site.nome}`)}
+  metaDescription={metaOuPadrao(site, 'sobre', "Conheça a VitalCare Saúde: nossa missão, valores, trajetória desde 2014 e a equipe que transforma o cuidado com a saúde em São Paulo.")}
   canonical={canonical}
   nodeId="sobre"
 >

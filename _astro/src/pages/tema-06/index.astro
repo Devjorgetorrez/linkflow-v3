@@ -24,6 +24,7 @@ import PostLista    from '../../components/blocos/PostLista.astro'
 import BuscasFrequentes from '../../components/blocos/BuscasFrequentes.astro'
 import Footer       from '../../components/blocos/Footer.astro'
 import { site }     from '../../config/tema-06.ts'
+import { tituloOuPadrao, metaOuPadrao } from '../../lib/paginaFixa.ts'
 import { textoCredencial, organizacaoSchema, areaLista } from '../../lib/schema.ts'
 import { getCollection } from 'astro:content'
 import { ehPublicado } from '../../lib/publicacao.ts'
@@ -83,8 +84,8 @@ const jsonLd = {
 ---
 
 <Tema06Base
-  titulo={`Caça Vazamento e Encanador em ${site.nap.cidade} — ${site.nome}`}
-  metaDescription="Caça vazamento, detecção de infiltração e serviço de encanador em Goiânia e região. Localizamos o ponto sem quebrar, com laudo técnico e plantão de emergência."
+  titulo={tituloOuPadrao(site, 'home', `Caça Vazamento e Encanador em ${site.nap.cidade} — ${site.nome}`)}
+  metaDescription={metaOuPadrao(site, 'home', "Caça vazamento, detecção de infiltração e serviço de encanador em Goiânia e região. Localizamos o ponto sem quebrar, com laudo técnico e plantão de emergência.")}
   canonical={canonical}
   jsonLd={jsonLd}
   nodeId="home"

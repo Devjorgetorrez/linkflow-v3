@@ -22,6 +22,7 @@ import PostLista    from '../../components/blocos/PostLista.astro'
 import BuscasFrequentes from '../../components/blocos/BuscasFrequentes.astro'
 import Footer       from '../../components/blocos/Footer.astro'
 import { site }     from '../../config/tema-04.ts'
+import { tituloOuPadrao, metaOuPadrao } from '../../lib/paginaFixa.ts'
 import { textoCredencial, organizacaoSchema, areaLista } from '../../lib/schema.ts'
 import { getCollection } from 'astro:content'
 import { ehPublicado } from '../../lib/publicacao.ts'
@@ -85,8 +86,8 @@ const jsonLd = {
 ---
 
 <Tema04Base
-  titulo={`${site.nome} — Higienização de Sofás e Colchões em ${site.nap.cidade}`}
-  metaDescription="Higienização de sofás, colchões, tapetes e estofados em domicílio em Campinas e região. Extratora profissional, produtos seguros e garantia de 90 dias."
+  titulo={tituloOuPadrao(site, 'home', `${site.nome} — Higienização de Sofás e Colchões em ${site.nap.cidade}`)}
+  metaDescription={metaOuPadrao(site, 'home', "Higienização de sofás, colchões, tapetes e estofados em domicílio em Campinas e região. Extratora profissional, produtos seguros e garantia de 90 dias.")}
   canonical={canonical}
   jsonLd={jsonLd}
   nodeId="home"

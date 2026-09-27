@@ -12,6 +12,7 @@ import Depoimentos  from '../../components/blocos/Depoimentos.astro'
 import Cta          from '../../components/blocos/Cta.astro'
 import Footer       from '../../components/blocos/Footer.astro'
 import { site }     from '../../config/tema-06.ts'
+import { tituloOuPadrao, metaOuPadrao } from '../../lib/paginaFixa.ts'
 import { textoCredencial } from '../../lib/schema.ts'
 import { getCollection } from 'astro:content'
 
@@ -43,8 +44,8 @@ const jsonLd = {
 ---
 
 <Tema06Base
-  titulo={`Quem somos — ${site.nomeLongo}`}
-  metaDescription="Conheça a Hidroponto: treze anos de detecção de vazamento em Goiânia, equipe própria com responsável técnico e mais de 90% dos casos localizados sem quebra."
+  titulo={tituloOuPadrao(site, 'sobre', `Quem somos — ${site.nomeLongo}`)}
+  metaDescription={metaOuPadrao(site, 'sobre', "Conheça a Hidroponto: treze anos de detecção de vazamento em Goiânia, equipe própria com responsável técnico e mais de 90% dos casos localizados sem quebra.")}
   canonical={canonical}
   jsonLd={jsonLd}
   nodeId="sobre"

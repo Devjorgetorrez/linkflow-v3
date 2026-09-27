@@ -9,12 +9,13 @@ import Footer      from '../components/blocos/Footer.astro'
 import { site }    from '../config/site.ts'
 
 import { textoCredencial } from '../lib/schema.ts'
+import { tituloOuPadrao, metaOuPadrao } from '../lib/paginaFixa.ts'
 const canonical = `${site.dominio}/contato`
 ---
 
 <ThemeBase
-  titulo={`Contato — ${site.nome}`}
-  metaDescription="Entre em contato com a VitalCare Saúde. Agende sua consulta pelo WhatsApp, telefone ou formulário online. Av. Paulista, 1966 — Bela Vista, São Paulo."
+  titulo={tituloOuPadrao(site, 'contato', `Contato — ${site.nome}`)}
+  metaDescription={metaOuPadrao(site, 'contato', "Entre em contato com a VitalCare Saúde. Agende sua consulta pelo WhatsApp, telefone ou formulário online. Av. Paulista, 1966 — Bela Vista, São Paulo.")}
   canonical={canonical}
   nodeId="contato"
 >

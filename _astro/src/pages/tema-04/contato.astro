@@ -9,6 +9,7 @@ import Depoimentos  from '../../components/blocos/Depoimentos.astro'
 import Cta          from '../../components/blocos/Cta.astro'
 import Footer       from '../../components/blocos/Footer.astro'
 import { site }     from '../../config/tema-04.ts'
+import { tituloOuPadrao, metaOuPadrao } from '../../lib/paginaFixa.ts'
 import { textoCredencial, areaLista } from '../../lib/schema.ts'
 import { getCollection } from 'astro:content'
 
@@ -34,8 +35,8 @@ const jsonLd = {
 ---
 
 <Tema04Base
-  titulo={`Contato — Peça seu orçamento na ${site.nome}`}
-  metaDescription="Fale com a Renovar Higienização em Campinas. Mande a foto da peça pelo WhatsApp e receba o valor fechado, sem visita técnica cobrada."
+  titulo={tituloOuPadrao(site, 'contato', `Contato — Peça seu orçamento na ${site.nome}`)}
+  metaDescription={metaOuPadrao(site, 'contato', "Fale com a Renovar Higienização em Campinas. Mande a foto da peça pelo WhatsApp e receba o valor fechado, sem visita técnica cobrada.")}
   canonical={canonical}
   jsonLd={jsonLd}
   nodeId="contato"

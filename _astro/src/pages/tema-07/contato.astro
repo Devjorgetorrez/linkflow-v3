@@ -10,6 +10,7 @@ import Depoimentos  from '../../components/blocos/Depoimentos.astro'
 import Cta          from '../../components/blocos/Cta.astro'
 import Footer       from '../../components/blocos/Footer.astro'
 import { site }     from '../../config/tema-07.ts'
+import { tituloOuPadrao, metaOuPadrao } from '../../lib/paginaFixa.ts'
 import { textoCredencial, areaLista } from '../../lib/schema.ts'
 import { getCollection } from 'astro:content'
 
@@ -35,8 +36,8 @@ const jsonLd = {
 ---
 
 <Tema07Base
-  titulo={`Contato — Solicite sua cotação na ${site.nome}`}
-  metaDescription="Fale com a Vereda Corretora em Sorocaba. Solicite a cotação pelo formulário ou pelo WhatsApp e receba o comparativo em até um dia útil."
+  titulo={tituloOuPadrao(site, 'contato', `Contato — Solicite sua cotação na ${site.nome}`)}
+  metaDescription={metaOuPadrao(site, 'contato', "Fale com a Vereda Corretora em Sorocaba. Solicite a cotação pelo formulário ou pelo WhatsApp e receba o comparativo em até um dia útil.")}
   canonical={canonical}
   jsonLd={jsonLd}
   nodeId="contato"

@@ -20,6 +20,7 @@ import { getCollection } from 'astro:content'
 import { ehPublicado } from '../../lib/publicacao.ts'
 import { nomeAutor } from '../../lib/autores.ts'
 import { nomeCategoria } from '../../lib/categorias.ts'
+import { tituloOuPadrao, metaOuPadrao } from '../../lib/paginaFixa.ts'
 
 const servicos = (await getCollection('servicosT3'))
   .sort((a, b) => a.data.ordem - b.data.ordem)
@@ -101,8 +102,8 @@ const jsonLd = {
 ---
 
 <Tema03Base
-  titulo={`${site.nome} — Escritório de Contabilidade em Londrina — PR`}
-  metaDescription="Escritório de contabilidade em Londrina há mais de 20 anos. Contabilidade consultiva, gestão fiscal, departamento pessoal e BPO financeiro, com contador responsável e relatório gerencial mensal."
+  titulo={tituloOuPadrao(site, 'home', `${site.nome} — Escritório de Contabilidade em Londrina — PR`)}
+  metaDescription={metaOuPadrao(site, 'home', "Escritório de contabilidade em Londrina há mais de 20 anos. Contabilidade consultiva, gestão fiscal, departamento pessoal e BPO financeiro, com contador responsável e relatório gerencial mensal.")}
   canonical={canonical}
   jsonLd={jsonLd}
   nodeId="home"

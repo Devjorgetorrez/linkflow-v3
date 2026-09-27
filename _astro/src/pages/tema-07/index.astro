@@ -24,6 +24,7 @@ import PostLista    from '../../components/blocos/PostLista.astro'
 import BuscasFrequentes from '../../components/blocos/BuscasFrequentes.astro'
 import Footer       from '../../components/blocos/Footer.astro'
 import { site }     from '../../config/tema-07.ts'
+import { tituloOuPadrao, metaOuPadrao } from '../../lib/paginaFixa.ts'
 import { textoCredencial, organizacaoSchema, areaLista } from '../../lib/schema.ts'
 import { getCollection } from 'astro:content'
 import { ehPublicado } from '../../lib/publicacao.ts'
@@ -83,8 +84,8 @@ const jsonLd = {
 ---
 
 <Tema07Base
-  titulo={`Planos de Saúde em ${site.nap.cidade} e região — ${site.nome}`}
-  metaDescription="Corretora de planos de saúde em Sorocaba e região. Comparamos operadoras, conferimos a rede por endereço e mostramos o histórico de reajuste antes de você escolher."
+  titulo={tituloOuPadrao(site, 'home', `Planos de Saúde em ${site.nap.cidade} e região — ${site.nome}`)}
+  metaDescription={metaOuPadrao(site, 'home', "Corretora de planos de saúde em Sorocaba e região. Comparamos operadoras, conferimos a rede por endereço e mostramos o histórico de reajuste antes de você escolher.")}
   canonical={canonical}
   jsonLd={jsonLd}
   nodeId="home"

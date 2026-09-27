@@ -24,6 +24,7 @@ import PostLista   from '../../components/blocos/PostLista.astro'
 import BuscasFrequentes from '../../components/blocos/BuscasFrequentes.astro'
 import Footer      from '../../components/blocos/Footer.astro'
 import { site }    from '../../config/tema-05.ts'
+import { tituloOuPadrao, metaOuPadrao } from '../../lib/paginaFixa.ts'
 import { textoCredencial, organizacaoSchema } from '../../lib/schema.ts'
 import { getCollection } from 'astro:content'
 import { ehPublicado } from '../../lib/publicacao.ts'
@@ -87,8 +88,8 @@ const jsonLd = {
 ---
 
 <Tema05Base
-  titulo={`Advogados Previdenciários em ${site.nap.cidade} — ${site.nome}`}
-  metaDescription="Escritório dedicado exclusivamente a direito previdenciário em Belo Horizonte. Benefícios do INSS, BPC/LOAS e aposentadoria de servidor público, com acompanhamento mensal."
+  titulo={tituloOuPadrao(site, 'home', `Advogados Previdenciários em ${site.nap.cidade} — ${site.nome}`)}
+  metaDescription={metaOuPadrao(site, 'home', "Escritório dedicado exclusivamente a direito previdenciário em Belo Horizonte. Benefícios do INSS, BPC/LOAS e aposentadoria de servidor público, com acompanhamento mensal.")}
   canonical={canonical}
   jsonLd={jsonLd}
   nodeId="home"

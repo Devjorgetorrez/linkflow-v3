@@ -21,6 +21,7 @@ import { getCollection } from 'astro:content'
 import { ehPublicado } from '../lib/publicacao.ts'
 import { nomeAutor } from '../lib/autores.ts'
 import { nomeCategoria } from '../lib/categorias.ts'
+import { tituloOuPadrao, metaOuPadrao } from '../lib/paginaFixa.ts'
 
 /* ── Coleções ─────────────────────────────────────────────────── */
 const todosServicos = await getCollection('servicos')
@@ -118,8 +119,8 @@ const jsonLd = {
 ---
 
 <ThemeBase
-  titulo={`${site.nome} — Clínica Médica em São Paulo`}
-  metaDescription="VitalCare Saúde oferece consultas especializadas, exames, medicina preventiva e telemedicina na Av. Paulista, SP. Equipe com CRM, agendamento em 24h."
+  titulo={tituloOuPadrao(site, 'home', `${site.nome} — Clínica Médica em São Paulo`)}
+  metaDescription={metaOuPadrao(site, 'home', "VitalCare Saúde oferece consultas especializadas, exames, medicina preventiva e telemedicina na Av. Paulista, SP. Equipe com CRM, agendamento em 24h.")}
   canonical={canonical}
   jsonLd={jsonLd}
   nodeId="home"
