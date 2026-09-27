@@ -1,180 +1,71 @@
-# Handoff — SiteFlow CMS / LinkFlow (Jorge Torrez) — v4 (26/09/2026, Relatório de Testes 3)
+# Handoff — SiteFlow CMS / LinkFlow (Jorge Torrez) — v5 (27/09/2026, Plano de Correção de QA do Painel)
 
-> **Mudança de fluxo (25/09/2026):** a partir da rodada R0, o modelo de duas
-> sessões (chat edita / Code valida) foi encerrado. `C:\Projetos\linkflow-completo`
-> agora é repositório git, e uma única sessão do Code edita a pasta real,
-> testa em cópia isolada e faz commit por rodada. O `HANDOFF.md` continua
-> sendo o documento de retomada — cole-o inteiro numa conversa nova se a
-> sessão for perdida; o histórico de commits complementa o que este
-> documento resume.
->
-> Cole este documento inteiro como primeira mensagem numa conversa nova,
-> apontando a working directory para `c:\Projetos\linkflow-completo` (repo
-> git local, já com todo o histórico de commits). Não precisa de `.zip`,
-> `manifesto-md5.txt` nem `conferir_manifesto.py` — isso era do modelo
-> antigo de duas sessões (chat edita / Code valida), encerrado a partir da
-> rodada R0. Ele substitui o histórico das sessões anteriores: não existe
-> transferência de conversa, então este documento é o que faz a sessão nova
-> saber o que as anteriores sabiam. Rode `git log --oneline` e `git status`
-> logo de cara para confirmar que a pasta bate com o que está descrito aqui.
+> **Modelo de trabalho:** uma única sessão do Claude Code edita a pasta real
+> (`D:\LFSoft\Mentoria\linkflow-completo`, repositório git local), valida em
+> cópia isolada (nunca roda `npm ci`/build na pasta real) e faz commit por
+> rodada de correção. Não existe mais o modelo antigo de duas sessões
+> (chat edita / Code valida por ZIP) — encerrado desde a rodada R0
+> (25/09/2026). Este documento é o que faz uma sessão nova (ou a mesma,
+> depois de perder contexto) saber o que já foi feito. Cole-o inteiro numa
+> conversa nova apontando a working directory para
+> `D:\LFSoft\Mentoria\linkflow-completo` e rode `git log --oneline` /
+> `git status` logo de cara para confirmar que a pasta bate com o descrito
+> aqui.
 
-## Estado atual em uma tela (26/09/2026)
+## Estado atual em uma tela (27/09/2026)
 
-- Última rodada: **Relatório de Testes 3** (`relatorios/Relatorio-Testes-3-LinkFlow-19-09.docx`),
-  9 erros. Todos tratados no código (tabela abaixo). **Nada disso foi testado numa VPS real.**
-- **Próximo relatório a tratar:** `relatorios/Relatorio_QA_Painel_SiteFlow.pdf` (mais extenso; o
-  Lucas pediu para abordá-lo só depois de concluir o 3).
-- **Pendência única de validação:** R5, teste de ponta a ponta na VPS de teste, agora incluindo o
-  instalador novo e o fluxo em marcos. **Pedir autorização ao Lucas antes de tocar no VPS.**
-- `relatorios/` e `templates-layout-temas/` (os 4 zips) estão no `.gitignore`: relatórios são
-  internos e os layouts corretos já vivem em `_astro/`; os zips eram só referência.
-
-## Relatório de Testes 3 — o que foi feito
-
-| # | Erro | Correção | Commit |
-|---|---|---|---|
-| 25 | Instalador da VPS podia derrubar cliente ativo | `setup.sh` sem `apt upgrade` (só `--no-upgrade`, só o que falta); não remove `sites-enabled/default` se há outro site; porta via `ss`/`.env` (o `pm2 list` não mostra porta, então sempre caía em 3210); SSL sai do fluxo crítico (`ssl-cliente.sh` só pede certificado para nomes cujo DNS já aponta para o servidor); e-mail do certbot deixou de ser inventado (`ssl@com.br`); recusa domínio já servido por outro bloco Nginx; `migrar` só para o processo `painel` se for da instalação antiga. `.gitattributes` fixa LF nos `.sh` | `62cfd2b`, `4c5e659` |
-| 28 | Auditoria acusava órfã falsa | `lib/links-internos.ts` lê o HTML real do `dist/`; regra de órfã só roda com grafo real (sem `dist/` avisa "não verificado" em vez de tratar "sem dado" como "sem link"); `links_saindo` continua sendo o plano | `9a6f015` |
-| 23 | Domínio exigido antes de construir | `guardiao_construtor.py` tem 4 fases: `construcao` (domínio e e-mail viram aviso), `previa`, `publicacao` (exige `visual_aprovado: sim`, domínio real, e-mail, `tema_pasta`) e `saida`. `entrada` é apelido de `construcao` | `9960476` |
-| 20, 21, 22, 24 | Escolha às cegas / referência / 3 tarefas numa resposta | Prévia em `localhost` antes de qualquer servidor; layouts do catálogo em vez de referência externa; 3 marcos com um pedido por vez (`CLAUDE.md › Rotina em marcos`) | `726d857` e anteriores |
-| 27 | Sem recuperação de senha | Botão "Esqueci minha senha" gera pedido para colar no Claude Code; skill `painel-senha` + `scripts/painel_redefinir_senha.cjs` redefinem por SSH (não há rota de reset por chave, de propósito) | `a844295` |
-
-Além do relatório: 3 layouts novos (05, 06, 07), catálogo, tela Layout do painel, pilar `/planos`.
-
-## Layouts e o que "tema" significa agora
-
-Duas palavras, dois níveis. Para o usuário, **layout** = o visual. No código, cada layout é uma
-**base por nicho** (`base`, `tema-03` … `tema-07`), com coleções e campos próprios; o
-`projeto.md` registra `tema_pasta`. Trocar de layout **não** é um campo: reconstrói-se o conteúdo
-no esquema do layout novo — barato só até publicar.
-
-| Layout | Nome | Páginas ao promover | Observação |
-|---|---|---|---|
-| `base` | HealthCare Institucional | 22 | saúde |
-| `tema-03` | Vértice Institucional | 22 | serviço profissional |
-| `tema-04` | Renovar Serviço Local | 21 | serviço local |
-| `tema-05` | Amparo Institucional | 23 | profissão regulamentada; página fixa `direito-previdenciario` |
-| `tema-06` | Hidroponto Institucional | 20 | serviço técnico de emergência |
-| `tema-07` | Vereda Institucional | 21 | **pilar `/planos`** (coleção continua `servicos`; `rotaPilar: '/planos'` no config) |
-
-Motor de referência completo, sem promoção: **131 páginas** (inclui `/catalogo`).
-
-- **Catálogo:** fonte única em `_astro/src/config/catalogo-layouts.json`. Gera a capa
-  `/catalogo` (só no motor de referência; a promoção a remove) e
-  `painel/lib/catalogo-layouts.ts` via `python scripts/gerar_catalogo_layouts.py`, que **valida** o
-  JSON contra `public/tema*.json` (cores/fontes) e contra `promover_tema.py`. Use `--check` em CI.
-- **`scripts/promover_tema.py`:** registro único `TEMAS`. Tema novo entra **só ali** (mais o
-  catálogo). Só o que o layout promovido trouxe fica na raiz (o `pages/servicos/` do base é
-  resíduo no tema-07). Grava `_astro/tema-ativo.json`, que o painel lê.
-- **Origem dos layouts 05/06/07:** zip `Luas Corretora` (superset dos outros três zips). Vieram no
-  formato antigo (rotas `[id]`, sem autor/categoria) e foram convertidos ao padrão do tema-03 —
-  ponto de rastreio `df93f2f` (importado "como entregue"). Autores e categorias derivam do que os
-  posts de demonstração já declaravam; `descricao`/`metaDescription` das categorias são **texto
-  de demonstração**, não fato de cliente.
-
-## Fluxo do site Astro em marcos
-
-1. **Marco 1 — aprovar o visual (localhost):** `guardiao ... --fase construcao` →
-   `python scripts/preparar_site_local.py --slug <slug> --tema <tema_pasta>` (cria
-   `projetos/<slug>/site/_astro`, promove, apaga a demonstração) → substituir o `config/site.ts`
-   **campo a campo** → build → `--fase previa` → `npm run preview -- --port 4321` → **um pedido** ao
-   usuário. Vitrine dos layouts: `cd _astro && npx astro dev --port 4322` → `/catalogo`.
-   Aprovação é uma frase explícita → `visual_aprovado: sim`.
-2. **Marco 2 — colocar no ar:** `--fase publicacao` → domínio e e-mail (um por vez) → regera com o
-   domínio real → `vps-setup` Parte A → envia `src/` e `public/` → Parte B (DNS, depois SSL, depois
-   admin do painel) → `--fase saida`.
-3. **Marco 3:** `fase3-conteudo`.
-
-**Risco descoberto:** o `config/site.ts` que sobra da promoção é o de **demonstração** do layout
-(empresa, CNPJ, telefone fictícios), e o formato mínimo que a skill antiga mandava gerar não cobria
-`faq`, `diferenciais`, `selos`, `numeros`, `passos`, `legal`… O guardião (`previa` e `saida`) agora
-reprova se sobrar qualquer valor de demonstração no config do cliente.
-
-## Testes (guardados em `scripts/testes/`)
-
-- `bash scripts/testes/testar_promocao.sh <tema|sem-promocao> <dir_de_build>` — cópia isolada,
-  promoção, build real, contagens e vazamento de `/tema-0X` (cabeçalho explica como criar o
-  `dir_de_build`). Números esperados no cabeçalho.
-- `python scripts/testes/testar_guardiao.py` — 19 cenários das 4 fases do guardião.
-- Painel: `tsc --noEmit` + `npm run build` numa cópia com `npm ci`; APIs testadas com `x-api-key`
-  e login por sessão contra um site promovido. O efeito no navegador (marcar "Em uso", copiar,
-  o botão de "Esqueci minha senha") **não foi visto**.
+- **O plano de correção de QA do painel** (`relatorios/Plano-Correcao-QA-Painel.md`,
+  a partir de `relatorios/Relatorio_QA_Painel_SiteFlow.pdf`, 87 defeitos) está
+  **concluído nas 7 fases (0 a 6)**. Ver seção própria abaixo — é o trabalho
+  mais recente e o mais extenso desta sessão.
+- **Git limpo**, working tree sem pendência, tudo commitado (`git log --oneline`
+  mostra a sequência completa desde `bc70a98`, que fecha o Relatório de
+  Testes 3 — anterior ao plano de QA).
+- **Pendência real, em aberto:**
+  1. **R5 — teste de ponta a ponta no VPS de teste.** Nunca foi feito (nem
+     antes do plano de QA, nem depois). Precisa de **autorização explícita**
+     antes de tocar no VPS. Ver "VPS de teste" abaixo para o escopo atualizado.
+  2. **Suíte Playwright**, autorizada pelo Lucas no início do plano de QA
+     para uso do agente de desenvolvimento — nunca chegou a ser criada. Todo
+     o plano de QA foi validado por build real + teste de API (curl/Node),
+     nunca por teste de navegador gravado.
+  3. Lista curta de lacunas conhecidas, sem correção — ver "Pendências,
+     em ordem".
+- `relatorios/` e `templates-layout-temas/` continuam no `.gitignore`.
 
 ## Quem é quem
 
 - **Lucas** — LF Soft Soluções, desenvolvedor, fala português, direto e
-  técnico. É quem opera: baixa o ZIP, copia os arquivos para a pasta do
-  Code e repassa os prompts e as respostas.
-- **Jorge Torrez** — dono do produto LinkFlow (agente de automação de
-  sites e SEO para pequenos negócios). Cliente de teste real: Torrez
-  Desentupidora (`projetos/torrez-desentupidora/`).
-- **"Code"** — Claude Code rodando na máquina do Lucas (Windows), com
-  `npm`, build real e terminal. Ele **valida**; a sessão de chat **edita**.
-  Ele lê direto de `C:\Projetos\linkflow-completo` (não extrai ZIP).
-
-## Fluxo de trabalho (obrigatório)
-
-1. A sessão de chat edita os arquivos, empacota o ZIP e gera o manifesto.
-2. A resposta ao Lucas traz, **nesta ordem**:
-   - a lista de arquivos da rodada, separada em **NOVOS**, **EDITADOS** e
-     **REMOVIDOS**. Os removidos o Lucas apaga à mão, porque extrair o ZIP
-     não apaga nada. Se não houver removidos, dá para extrair o ZIP
-     inteiro por cima da pasta;
-   - o **prompt completo** para o Code, pronto para copiar, **sem
-     placeholder** (nunca "[cole aqui a tabela]").
-3. O Code sempre começa pelo **Passo 0**:
-   `python C:\Projetos\conferir_manifesto.py C:\Projetos\linkflow-completo C:\Projetos\manifesto-md5.txt`.
-   O esperado é FALTANDO 0, DIFERENTE 0, e em SOBRANDO só
-   `projetos/torrez-desentupidora/projeto.md`. Se der outra coisa, ele para.
-4. O Code testa **sempre em cópia isolada** (nunca na pasta real, nem
-   `npm install` no painel real) e usa `npm ci`, nunca `npm install`.
-5. Todo prompt pede verificação específica, com números esperados (páginas
-   no build, URLs no sitemap, conteúdo de arquivo). Nunca "revisa geral".
-
-## Lições operacionais (não repetir)
-
-- **ZIP reaproveitado:** `zip -r` sobre um ZIP existente atualiza e deixa
-  arquivos fantasmas. Sempre `rm -f` antes, e conferir a contagem de
-  arquivos da pasta contra a do ZIP.
-- **`__pycache__`:** o `py_compile` gera essa pasta e ela entra no ZIP.
-  Apagar antes de empacotar.
-- **Arquivos NOVOS:** quem copia só os "editados" esquece os novos. A lista
-  precisa separar os dois, e o manifesto acusa o que faltar.
-- **Dessincronia:** o `manifesto-md5.txt` (árvore inteira) mais o
-  `conferir_manifesto.py` resolvem. Não comparar arquivo por arquivo à mão.
-- **"Rodou sem erro" não basta:** cada rodada revelou bug real só no build
-  do Code ou em teste programático. Testar o comportamento, não só a sintaxe.
-- **Sem npm no chat:** o registry costuma estar bloqueado no ambiente da
-  sessão de chat. O build e o `npm ci` são sempre do Code. No chat dá para
-  checar sintaxe (há um TypeScript local em alguns ambientes), rodar
-  Python e testar módulos `.ts` com `node --experimental-strip-types`.
-- **YAML:** data sem aspas (`2026-09-25`) vira objeto Date. O painel já grava
-  entre aspas, e o schema aceita as duas formas, mas qualquer gerador novo
-  de frontmatter precisa pôr aspas.
-- **Python do VPS:** a versão não é garantida (vem do `apt`). Não usar
-  recursos do 3.9+ (`removeprefix`, `write_text(newline=)`).
+  técnico. Testa o painel manualmente (localhost) a cada rodada e reporta
+  defeitos com prints reais.
+- **Jorge Torrez** — dono do produto LinkFlow. Cliente de teste real no VPS:
+  Torrez Desentupidora (`projetos/torrez-desentupidora/`).
+- **Claude Code** — roda na máquina do Lucas (Windows), com `npm`, build
+  real e terminal. Edita a pasta real, valida em cópia isolada.
 
 ## O produto, em uma frase
 
 SiteFlow é um CMS (painel Next.js) + motor de site (Astro) + agente de
 automação (skills do LinkFlow). O agente faz onboarding, constrói o site,
-publica conteúdo e faz o deploy em VPS.
+publica conteúdo e faz o deploy em VPS — e, desde o plano de QA, o painel
+também é um editor real de boa parte do conteúdo (posts, serviços, título e
+meta das páginas fixas), não só um painel de leitura.
 
 ## Arquitetura (estado real)
 
 **Cada cliente tem uma cópia ISOLADA do motor Astro**, criada por
 `scripts/vps/novo-cliente.sh` em `/opt/linkflow/clientes/[slug]/_astro/`, a
 partir do motor de referência `/opt/linkflow/_astro`. O motor de referência
-nunca é editado nem servido.
+nunca é editado nem servido. A mídia do cliente fica em
+`/opt/linkflow/clientes/[slug]/midia/` (fora da raiz do site, servida pelo
+Nginx via `location ^~ /midia/`) — ver Fase 4 abaixo.
 
-**Temas = base por nicho** (`base`, `tema-03`, `tema-04`), com estrutura e
+**Temas = base por nicho** (`base`, `tema-03`…`tema-07`), com estrutura e
 campos diferentes. A escolha é **definitiva**, feita uma vez no onboarding.
 `scripts/promover_tema.py` move o tema para a raiz da cópia do cliente e
-apaga os outros. Ele trata a coleção nova pela lista `COLECOES`
-(servicos, equipe, depoimentos, posts, autores, categorias) e as páginas do tema base
-pela lista `NOMES_BASE_LEGITIMOS`. **Coleção ou página nova precisa entrar
-nessas listas**, senão a promoção apaga como resíduo. O painel **não** troca
-tema: a tela "Tema" é só informativa.
+apaga os outros; registro único `TEMAS`. Tema novo entra **só ali** (mais o
+catálogo). O painel **não** troca tema: a tela "Layout" é só informativa
+(mostra o catálogo com demonstrações navegáveis).
 
 **Caminhos canônicos pós-promoção:** `_astro/src/config/site.ts` e
 `_astro/src/content/<colecao>/`. Nunca por slug de cliente.
@@ -186,298 +77,361 @@ tema: a tela "Tema" é só informativa.
 | Home | `/` |
 | Blog (índice) | `/blog` |
 | Artigo | `/<slug>` |
-| Serviços (pilar) | `/servicos` |
+| Serviços (pilar) | `/servicos` (`/planos` no tema-07) |
 | Serviço interno | `/<slug>` |
-| Categoria | `/<slug>`; o artigo continua `/<slug>`, sem categoria no caminho |
+| Categoria | `/<slug>` |
 | Autor | `/autor/<slug>` |
+| Página-guia (só 4 dos 6 temas — ver Fase 6) | `/<slug-do-tema>` |
 
-Rota unificada em `pages/[slug].astro`. Prioridade em caso de slug repetido
-(decidida): página fixa > serviço > categoria > artigo — implementada e
-testada (build ignora o perdedor e avisa no log; `guardiao_construtor.py`
-bloqueia a colisão antes de reportar "pronto").
+Rota unificada em `pages/[slug].astro`. Prioridade em colisão: página fixa >
+serviço > categoria > artigo.
 
-**Painel:** a única fonte de URL pública é `painel/lib/urls-publicas.ts`
-(espelha as rotas do site). Não existe mais mock: `painel/mock/` só tem
-`types.ts`, e o store carrega tudo das APIs (lista vazia se a API falhar).
+**Painel:** a única fonte de URL pública é `painel/lib/urls-publicas.ts`.
+Não existe mock — `painel/mock/` só tem `types.ts`. Tudo vem das APIs, que
+por sua vez leem o `site.ts`/`content/` reais do cliente e, desde a Fase 5,
+o **HTML publicado de verdade** quando é o caso (SEO, Páginas).
 
-## Concluído e validado pelo Code (build real)
+## Layouts e o que "tema" significa agora
 
-1. Promoção de tema nos 3 cenários (imports, `public/`, CRLF, `noindex`).
-2. Páginas legais nos 3 temas, com **Termos obrigatório** (decisão do Jorge).
-   O `ConteudoLegal` tem 9 seções na política e 7 nos termos, igual ao
-   `guardiao_institucionais` (6/6 PASS). Dados em `site.legal` e
-   `site.legal.termos` (`naoSubstitui`, `foro`, `vigenciaDesde`).
-3. **Sitemap dinâmico:** `_astro/integracoes/sitemap-canonico.mjs`, que roda
-   depois do build e lê as canonicals do `dist/`, sem as `noindex`. Não
-   existe `public/sitemap.xml`. O `guardiao_construtor` confere domínio, URL
-   plana e presença da home.
-4. **Rascunho não vai ao ar:** `_astro/src/lib/publicacao.ts` exclui
-   rascunho, revisão, agendado e lixeira. O painel usa a mesma regra em
-   `painel/lib/status-post.ts`. Status ausente ou `pronto` = publicado.
-   Rascunho pode não ter `metaDescription`; publicado exige 80–165.
-5. **Botão Publicar do painel:** copia `dist/` inteiro, valida antes de
-   apagar e preserva `midia/` e `_redirects`.
-6. **URL plana no painel:** JSON-LD, llms.txt, robots, sitemap do painel,
-   busca e `/api/paginas` (classifica pelo conteúdo, não pela URL).
-   `/api/config` devolve `dominioHost` sem protocolo.
-7. **Mocks removidos:** dashboard com saúde real (`/api/stats`),
-   integrações pelo config real, sem textos de psicologia.
-8. **Frontmatter do painel:** `lib/frontmatter-post.ts` traduz os campos do
-   painel para os nomes do site. `lib/fs.ts` grava com aspas quando precisa,
-   e o PATCH é cirúrgico (preserva listas e comentários).
-9. **Lockfile do painel regenerado.** O deploy usa `npm ci` e copia o
-   `package-lock.json` para a pasta do cliente.
-10. **R0 — 3 bugs da rodada de autor, corrigidos e validados (19/19/19):**
-    `PostLista.astro` agora mostra `{autor} · {data}` nas 3 variantes (antes
-    só a data, em `/blog` e na home); `Tema04Base.astro` corrigido pra
-    apontar `<link rel="sitemap">` pro `/sitemap.xml` real; `emailLogin` em
-    `api/usuarios` só é exigido quando `podeAcessar: true` (autor que só
-    assina não precisa de e-mail de login).
-11. **R1 — Página de categoria `/<slug>` nos 3 temas**, ver resumo no
-    histórico de rodadas abaixo.
-12. **R2 — Privacidade do painel ligada ao `site.legal`**, ver resumo no
-    histórico de rodadas abaixo.
-13. **R3 — `robots.txt`/`llms.txt` desde o primeiro build**, ver resumo no
-    histórico de rodadas abaixo.
-14. **R4 — Varredura pós-implementação**, ver detalhe abaixo.
+**Layout** (usuário) = o visual. **Tema** (código) = uma base por nicho
+(`base`, `tema-03`…`tema-07`), com coleções e campos próprios; o
+`projeto.md` registra `tema_pasta`. Trocar de layout reconstrói o conteúdo
+no esquema do layout novo — não é um campo.
 
-## R6 — Fechamento (25/09/2026)
+| Layout | Nome | Páginas ao promover | Observação |
+|---|---|---|---|
+| `base` | HealthCare Institucional | 22 | saúde |
+| `tema-03` | Vértice Institucional | 22 | serviço profissional; página-guia `contabilidade-consultiva` |
+| `tema-04` | Renovar Serviço Local | 21 | serviço local; página-guia `higienizacao-de-estofados` |
+| `tema-05` | Amparo Institucional | 23 | profissão regulamentada; página-guia `direito-previdenciario` |
+| `tema-06` | Hidroponto Institucional | 20 | serviço técnico de emergência; sem página-guia |
+| `tema-07` | Vereda Institucional | 21 | **pilar `/planos`**; página-guia `como-escolher-plano-de-saude` |
 
-**R5 (teste de ponta a ponta no VPS de teste) foi pulada a pedido do
-Lucas** — não por falha, nem por bloqueio técnico. Perguntei explicitamente
-via confirmação antes de tocar no VPS (regra "Quando parar e perguntar") e
-a resposta foi "não, pular a R5 por agora". Fica como pendência única,
-pronta pra rodar quando for autorizada — nada no código depende dela pra
-R0-R4 estarem corretas: cada uma foi validada por build real isolado, não
-pelo teste de VPS.
+Motor de referência completo, sem promoção: **131 páginas** (inclui `/catalogo`).
 
-**Estado final do repositório:** git limpo, working tree sem pendência,
-5 commits desde o início do fluxo de sessão única (`bc70a98` rodada de
-autor → `85ed0c1` R4), nada não commitado.
+## Fluxo do site Astro em marcos
 
-**Resumo do que ficou pronto (R0-R4), todos com build real + commit:**
+1. **Marco 1 — aprovar o visual (localhost):** `guardiao ... --fase
+   construcao` → `preparar_site_local.py` → substituir `config/site.ts`
+   campo a campo → build → `--fase previa` → prévia em `localhost:4321`
+   (`npm run dev`, não `preview` — o dev server serve `/midia/` local, o
+   preview não). Vitrine de layouts em `localhost:4322/catalogo`. Aprovação
+   é uma frase explícita → `visual_aprovado: sim`.
+2. **Marco 2 — colocar no ar:** `--fase publicacao` (exige `painelUrl`
+   válido no config, desde a Fase 3 — sem isso o formulário do site não
+   envia nada) → domínio e e-mail (um por vez) → `vps-setup` Parte A → envia
+   `src/`/`public/` → Parte B (DNS, SSL, admin do painel) → `--fase saida`.
+3. **Marco 3:** `fase3-conteudo`, mais o painel para correções pontuais
+   (posts, serviços, título/meta das páginas fixas — ver Fase 6).
 
-| Rodada | Entrega | Validação |
-|---|---|---|
-| R0 | 3 bugs corrigidos: autor sumido nos cards de post, link de sitemap morto no tema-04, e-mail de login exigido indevidamente | build 19/19/19, HTML conferido |
-| R1 | Página de categoria `/<slug>` nos 3 temas + sincronização no painel | build 22/22/21, JSON-LD, colisão de slug testada |
-| R2 | Telas Privacidade do painel gravam de verdade em `site.legal` (antes só estado local, não persistia) | `tsc`+build painel OK, PATCH→build site→HTML conferido campo a campo |
-| R3 | `robots.txt`/`llms.txt` nascem no primeiro build, antes do painel existir | 2 cenários testados (ausente/customizado) |
-| R4 | Varredura: achou e corrigiu regressão da R2 (`naoSubstitui` sendo sobrescrito) + resíduo em `site-publicar` (`imagemHero`→`imagemCapa`) + checagem nova de autor/categoria órfão no guardião | build 22/22/21 sem mudança de contagem, `tsc`+build painel OK |
+**Atenção para o próximo cliente publicado num servidor já em produção:**
+o bloco Nginx `location /midia/` de clientes criados **antes** da Fase 4
+não tem o `^~` (prefixo com prioridade sobre a regra de extensão) — PDF e
+vídeo davam 404, e imagem caía no root do site. Precisa atualizar à mão o
+bloco desses clientes (o de teste, Torrez, está nessa situação). Clientes
+novos, criados pelo `novo-cliente.sh` atual, já nascem certos.
 
-**Pendência única: R5 — teste de ponta a ponta no VPS de teste**
-(`[IP-REMOVIDO]`, `LINKFLOW_DIR: /opt/linkflow-teste`,
-`LINKFLOW_SLUG: torrez-desentupidora`). Critério de "concluído": Torrez
-criada do zero pelo fluxo do agente (`novo-cliente.sh` → promoção → build
-do site e do painel), site e painel no ar, publicando um post pelo painel
-sem intervenção manual. **Precisa de autorização explícita do Lucas antes
-de qualquer ação no VPS** — nenhuma ação de VPS foi tomada até aqui.
+---
 
-## Última rodada: R4 concluída e validada (build real)
+## Plano de correção de QA do painel (Fases 0–6) — concluído
 
-**Varredura do que não tinha sido auditado ainda — achou 2 bugs reais,
-não só "nada encontrado":**
+Ponto de partida: `relatorios/Relatorio_QA_Painel_SiteFlow.pdf` (87
+defeitos) e o plano derivado dele, `relatorios/Plano-Correcao-QA-Painel.md`
+(ambos gitignored). Sete fases, cada uma com commit(s) próprio(s) e build
+real de validação. Nenhuma fase alterou o VPS.
 
-1. **Regressão da R2, achada ao reler `fase3-conteudo`:** a skill documenta
-   que o agente escreve `site.legal.termos.naoSubstitui` com texto
-   ESPECÍFICO DO NICHO do cliente (ex: "não substitui consulta médica" vs
-   "não substitui aconselhamento jurídico") durante a Fase 3 — mas o
-   `gerarBlocoLegal()` da R2 sempre sobrescrevia esse campo com uma frase
-   genérica fixa, toda vez que qualquer uma das 3 telas Privacidade fosse
-   salva. Ou seja: cliente astro com painel ativo perderia o texto do
-   nicho na primeira edição de QUALQUER campo legal, mesmo um não
-   relacionado (ex: só mudar o foro já apagava o texto médico/jurídico
-   específico). Corrigido: `LegalPainel` ganhou o campo `naoSubstitui`
-   (editável agora na tela Termos, textarea nova); se a tela não tem
-   valor, o gerador preserva o que já existe no `config/site.ts` em vez
-   de inventar texto genérico — nunca inventar é a regra de sempre.
-   Testado com build real: `PATCH` só de `foroCidade`/`foroUf` (sem tocar
-   em `naoSubstitui`) preservou o texto médico original palavra por
-   palavra.
-2. **Resíduo em `site-publicar`:** o Passo 2.1 (extração do frontmatter do
-   gerador WordPress) mandava mapear `coverImage → imagemHero`, mas o
-   campo real do schema `posts` é `imagemCapa` — `imagemHero` nem existe
-   na coleção, o Zod removeria o campo em silêncio (mesma classe de bug
-   que já quebrou o build antes, por isso a própria skill já tinha a
-   regra "nunca `imagemHero`" mais adiante, sem que a etapa 2.1 seguisse
-   essa regra). Corrigido: a etapa de extração agora já usa os nomes
-   finais do schema (`metaDescription`, `imagemCapa`), nunca um nome
-   intermediário que discorda da regra declarada na mesma skill.
-3. **Checagem nova no `guardiao_construtor.py`:** post com `autor:` ou
-   `categoria:` que não existe em `content/autores/`/`content/categorias/`
-   agora gera aviso (não bloqueia — o site já suporta autor/categoria
-   fora da coleção, mostrando sem link) na saída da Fase 3.
-4. **Áreas conferidas e já corretas, sem achado:** `site-atualizar`
-   (sincroniza `_astro/src/` inteiro via rsync, não hardcoda nome de
-   campo — robusta a mudança de schema por design); menus/formulários/
-   leads do painel (já usam `/api/menus`, `/api/formularios`, `/api/leads`
-   reais, não mock — confirma o item 7 do "Concluído"); caminho WordPress
-   (`blog-publicar` não referencia nomes de campo do schema Astro —
-   arquiteturalmente isolado, baixo risco).
+### Fase 0 — Contenção rápida
+17 correções pontuais e independentes: `LINKFLOW_DIR` sem default perigoso,
+reabrir post sem perder dado, login com autofill, flyout do menu, mídia
+(miniatura, `.meta.json`, prévia), formulário vazio, URLs, validação de
+CNPJ, home/intenção transacional, legendas únicas, agrupamento da
+auditoria. Commits `29830dc`, `392c85b`, `da6ad7d`.
 
-Build real: 22/22/21 páginas nos 3 temas (sem mudança de contagem — só
-correção de bug). `tsc --noEmit` e `npm run build` do painel sem erro.
-`py_compile` no `guardiao_construtor.py` limpo.
+### Fase 1 — Não destruir dado nem abrir brecha (segurança e integridade)
+- **1.1 / 1.1b** — módulo único de leitura/escrita de `config/site.ts`
+  (`painel/lib/site-config.ts`, scanner por caminho, preserva comentários e
+  campos não tocados); telas de Contato/Identidade/Redes/Integrações
+  gravando de verdade; campos restaurados (identidade, mídia, schema,
+  horários) que uma rodada anterior tinha removido por engano — **nunca
+  remover campo que "não estava salvando", repor com backing real** (regra
+  aprendida aqui). Motor: identidade/contato guiados 100% por config
+  (JSON-LD, logo, favicon, OG, credencial).
+- **Cobertura duplicada:** `areaAtendimento` virou fonte única de cidade
+  atendida em todas as páginas dos 6 layouts (antes cada layout tinha a
+  própria lista `regioes`/`cidades`); guardião avisa se sobrar lista
+  divergente.
+- **1.2** — as 3 telas de Privacidade (Política, Termos, Cookies) editam o
+  bloco `legal:` real **campo a campo**, nunca mais regeneram o bloco
+  inteiro (perderia texto do nicho escrito pelo agente na Fase 3). Cookies
+  analíticos/marketing só entram se a integração (GA/GTM/Pixel) existe de
+  verdade no site — `integracoesAtivas()` em `painel/lib/legal-site.ts` é a
+  fonte única disso, reusada depois no motor (Fase 6) e no SEO.
+- **1.3** — usuários e autorização por papel: criar só ao clicar em "Criar
+  usuário" (antes criava rascunho ao abrir a tela); trava do último
+  administrador; senha atual exigida para trocar a própria senha; sessão
+  revalidada a cada requisição; limite de 5 tentativas de login por 15 min;
+  matriz completa rota × papel (43 rotas).
+- **A03 (nível de página):** decisão do Jorge esclareceu que o "sem link
+  interno" acusado no teste real era o painel usando o grafo de links
+  planejado (que não via menu/rodapé/silo), não falta de link de verdade.
+  Corrigido: nível = **cliques reais a partir da home**, pelo grafo real de
+  links do HTML publicado (`painel/lib/links-internos.ts`).
 
-## Rodada R3 (concluída antes da R4)
+### Fase 2 — Ciclo de post e publicação
+A maior rodada de idas e vindas com feedback do Lucas. Resultado final:
+- **Criar/editar post:** nasce já válido (título provisório, rascunho, data,
+  autor); slug acompanha o título **só enquanto o post não é publicado**
+  (depois de publicado, mudar o slug é manual — padrão de mercado, evita
+  redirect a cada edição); renomear slug de post publicado **reescreve os
+  links internos** que apontavam para ele (relacionados, corpo de outros
+  posts/serviços, menu) e cria 301 automático, sem cadeia.
+- **Lixeira real**, fora de `content/`, com restaurar/excluir definitivo;
+  mover para a lixeira avisa antes se outro conteúdo referencia o post, e
+  limpa a referência em "relacionados" dos outros.
+- **Editor:** todos os campos que a tela mostra persistem de verdade
+  (seoTitle, resumo, capa+alt, canonical, noindex, FAQ — campos novos que o
+  motor Astro passou a aceitar nos 6 layouts, com título/canonical/robots/
+  FAQPage/card reais); Markdown (posts escritos por skill) é convertido para
+  o formato do editor ao abrir, sem estragar a estrutura; título é campo
+  próprio, separado do corpo; autor gravado sempre pelo **slug**, nunca id
+  de usuário (a lista mostra nome, não UUID).
+- **Posts relacionados** (automático por categoria ou escolha manual, até
+  3) e **conteúdo pilar** (link da post para a página de serviço que ele
+  apoia, com `isPartOf` no JSON-LD) — persistência ponta a ponta.
+- **Build/Publicar:** estado real em arquivo (nunca publicado / rodando /
+  ok / erro, com log completo e timeout de 5 min, sem dois builds
+  simultâneos); valida todos os posts contra o schema **antes** de buildar
+  — post inválido bloqueia sem tocar no site no ar; botão do topo virou
+  "Atualizar o site (N)", desabilitado sem pendência; contador de
+  pendências calculado no servidor (mtime de conteúdo vs. último build ok),
+  sobrevive a F5.
 
-**`robots.txt`/`llms.txt` desde o primeiro build.**
+### Fase 3 — Formulário de contato e leads
+- Site: script único de envio (validação, honeypot, UTM, estado
+  "Enviando…"), botão WhatsApp flutuante + "Continuar no WhatsApp" após
+  enviar, caixa de consentimento LGPD (exigida no formulário "contato"
+  padrão). Sem `painelUrl` configurado, o formulário avisa que ainda não
+  publica em vez de fingir sucesso.
+- Painel: `/api/submissao` com CORS restrito à origem do site, rate limit
+  por IP confiável (último item de `X-Forwarded-For`, não confia em
+  cabeçalho arbitrário), validação real; formulário "contato" semeado
+  sozinho se não existir; editor de formulários salva de verdade; tela de
+  Leads com dados reais, status, filtros, CSV, atualização automática a
+  cada 20 s (sem precisar de F5).
 
-**`robots.txt` e `llms.txt` agora nascem automaticamente no primeiro
-build**, antes de qualquer edição no painel — o guardião exigia os dois,
-mas só o painel os criava (cliente ficava sem eles até logar e salvar a
-tela).
+### Fase 4 — Mídia
+- Mídia grava em `$LINKFLOW_DIR/midia` (não mais `/var/www/<slug>/midia`);
+  upload por biblioteca inteira (arrastar em qualquer lugar da tela, não só
+  numa faixa), validação por conteúdo real do arquivo (magic bytes), nunca
+  SVG, sem sobrescrever, detecta duplicata; Excluir funciona (single e em
+  massa); **Substituir arquivo** troca o conteúdo mantendo o mesmo endereço
+  (atualiza todos os usos de uma vez, só aceita o mesmo tipo).
+- Metadados reais (quem enviou, quando), miniaturas sob demanda (`sharp`,
+  com fallback se não disponível), "usado em" calculado de verdade.
+- Infra: Nginx corrigido (`location ^~ /midia/` tem prioridade sobre a
+  regra de extensão — PDF/MP4/imagem paravam de dar 404), migração
+  automática da mídia legada, prévia local (`astro dev`) serve `/midia/`.
 
-- `_astro/integracoes/sitemap-canonico.mjs` (o mesmo hook `astro:build:done`
-  que já gera o `sitemap.xml`) agora também gera `dist/robots.txt` e
-  `dist/llms.txt` básicos, com o domínio real (lido dos mesmos canonicals
-  do sitemap) e a linha `Sitemap:` — **só quando o arquivo ainda não
-  existe**. Não precisou de config nova: o Astro já copia `public/` pra
-  `dist/` antes desse hook rodar, então `existsSync(dist/robots.txt)` já
-  diz sozinho se veio de `public/` (painel salvou um customizado — esse
-  prevalece) ou se o site nunca teve um (gera o básico).
-- `scripts/guardiao_construtor.py`: a checagem de `robots.txt`/`llms.txt`
-  saiu de `_astro/public/` (que agora pode legitimamente estar vazio) e
-  passou a conferir o **site publicado** (`/var/www/[slug]/`), igual ao
-  que já fazia com o `sitemap.xml`.
+### Fase 5 — Informação verdadeira em SEO e Páginas
+Painel deixou de inventar/inferir dado de SEO: `/api/paginas` lê o HTML
+**publicado de verdade** (title completo sem cortar, meta robots real,
+canonical, todos os blocos JSON-LD, H1, palavras, imagens sem alt) — cai na
+última prévia local só se ainda não houver publicação, e diz qual das duas
+origens usou. Auditoria com regra de aviso vs. erro (Money Page com
+`noindex` de propósito até a Fase 3 = aviso explicativo, não erro);
+Analytics só é cobrado se de fato configurado; contador de problemas
+estável (só calcula depois de todos os fetches terminarem). Tela "Dados
+estruturados" passou a mostrar o JSON-LD **real** emitido por cada
+página/post, não mais um "previsto" fantasioso gerado a partir dos dados do
+painel.
 
-Testado com build real, 2 cenários (`public/robots.txt` ausente vs.
-presente): ausente → `robots.txt`/`llms.txt` gerados com o domínio real e
-`Sitemap:` correto; presente (customizado) → preservado, nada sobrescrito.
-Lógica do guardião testada isoladamente para os casos site-publicado
-completo (0 erros) e site-publicado vazio (erro em `robots.txt`, aviso em
-`llms.txt`). `py_compile` e `node --check` limpos.
+### Fase 6 — Paridade com WordPress (a maior)
+- **Cores reais:** a aba Cores de Aparência lê as cores de verdade do
+  layout ativo (antes mostrava uma paleta genérica fixa) e virou consulta,
+  sem botão Salvar (não existe "cor do cliente" — a cor é do layout).
+- **Editor real de páginas:**
+  - **Serviços** (`content/servicos/*.md`): criar, editar, renomear com
+    redirect + cascata (limpa o `pilar:` de posts que citavam o serviço
+    renomeado/excluído), lixeira própria.
+  - **Páginas fixas** (home, sobre, contato): título e meta description
+    agora vêm de um bloco novo `site.paginas.<pagina>.{titulo,
+    metaDescription}` — o motor Astro já lê esse bloco nos 6 layouts (18
+    arquivos), com fallback ao texto fixo de sempre quando vazio.
+  - **Página-guia:** 4 dos 6 layouts têm uma página pilar própria do nicho
+    da demonstração (ex.: tema-04 → "Higienização de Estofados"), com texto
+    de corpo extenso ainda fixo no `.astro`. Estendido o mesmo mecanismo —
+    `site.paginas.guia` — para título/meta dessa página também; o card só
+    aparece no painel quando o layout ativo tem essa página. O corpo
+    (introdução, passos, FAQ) continua sendo trabalho do agente.
+  - Tela "Páginas" (o detalhe/`/paginas/<id>`) reconhece quando a página
+    aberta na verdade é um post, um serviço ou uma página fixa, e mostra um
+    botão "Editar" de verdade em vez de instruir a chamar o agente.
+  - Botão "Adicionar página" cria serviço de verdade (a opção de página
+    institucional livre continua "Em breve" — não implementada).
+- **Banner de cookies real no motor:** aparece só quando há cookie não
+  essencial cadastrado ou alguma integração configurada; Aceitar/Rejeitar
+  com o mesmo peso visual; "Personalizar" por categoria real do site;
+  scripts de GA4/GTM/Meta Pixel só carregam após consentimento (inclusive
+  em visita repetida já consentida, sem esperar novo clique). Depois
+  estendido: título, descrição, posição na tela e **registro de
+  consentimento** (POST público `/api/consentimentos`, IP nunca gravado em
+  claro — só hash) são reais, gravados em `site.cookieBanner` e lidos pelo
+  banner publicado — não ficam mais só na sessão do navegador do painel.
+  Sem tela de listagem dos registros ainda (próximo passo, se precisar).
+- **Desempenho:** causa raiz do excesso de chamadas de API a cada
+  navegação identificada (telas de Mídia/Usuários faziam fetch próprio
+  redundante ao que o store já tinha carregado) e corrigida, mais cache
+  curto (8 s) em Leads/Formulários; bug real de texto digitado sumindo por
+  causa de dado assíncrono tardio, corrigido no editor de formulários;
+  Enter na busca abre o primeiro resultado. A trava de ~30 s relatada em
+  Leads **não foi reproduzida nem confirmada como resolvida** — a suspeita
+  mais forte é I/O de arquivo bloqueante (`painel/lib/dados.ts`) somada ao
+  excesso de chamadas; precisa de teste ao vivo para confirmar.
+- **Foto de perfil como avatar:** círculo de usuário/autor mostra a foto de
+  verdade quando existe (antes sempre mostrava só iniciais), com iniciais
+  como reserva. Aplicado em lista de usuários, autores e rodapé do menu.
+- **Box do autor no fim do artigo:** completo (todas as redes cadastradas,
+  especialidades, formação, alt real da foto); removido o WhatsApp da
+  **empresa** que aparecia com rótulo "de \<autor\>" (contato falso); "Nenhum"
+  (quando o autor não tem conselho profissional) deixou de aparecer como
+  credencial.
 
-## Rodada R2 (concluída antes da R3)
+**Todas as fases foram validadas por build real** (`testar_promocao.sh`,
+contagens de página conferidas), `tsc --noEmit` + `npm run build` do
+painel, e testes de integração por curl/Node contra `next start` — nunca só
+"compilou sem erro". Uma cópia de teste local descartável foi usada ao
+longo de toda a sessão (`D:\LFSoft\Mentoria\_teste-fase1`, fora do repo,
+painel em `localhost:3210` + site em `localhost:4321`, admin
+`[EMAIL-REMOVIDO]` / `[SENHA-REMOVIDA]`); **pode não existir mais** numa sessão
+nova — recriar copiando `_astro/` + promovendo um tema + `npm run dev` nos
+dois lados, se precisar retomar teste manual.
 
-**As 3 telas Privacidade (Política, Termos, Cookies) agora gravam de
-verdade no `site.legal` que o site publica** — antes eram só estado local
-do React, nunca chegavam a lugar nenhum (nem no `config/site.ts`, nem
-persistido entre sessões).
+---
 
-- `dados/legal.json` (via `lib/dados.ts`, mesmo padrão de leads/formulários)
-  é a fonte de verdade da UI — as 3 telas leem/gravam nele. `config/site.ts`'s
-  `legal: {...}` passou a ser um **artefato gerado**: `painel/lib/legal.ts`
-  (`gerarBlocoLegal`) monta o bloco inteiro a cada `PATCH /api/config` com
-  `legalPainel`, e o bloco é substituído por inteiro (contagem de chaves,
-  não regex guloso — evita parar na primeira `}` errada dentro dos arrays).
-- Decisões de produto confirmadas com o Lucas antes de implementar
-  (mapeamento não era 1:1, teria feito documento legal errado se eu
-  adivinhasse):
-  - `legal.cookies[]` é sintetizado das telas Política (base legal +
-    retenção por categoria) e Cookies (texto de finalidade por categoria).
-  - `legal.transferenciaInternacional` (frase completa no schema do site) é
-    gerada a partir do toggle + campo "países/empresas" da tela Política.
-  - `legal.termos.foro` (`{cidade, uf}`) — a tela Termos trocou o campo
-    livre "jurisdição" por 2 campos (`foroCidade`/`foroUf`), 1:1 com o schema.
-  - Datas (`atualizadaEm`, `vigenciaDesde`) viraram `<input type="date">`
-    nas 2 telas — garante ISO (`yyyy-mm-dd`) sem parser frágil de "DD/MM/AAAA".
-- `formularios[]` do documento vem de `dados/formularios.json` de verdade
-  (lido no servidor a cada PATCH), nunca inventado nem editado na tela.
-- `controlador.razaoSocial` vem de `site.nome` (a tela já tratava esse
-  campo como espelho readonly do nome do site — não criei campo novo).
-- Nenhum campo vazio vira texto inventado — igual ao resto do `site.legal`,
-  campo vazio bloqueia a publicação (regra já existente do `ConteudoLegal`).
-- Botão "Salvar" novo nas telas Política e Termos (não existia — só a tela
-  Cookies tinha, e só salvava local). As 3 agora persistem no servidor.
+## Testes (guardados em `scripts/testes/`)
 
-Build real: `tsc --noEmit` e `npm run build` do painel sem erro. Teste
-fim-a-fim: `PATCH /api/config` com dados reais de teste (CNPJ, endereço,
-foro, versão, transferência internacional, textos de cookie) → conferido
-o `config/site.ts` regenerado campo a campo → `npm run build` do site →
-HTML de `/politica-de-privacidade` e `/termos-de-uso` conferido com os
-dados novos (CNPJ, endereço, versão, foro cidade/UF, finalidade e base
-legal de cada cookie), sem "Publicação bloqueada", com `exemplo: true`
-preservado.
+- `bash scripts/testes/testar_promocao.sh <tema|sem-promocao> <dir_de_build>`
+  — cópia isolada, promoção, build real, contagens e vazamento de
+  `/tema-0X` (cabeçalho explica como criar o `dir_de_build`). Números
+  esperados no cabeçalho.
+- `python scripts/testes/testar_guardiao.py` — cenários das 4 fases do
+  guardião (27 no total, incluindo os de `painelUrl` da Fase 3).
+- `python scripts/testes/testar_nginx_midia.py` — reimplementa a regra de
+  seleção de `location` do Nginx sobre o bloco gerado por
+  `novo-cliente.sh`, sem precisar de um Nginx real.
+- `node --experimental-strip-types scripts/testes/testar_site_config.ts` —
+  263 asserções do módulo de leitura/escrita de `site.ts` contra os
+  configs reais.
+- `node --experimental-strip-types scripts/testes/testar_legal_site.ts` —
+  o mesmo para o bloco `legal:` (edição campo a campo, nunca regenera).
+- Painel: `tsc --noEmit` + `npm run build` numa cópia (nunca a pasta real);
+  APIs testadas com `x-api-key` e por sessão. **Nenhuma tela foi vista
+  clicando de verdade num navegador durante o plano de QA** — validação de
+  UI ficou por conta do Lucas testando manualmente a cada rodada.
 
-## Rodada R1 (concluída antes da R2)
+## Lições operacionais (não repetir)
 
-**Página de categoria `/<slug>` nos 3 temas.**
-
-**Página de categoria `/<slug>` nos 3 temas**, mesmo padrão da rodada de autor:
-- Coleção `categorias` (+T3/T4): `nome`, `descricao`, `seoTitle`,
-  `metaDescription`, `imagem`, `ordem`, `gerenciadoPor`. Post referencia
-  pelo slug em `categoria:`; `_astro/src/lib/categorias.ts` resolve (aceita
-  nome como reserva, para posts antigos) e limita a página aos 12 artigos
-  mais recentes, sem paginação (decisão do Jorge).
-- Posts de exemplo dos 3 temas convertidos pra slug; categorias criadas a
-  partir dos nomes que eles já usavam (ex: base → `prevencao`,
-  `endocrinologia`, `saude-mental`).
-- Rota em `pages/[slug].astro` (raiz, junto com serviço e artigo — nunca
-  `/categoria/<slug>`), com prioridade página fixa > serviço > categoria >
-  artigo e aviso no log em toda colisão. Componente
-  `CategoriaDetalhe(T3/T4).astro`: cabeçalho, artigos, link `/blog`. Sem
-  artigo publicado, sai `noindex`. JSON-LD `CollectionPage` + `ItemList` +
-  breadcrumb (Home › Blog › Categoria).
-- Artigo: selo de categoria virou link pra página dela; breadcrumb do
-  artigo continua Home › Blog › Artigo (decisão do Jorge — a categoria não
-  entra no breadcrumb do artigo, só o selo linka).
-- Painel: `lib/sync-categorias.ts` (chamado no POST/PATCH/DELETE de
-  `/api/categorias`, mesmo padrão de `sync-autores.ts`), `urlCategoria()`
-  em `urls-publicas.ts`, botão "Ver" na tela de categoria, categoria de
-  volta no `llms.txt`/`indexaveis`/dados estruturados
-  (`gerarGraphCategoria`), e POST/PATCH de posts convertendo
-  `categoriaId` ↔ slug.
-- Colisão de slug: `guardiao_construtor.py` bloqueia colisão entre
-  serviço/post/categoria/página fixa na saída; o painel avisa (não
-  bloqueia) ao salvar categoria com slug colidindo
-  (`avisoColisaoSlug` em `sync-categorias.ts`).
-- `scripts/vps/novo-cliente.sh` limpa `content/categorias/` no cliente novo.
-- Skill `site-publicar` atualizada: `categoria:` agora é o slug de um
-  arquivo existente em `content/categorias/`, com a mesma regra de "criar
-  se não existir" que já valia pro autor. **`fase3-conteudo` não foi
-  tocada** — ela não gera posts de blog (isso é `site-publicar`), não tem
-  nenhuma referência a `categoria:` no frontmatter, então a instrução de
-  atualizá-la não se aplicava.
-- Bug encontrado e corrigido durante a implementação: `const RESERVADOS`
-  declarado no escopo do módulo de `[slug].astro`, fora de
-  `getStaticPaths`, quebrava o build com `"RESERVADOS is not defined"` — o
-  Astro isola `getStaticPaths` num chunk próprio de pré-renderização e não
-  inclui `const` do escopo do módulo declarada fora da função. Movido pra
-  dentro da função nos 3 temas.
-
-Build real: **22/22/21** páginas e URLs no sitemap (base/tema-03/tema-04 —
-19 da rodada de autor + 3/3/2 categorias novas). Testado com build real:
-categoria com artigo (indexável, JSON-LD, selo linkando), categoria vazia
-(`noindex`), colisão de slug categoria×serviço (serviço vence, aviso no
-log, build não quebra), criação/edição de categoria e post pelo painel com
-sincronização e round-trip `categoriaId`↔slug confirmados. `tsc --noEmit`
-e `npm run build` do painel sem erro.
-
-## Rodada de autor (concluída antes da R0)
-
-**Páginas de autor `/autor/<slug>` nos 3 temas.**
-Resumo:
-- Coleção `autores` (+T3/T4). O post referencia o autor pelo slug. O helper
-  `_astro/src/lib/autores.ts` resolve o autor (aceita nome, para posts
-  antigos) e separa "Seleção do autor" (3) de "Últimos artigos" (7).
-- Bloco `components/blocos/PerfilAutor.astro` + `pages/autor/[slug].astro`
-  (e as versões `tema-03/`, `tema-04/`). JSON-LD `ProfilePage` + `Person`.
-  Autor sem artigo sai `noindex`.
-- Artigos ligam ao perfil. O tema base ganhou JSON-LD `BlogPosting`.
-- Painel: `lib/sync-autores.ts`, chamado em `salvarUsuarios()`, grava
-  `content/autores/<slug>.md` com `gerenciadoPor: painel`. Converte o id do
-  usuário (painel) para o slug (site) nas rotas de posts.
-- Bugs corrigidos nesta rodada: posts do tema-03/04 exigiam
-  `autorCargo`/`autorBio`; as skills `site-publicar` e `fase2-site-astro`
-  gravavam `descricao` em vez de `metaDescription`, o que quebrava o build.
-- Números esperados no build: **19 / 19 / 19** páginas (base, tema-03, tema-04).
+- **`taskkill /IM node.exe` sem filtro mata TUDO**, inclusive o painel/site
+  de teste que o Lucas está usando para validar. Sempre matar processo de
+  teste por PID/porta específica.
+- **Junction de `node_modules` quebra o webpack do Next** ("module is not a
+  function"). Sempre copiar de verdade (`cp -r`), nunca linkar.
+- **Misturar `next build` (produção) e `next dev` na mesma pasta `.next`**
+  quebra os dois — apagar `.next` antes de trocar de modo.
+- **Terminal Git Bash no Windows corrompe acento em `curl -d '...texto com
+  ç, ã...'`** (o shell mangla a codificação antes de chegar no `-d`). Para
+  testar payload com acento, escrever um arquivo `.json` em UTF-8 de
+  verdade (Python `open(..., encoding="utf-8")`) e usar `curl --data-binary
+  @arquivo`. Isso é só do terminal de teste — o navegador do usuário sempre
+  envia UTF-8 correto, então não é bug de produto.
+- **Cada agente em paralelo precisa de fronteira de arquivo explícita** —
+  nesta sessão, várias rodadas usaram 2 a 4 agentes simultâneos em áreas
+  diferentes do painel/motor; sempre listar exatamente quais arquivos cada
+  um pode tocar, e revisar/testar o conjunto (não confiar no relatório
+  isolado de cada um) antes de commitar.
+- **YAML:** data sem aspas (`2026-09-25`) vira objeto Date. O painel grava
+  entre aspas; qualquer gerador novo de frontmatter precisa fazer o mesmo.
+- **Python do VPS:** versão não garantida (vem do `apt`). Não usar recursos
+  do 3.9+ (`removeprefix`, `write_text(newline=)`).
 
 ## Pendências, em ordem
 
-1. **R5 — teste de ponta a ponta na VPS de teste** (pulada a pedido do Lucas em 25/09/2026, não por
-   falha). Agora precisa cobrir também: o instalador novo (`setup.sh`, `novo-cliente.sh`,
-   `ssl-cliente.sh`, escolha de porta), a cópia com `tar` (sem `node_modules`), e o fluxo em
-   marcos até o painel entregue. **Pedir autorização ao Lucas antes de tocar no VPS.**
-2. **Relatório QA do painel** (`relatorios/Relatorio_QA_Painel_SiteFlow.pdf`) — só depois do 3.
-4. Limites conhecidos, ainda sem correção:
-   - `hashtags`/`buscasFrequentes` dos configs apontam direto para slugs de post e de serviço; se o
-     post virar rascunho, o link fica morto (vale para o tema-03 também).
-   - `public/tema-0X.json` ainda descreve as rotas antigas (`/tema-0X/servicos/[id]`); só informativo.
-   - Tela Layout do painel: o efeito no navegador não foi exercitado.
-   - Login do painel é renderizado só no cliente (já era assim antes desta rodada).
+1. **R5 — teste de ponta a ponta no VPS de teste.** Nunca feito. Precisa
+   cobrir, além do que já cobria antes do plano de QA: o Nginx com `^~
+   /midia/` (bloco do cliente Torrez precisa ser atualizado à mão antes ou
+   durante o teste), `painelUrl` preenchido na publicação (bloqueia sem
+   ele), o formulário do site enviando lead de verdade ao painel publicado,
+   o banner de cookies e o registro de consentimento num domínio real, o
+   editor de posts/serviços publicando de ponta a ponta. **Pedir
+   autorização ao Lucas antes de tocar no VPS.**
+2. **Suíte Playwright**, autorizada mas não criada — cobriria os fluxos que
+   só foram validados por API/build nesta sessão.
+3. **Página institucional livre** (fora de serviço) — botão existe, mostra
+   "Em breve".
+4. **Corpo de texto livre** das páginas fixas e da página-guia — só
+   título/meta viraram editáveis; o corpo depende de mudança maior no
+   motor (onde renderizar um texto livre dentro do layout de cada tema).
+5. **Tela de consentimentos registrados** (`dados/consentimentos.json`) —
+   o registro passou a acontecer de verdade (Fase 6), mas não há UI para
+   consultá-los no painel.
+6. **Trava de ~30 s em Leads (A44 do relatório de QA)** — não reproduzida
+   nem confirmada como resolvida; suspeita é I/O síncrono em
+   `painel/lib/dados.ts` somado ao excesso de chamadas (já reduzido).
+   Precisa de teste ao vivo.
+7. **`painel/lib/dados.ts` usa `fs.readFileSync`/`writeFileSync` síncronos**
+   em toda chamada de API de leads/formulários/tarefas — risco de
+   travamento sob carga; converter para async é mudança maior, ainda não
+   feita.
+8. **Corrida em `usuarios.json`** — a escrita é atômica, mas não há trava
+   contra leitura-modificação-gravação simultânea de duas requisições.
+9. **Permissão de arquivo:** `usuarios.json` (com hash de senha) fica
+   legível por outros usuários locais no servidor.
+10. **`/api/auth/verificar-senha`** não tem limite de tentativas (exige
+    sessão, mas dá para forçar a própria senha).
+11. **`scripts/criar-admin.mjs`** é legado, incompatível com o painel
+    atual (algoritmo de hash diferente, caminho de gravação diferente) —
+    o admin que ele cria provavelmente não consegue logar. Considerar
+    remover ou reescrever.
+12. Limites conhecidos de antes do plano de QA, ainda sem correção:
+    `hashtags`/`buscasFrequentes` dos configs apontam direto para slugs de
+    post/serviço (link morto se o post virar rascunho); `public/tema-0X.json`
+    ainda descreve rotas antigas (só informativo).
 
 ## VPS de teste
 
 `[IP-REMOVIDO]`, porta `22022`, `LINKFLOW_DIR: /opt/linkflow-teste`,
-`LINKFLOW_SLUG: torrez-desentupidora`.
+`LINKFLOW_SLUG: torrez-desentupidora`. **Pedir autorização ao Lucas antes de
+qualquer ação no VPS.** Critério de "R5 concluído": Torrez recriada (ou
+atualizada) do zero pelo fluxo do agente, site e painel no ar, Nginx com o
+bloco de mídia correto, formulário do site entregando lead de verdade no
+painel, um post publicado pelo painel sem intervenção manual.
+
+---
+
+## Histórico anterior ao plano de QA (resumo)
+
+Trabalho concluído antes do plano de QA do painel, ainda válido, condensado
+aqui (detalhe completo no `git log` de `bc70a98` para trás):
+
+- **Relatório de Testes 3** (9 erros, `relatorios/Relatorio-Testes-3-LinkFlow-19-09.docx`):
+  instalador de VPS mais seguro (sem `apt upgrade`, porta por `ss`/`.env`,
+  SSL só onde o DNS aponta, sem e-mail inventado); auditoria de SEO lendo
+  links reais do `dist/` em vez do plano; guardião em 4 fases
+  (construção/prévia/publicação/saída); fluxo em 3 marcos com prévia local
+  antes de qualquer VPS; recuperação de senha via SSH (skill `painel-senha`).
+- **3 layouts novos** (05 Amparo, 06 Hidroponto, 07 Vereda com pilar
+  `/planos`), convertidos dos zips de referência ao padrão do projeto;
+  catálogo de layouts (`/catalogo`, fonte única em
+  `catalogo-layouts.json`); tela "Layout" no painel.
+- **Rodada de autor:** páginas `/autor/<slug>` nos 3 temas originais, com
+  perfil, seleção de artigos e JSON-LD `Person`.
+- **R0-R4** (pós-Relatório 3, pré-plano de QA): autor sumido nos cards de
+  post; página de categoria `/<slug>` nos 3 temas; Privacidade do painel
+  ligada a `site.legal` de verdade (evoluído mais a fundo na Fase 1.2 do
+  plano de QA depois); `robots.txt`/`llms.txt` nascendo no primeiro build;
+  varredura que achou e corrigiu 2 regressões reais (texto do nicho sendo
+  sobrescrito, campo `imagemHero` inexistente no schema).
+
+Todas essas rodadas foram substituídas ou aprofundadas pelo plano de QA do
+painel na parte em que se sobrepõem (principalmente Privacidade e SEO) —
+o texto acima é só para entender a origem histórica, não para retrabalhar.
