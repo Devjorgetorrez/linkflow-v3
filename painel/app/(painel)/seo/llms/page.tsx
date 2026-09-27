@@ -185,7 +185,7 @@ export default function LlmsPage() {
   // Páginas reais do site (dist/), nunca o mock do store: o llms.txt gerado
   // aqui é PUBLICADO no site do cliente (api/llms grava em public/llms.txt).
   const { paginas } = usePaginasReais();
-  const [BASE_URL, setBaseUrl] = useState("https://seudominio.com.br");
+  const [BASE_URL, setBaseUrl] = useState("https://[DOMINIO]");
   const URL_PUBLICADO = `${BASE_URL}/llms.txt`;
 
   useEffect(() => {

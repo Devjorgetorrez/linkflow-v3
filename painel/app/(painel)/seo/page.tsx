@@ -13,10 +13,8 @@ import {
 import Link from "next/link";
 
 import { cn } from "@/lib/utils";
-import { useStore } from "@/lib/store";
-import { gerarIndexaveis } from "@/motor/indexaveis";
-import type { GrafoLinks } from "@/lib/links-internos";
-import { auditarTecnica, type Problema, type Severidade } from "@/motor/auditoria-tecnica";
+import { carregarAuditoria, type ResultadoAuditoria } from "@/lib/auditoria-seo";
+import type { Problema } from "@/motor/auditoria-tecnica";
 
 /* ------------------------------------------------------------------ */
 
@@ -116,7 +114,7 @@ function BlocoSeveridade({
   problemas,
   vazio,
 }: {
-  cor: "vermelho" | "ambar" | "cinza";
+  cor: "vermelho" | "ambar" | "cinza" | "azul";
   icone: React.ElementType;
   rotulo: string;
   subtitulo: string;
@@ -137,6 +135,12 @@ function BlocoSeveridade({
       item: "border-l-2 border-[#f59e0b]/40",
       icone: "text-[#d97706]",
       grupo: "border-l-2 border-[#f59e0b]/20 bg-[#f59e0b]/5",
+    },
+    azul: {
+      header: "bg-primary/10 border-primary/30 text-primary",
+      item: "border-l-2 border-primary/40",
+      icone: "text-primary",
+      grupo: "border-l-2 border-primary/20 bg-primary/5",
     },
     cinza: {
       header: "bg-[var(--surface-2)] border-[var(--line)] text-ink-muted",
@@ -300,68 +304,84 @@ function CartaoCWV() {
 
 /* ------------------------------------------------------------------ */
 
-const COR_SEVERIDADE: Record<Severidade, "vermelho" | "ambar" | "cinza"> = {
-  bloqueia: "vermelho",
-  prejudica: "ambar",
-  verificar: "cinza",
-};
+/* ------------------------------------------------------------------ */
+
+/** Integrações: estado neutro. "Não configurado" não é falha nem sucesso. */
+function CartaoIntegracoes({ r }: { r: ResultadoAuditoria }) {
+  const i = r.integracoes;
+  const analiticoNoHtml = r.rastreadoresNoHtml.filter((n) => !/pixel/i.test(n));
+  const linhas: { nome: string; ativo: boolean }[] = [
+    { nome: "Google Analytics / Tag Manager", ativo: !!i?.analiticos || analiticoNoHtml.length > 0 },
+    { nome: "Meta Pixel", ativo: !!i?.marketing || r.rastreadoresNoHtml.some((n) => /pixel/i.test(n)) },
+  ];
+  return (
+    <div className="overflow-hidden rounded-[var(--radius)] border border-[var(--line)]">
+      <div className="flex items-center gap-2.5 border-b border-[var(--line)] bg-[var(--surface-2)] px-4 py-3">
+        <Info size={15} className="text-[var(--ink-muted)]" />
+        <span className="text-sm font-semibold text-[var(--ink)]">Medição e rastreamento</span>
+        <span className="text-xs text-[var(--ink-muted)]">informativo, não conta como problema</span>
+      </div>
+      <div className="divide-y divide-[var(--line)]">
+        {i === null ? (
+          <p className="px-4 py-3 text-sm text-[var(--ink-muted)]">
+            Não foi possível ler as configurações do site, então não dá para dizer o que está configurado.
+          </p>
+        ) : (
+          linhas.map((l) => (
+            <div key={l.nome} className="flex items-center justify-between gap-3 px-4 py-2.5">
+              <span className="text-sm text-[var(--ink)]">{l.nome}</span>
+              <span className="rounded bg-[var(--surface-2)] px-2 py-0.5 text-[11px] font-medium text-[var(--ink-muted)]">
+                {l.ativo ? "configurado" : "não configurado"}
+              </span>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+
+function noPlural(n: number, um: string, varios: string) {
+  return `${n} ${n === 1 ? um : varios}`;
+}
 
 export default function SeoVisaoGeral() {
-  const { posts: postsMock, paginas: paginasMock, categorias, autores, redirects: redirectsMock, robots: robotsMock } = useStore();
-  const [posts, setPosts] = useState<typeof postsMock>([]);
-  const [paginas, setPaginas] = useState<typeof paginasMock>([]);
-  const [redirects, setRedirects] = useState(redirectsMock);
-  const [robots, setRobots] = useState(robotsMock);
-  const [DOMAIN, setDomain] = useState("");
-  // Grafo real de links (HTML do site gerado). null = ainda não carregou ou
-  // não há site gerado: a auditoria não verifica órfãs sem ele.
-  const [linksReais, setLinksReais] = useState<GrafoLinks | null>(null);
+  // Tudo é buscado aqui e o resultado só existe DEPOIS de todos os fetches
+  // terminarem (lib/auditoria-seo.ts): o contador nasce uma vez e não muda.
+  const [resultado, setResultado] = useState<ResultadoAuditoria | null>(null);
 
   useEffect(() => {
-    fetch("/api/links-internos", { cache: "no-store" })
-      .then(r => r.json())
-      .then(data => { if (data.ok && data.disponivel) setLinksReais(data.links); })
-      .catch(console.error);
-    fetch("/api/posts")
-      .then(r => r.json())
-      .then(data => {
-        if (data.ok && Array.isArray(data.posts)) setPosts(data.posts);
-        else setPosts(postsMock);
-      })
-      .catch(() => setPosts(postsMock));
-    fetch("/api/paginas")
-      .then(r => r.json())
-      .then(data => {
-        if (data.ok && Array.isArray(data.paginas)) setPaginas(data.paginas);
-        else setPaginas(paginasMock);
-      })
-      .catch(() => setPaginas(paginasMock));
-    fetch("/api/redirects")
-      .then(r => r.json())
-      .then(data => { if (data.ok && Array.isArray(data.redirects)) setRedirects(data.redirects); })
-      .catch(console.error);
-    fetch("/api/robots")
-      .then(r => r.json())
-      .then(data => { if (data.ok && data.conteudo) setRobots(data.conteudo); })
-      .catch(console.error);
-    fetch("/api/config")
-      .then(r => r.json())
-      .then(data => { if (data.ok && data.config?.dominioHost) setDomain(data.config.dominioHost); })
-      .catch(console.error);
+    let ativo = true;
+    carregarAuditoria(async (url) => {
+      const r = await fetch(url, { cache: "no-store" });
+      return r.json();
+    }).then((r) => {
+      if (ativo) setResultado(r);
+    });
+    return () => {
+      ativo = false;
+    };
   }, []);
 
-  const { bloqueia, prejudica, verificar, totalProblemas, temGSC } = useMemo(() => {
-    const indexaveis = gerarIndexaveis({ posts, paginas, categorias, autores, dominio: DOMAIN, linksReais });
-    const lista = auditarTecnica(indexaveis, redirects, robots, linksReais !== null);
-
+  const { avisos, bloqueia, prejudica, verificar, totalProblemas, temGSC } = useMemo(() => {
+    const lista = resultado?.problemas ?? [];
+    const b = lista.filter((p) => p.severidade === "bloqueia");
+    const pr = lista.filter((p) => p.severidade === "prejudica");
+    const v = lista.filter((p) => p.severidade === "verificar");
     return {
-      bloqueia: lista.filter((p) => p.severidade === "bloqueia"),
-      prejudica: lista.filter((p) => p.severidade === "prejudica"),
-      verificar: lista.filter((p) => p.severidade === "verificar"),
-      totalProblemas: lista.length,
+      avisos: lista.filter((p) => p.severidade === "aviso"),
+      bloqueia: b,
+      prejudica: pr,
+      verificar: v,
+      totalProblemas: b.length + pr.length + v.length,
       temGSC: lista.some((p) => p.procedencia === "requer_search_console"),
     };
-  }, [posts, paginas, categorias, autores, redirects, robots, DOMAIN, linksReais]);
+  }, [resultado]);
+
+  const carregando = resultado === null;
+  const parcial = (resultado?.falhas.length ?? 0) > 0;
 
   return (
     <div className="min-h-screen bg-[var(--surface)]">
@@ -369,9 +389,14 @@ export default function SeoVisaoGeral() {
       <div className="sticky top-0 z-20 border-b border-[var(--line)] bg-[var(--surface)] px-6 py-4">
         <h1 className="text-base font-semibold text-[var(--ink)]">SEO — Visão geral</h1>
         <p className="text-xs text-[var(--ink-muted)]">
-          {totalProblemas === 0
-            ? "Nenhum problema identificado"
-            : `${totalProblemas} problema${totalProblemas !== 1 ? "s" : ""} identificado${totalProblemas !== 1 ? "s" : ""}`}
+          {carregando
+            ? "Verificando o site…"
+            : (totalProblemas === 0
+                ? "Nenhum problema identificado"
+                : noPlural(totalProblemas, "problema identificado", "problemas identificados")) +
+              (avisos.length > 0 ? ` · ${noPlural(avisos.length, "aviso", "avisos")}` : "") +
+              (parcial ? " (contagem parcial: veja o que não foi verificado abaixo)" : "") +
+              (resultado?.origemRotulo ? ` · lido de: ${resultado.origemRotulo}` : "")}
         </p>
         <p className="mt-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[10.5px] text-[var(--ink-muted)]">
           <span className="rounded bg-[var(--surface-2)] px-1.5 py-0.5 font-medium uppercase tracking-wide">
@@ -391,14 +416,40 @@ export default function SeoVisaoGeral() {
       </div>
 
       <div className="mx-auto max-w-3xl space-y-4 px-6 py-6">
+        {carregando && (
+          <p className="rounded-[var(--radius)] border border-[var(--line)] px-4 py-6 text-center text-sm text-[var(--ink-muted)]">
+            Lendo as páginas, os links e as configurações do site. O resumo aparece quando terminar.
+          </p>
+        )}
+
+        {resultado && resultado.falhas.length > 0 && (
+          <div className="rounded-[var(--radius)] border border-[#f59e0b]/40 bg-[#f59e0b]/10 px-4 py-3 text-sm text-[#b45309]">
+            {resultado.falhas.map((f) => (
+              <p key={f}>{f}</p>
+            ))}
+          </div>
+        )}
+
+        {resultado && (<>
         <BlocoSeveridade
           cor="vermelho"
           icone={AlertCircle}
           rotulo="Bloqueia indexação"
           subtitulo="Resolve primeiro"
           problemas={bloqueia}
-          vazio="Nenhum problema que bloqueie indexação encontrado."
+          vazio="Nenhuma página com erro de indexação encontrado."
         />
+
+        {avisos.length > 0 && (
+          <BlocoSeveridade
+            cor="azul"
+            icone={Info}
+            rotulo="Fora do Google por enquanto"
+            subtitulo="De propósito, até o conteúdo real ser liberado"
+            problemas={avisos}
+            vazio=""
+          />
+        )}
 
         <BlocoSeveridade
           cor="ambar"
@@ -418,10 +469,13 @@ export default function SeoVisaoGeral() {
           vazio="Nenhum item pendente de verificação."
         />
 
+        <CartaoIntegracoes r={resultado} />
+
         <CartaoCWV />
+        </>)}
 
         <p className="pb-2 text-center text-xs text-[var(--ink-muted)]">
-          Esta análise usa os dados do painel. Para auditorias completas use Google Search Console,
+          Esta análise lê o HTML do site e as configurações do painel. Para auditorias completas use Google Search Console,
           Lighthouse e PageSpeed Insights.
         </p>
       </div>

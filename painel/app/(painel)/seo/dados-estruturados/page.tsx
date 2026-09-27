@@ -327,16 +327,16 @@ export default function DadosEstruturadosPage() {
       .then(r => r.json())
       .then(data => {
         if (data.ok && Array.isArray(data.paginas)) setPaginas(data.paginas);
-        else setPaginas(paginasMock);
+        else setPaginas([]);
       })
-      .catch(() => setPaginas(paginasMock));
+      .catch(() => setPaginas([]));
     fetch("/api/posts")
       .then(r => r.json())
       .then(data => {
         if (data.ok && Array.isArray(data.posts)) setPosts(data.posts);
-        else setPosts(postsMock);
+        else setPosts([]);
       })
-      .catch(() => setPosts(postsMock));
+      .catch(() => setPosts([]));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [expandido, setExpandido] = useState<{
@@ -355,7 +355,7 @@ export default function DadosEstruturadosPage() {
 
   /* ── Passo 1: tipo do site ── */
   const homePage = paginas.find((p) => p.url === "/");
-  const tipoProfissional = derivarTipoProfissional(homePage?.schema);
+  const tipoProfissional = derivarTipoProfissional(homePage?.real ? homePage.real.schemaTipos.join(" ") : homePage?.schema);
   const passo1Status: StatusPasso = tipoProfissional ? "ok" : "pendente";
 
   /* ── Passo 2: autores e credenciais ── */

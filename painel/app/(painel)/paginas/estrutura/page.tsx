@@ -13,12 +13,11 @@ import {
   TreeDeciduous,
 } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 
 import { cn } from "@/lib/utils";
-import { useStore } from "@/lib/store";
-import { INTENCAO_DETALHE } from "@/lib/intencao";
-import type { Intencao, Pagina, TipoPagina } from "@/mock/types";
+import { usePaginasReais } from "@/lib/usePaginasReais";
+import type { Pagina, TipoPagina } from "@/mock/types";
 
 /* ---------------------------------------------------------------- helpers */
 
@@ -37,16 +36,6 @@ const TIPO_COR: Record<TipoPagina, string> = {
   supporting: "text-success",
   institucional: "text-ink-muted",
 };
-
-const INTENCAO_COR: Record<Intencao, string> = {
-  T: "bg-danger/10 text-danger border-danger/30",
-  C: "bg-accent/10 text-accent border-accent/30",
-  I: "bg-primary/10 text-primary border-primary/30",
-  N: "bg-success/10 text-success border-success/30",
-};
-
-/* LinkFlow targets (mocked) */
-const METAS_INTENCAO: Record<Intencao, number> = { T: 4, C: 2, I: 3, N: 2 };
 
 interface NoPagina {
   pagina: Pagina;
@@ -85,7 +74,7 @@ function calcularDiagnosticos(paginas: Pagina[]): Diagnostico[] {
   if (moneyProfundas.length > 0) {
     diags.push({
       tipo: "erro",
-      mensagem: "Money pages com nível > 2 (muito enterradas na arquitetura)",
+      mensagem: "Money pages a mais de 2 cliques da home (muito enterradas)",
       paginas: moneyProfundas.map((p) => p.titulo),
     });
   }
@@ -94,27 +83,9 @@ function calcularDiagnosticos(paginas: Pagina[]): Diagnostico[] {
   if (orfas.length > 0) {
     diags.push({
       tipo: "erro",
-      mensagem: "Páginas sem links internos recebidos",
+      mensagem: "Páginas que nenhuma outra página linka (órfãs)",
       paginas: orfas.map((p) => p.titulo),
     });
-  }
-
-  const clustersComPaginas = new Map<string, Pagina[]>();
-  for (const p of paginas) {
-    if (p.cluster) {
-      if (!clustersComPaginas.has(p.cluster)) clustersComPaginas.set(p.cluster, []);
-      clustersComPaginas.get(p.cluster)!.push(p);
-    }
-  }
-  for (const [cluster, pags] of clustersComPaginas) {
-    const temPilar = pags.some((p) => p.tipo === "pilar");
-    if (!temPilar) {
-      diags.push({
-        tipo: "aviso",
-        mensagem: `Cluster "${cluster}" sem página pilar`,
-        paginas: [],
-      });
-    }
   }
 
   const pilaresEncontrados = paginas.filter((p) => p.tipo === "pilar");
@@ -137,30 +108,10 @@ function calcularDiagnosticos(paginas: Pagina[]): Diagnostico[] {
 /* ---------------------------------------------------------------- page */
 
 export default function EstruturaPaginasPage() {
-  const { paginas: paginasMock } = useStore();
-  const [paginas, setPaginas] = useState<typeof paginasMock>([]);
-
-  useEffect(() => {
-    fetch("/api/paginas")
-      .then(r => r.json())
-      .then(data => {
-        if (data.ok && Array.isArray(data.paginas)) {
-          setPaginas(data.paginas);
-        } else {
-          setPaginas(paginasMock);
-        }
-      })
-      .catch(() => setPaginas(paginasMock));
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const { paginas, carregando, origemRotulo, erro } = usePaginasReais();
 
   const arvore = useMemo(() => buildTree(paginas), [paginas]);
   const diagnosticos = useMemo(() => calcularDiagnosticos(paginas), [paginas]);
-
-  const contIntencao = useMemo(() => {
-    const c: Record<Intencao, number> = { T: 0, C: 0, I: 0, N: 0 };
-    for (const p of paginas) c[p.intencao]++;
-    return c;
-  }, [paginas]);
 
   return (
     <div className="flex flex-col gap-0">
@@ -171,7 +122,9 @@ export default function EstruturaPaginasPage() {
             Estrutura do site
           </h1>
           <p className="mt-0.5 text-[11.5px] text-ink-muted">
-            Hierarquia de páginas definida pelo LinkFlow
+            {carregando
+              ? "Lendo o site…"
+              : `Silos pela coleção de conteúdo de cada página; nível e links são os reais do site${origemRotulo ? ` (lido de: ${origemRotulo})` : ""}`}
           </p>
         </div>
         <Link
@@ -223,58 +176,18 @@ export default function EstruturaPaginasPage() {
 
         {/* painel lateral */}
         <div className="flex flex-col gap-0 divide-y divide-line">
-          {/* distribuição de intenção */}
-          <div className="p-4">
-            <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
-              Distribuição de intenção
-            </p>
-            <div className="space-y-2.5">
-              {(["T", "C", "I", "N"] as Intencao[]).map((int) => {
-                const atual = contIntencao[int];
-                const meta = METAS_INTENCAO[int];
-                const ok = atual >= meta;
-                return (
-                  <div key={int} className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="flex items-center gap-1.5 text-[12px] text-ink">
-                        <span
-                          className={cn(
-                            "inline-flex h-5 w-5 items-center justify-center rounded border text-[10px] font-bold",
-                            INTENCAO_COR[int],
-                          )}
-                        >
-                          {int}
-                        </span>
-                        {INTENCAO_DETALHE[int]}
-                      </span>
-                      <span className={cn("font-mono text-[11.5px]", ok ? "text-success" : "text-danger")}>
-                        {atual} / {meta}
-                      </span>
-                    </div>
-                    <div className="h-1 w-full overflow-hidden rounded-full bg-line">
-                      <div
-                        className={cn(
-                          "h-full rounded-full transition-all",
-                          ok ? "bg-success" : "bg-danger",
-                        )}
-                        style={{ width: `${Math.min(100, (atual / meta) * 100)}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            <p className="mt-2.5 text-[10.5px] text-ink-muted">
-              Metas definidas pelo LinkFlow
-            </p>
-          </div>
-
           {/* diagnósticos */}
           <div className="p-4">
             <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
               Diagnóstico
             </p>
-            {diagnosticos.length === 0 ? (
+            {erro ? (
+              <p className="text-[12px] text-[#b45309]">{erro}</p>
+            ) : carregando ? (
+              <p className="text-[12px] text-ink-muted">Lendo o site…</p>
+            ) : paginas.length === 0 ? (
+              <p className="text-[12px] text-ink-muted">Nenhuma página: o site ainda não foi gerado.</p>
+            ) : diagnosticos.length === 0 ? (
               <p className="text-[12px] text-success">Nenhum problema encontrado</p>
             ) : (
               <div className="space-y-2.5">
@@ -369,15 +282,12 @@ function NoArvore({ no, profundidade }: { no: NoPagina; profundidade: number }) 
 
         {/* badges */}
         <div className="flex shrink-0 items-center gap-1">
-          {/* intenção */}
+          {/* nível real: cliques a partir da home */}
           <span
-            title={INTENCAO_DETALHE[pagina.intencao]}
-            className={cn(
-              "inline-flex h-[18px] w-[18px] items-center justify-center rounded border text-[9.5px] font-bold",
-              INTENCAO_COR[pagina.intencao],
-            )}
+            title={`${pagina.nivel} clique${pagina.nivel === 1 ? "" : "s"} a partir da home`}
+            className="font-mono text-[10px] text-ink-muted/60"
           >
-            {pagina.intencao}
+            n{pagina.nivel}
           </span>
 
           {/* status */}

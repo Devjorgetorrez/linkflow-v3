@@ -141,7 +141,7 @@ export default function RobotsPage() {
   const { setRobots, posts } = useStore();
   // Páginas reais do site (dist/), nunca o mock do store — ver lib/usePaginasReais.ts
   const { paginas } = usePaginasReais();
-  const [DOMINIO, setDominio] = useState("https://seudominio.com.br");
+  const [DOMINIO, setDominio] = useState("https://[DOMINIO]");
   const URL_PUBLICADO = `${DOMINIO}/robots.txt`;
 
   useEffect(() => {

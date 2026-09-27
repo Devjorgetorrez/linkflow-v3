@@ -1,7 +1,14 @@
 import type { Redirect } from "@/mock/types";
 import type { Indexavel } from "./indexaveis";
+import { normalizarUrl } from "@/lib/urls-publicas";
 
-export type Severidade = "bloqueia" | "prejudica" | "verificar";
+/**
+ * bloqueia  = erro: algo que deveria estar no Google e não está.
+ * aviso     = fora do Google DE PROPÓSITO (ex: Money Page em rascunho/noindex): explica, não acusa.
+ * prejudica = piora o ranqueamento.
+ * verificar = baixa urgência / conferência.
+ */
+export type Severidade = "bloqueia" | "aviso" | "prejudica" | "verificar";
 export type Procedencia = "calculado_no_build" | "requer_search_console";
 
 export interface Problema {
@@ -11,8 +18,10 @@ export interface Problema {
   titulo: string;
   detalhe: string;
   node_ids: string[];
+  /** Tela do painel onde dá para agir; "" = não há tela para isso (o detalhe diz o que fazer). */
   href_conserto: string;
-  label_conserto?: string; // default "Ver" quando ausente
+  /** Texto do link; só aparece junto de href_conserto (que aponta para tela existente). */
+  label_conserto?: string;
   procedencia: Procedencia;
   badge_tipo?: string; // "money" | "pilar" | "blog" | "categoria" | "autor" | "supporting" | "institucional"
 }
@@ -24,8 +33,28 @@ function hrefParaNo(ix: Indexavel): string {
   if (ix.tipo === "post") return `/posts/${ix.node_id.replace("post-", "")}`;
   if (ix.tipo === "categoria") return "/categorias";
   if (ix.tipo === "autor") return "/autores";
+  if (ix.node_id.startsWith("pagina-")) return `/paginas/${ix.node_id.slice("pagina-".length)}`;
   return "/paginas";
 }
+
+/** O que fazer, dito sem prometer botão que não existe. */
+function comoCorrigir(ix: Indexavel): string {
+  if (ix.tipo === "post") return "Corrija no editor do post e publique de novo.";
+  if (ix.tipo === "pagina") {
+    return "Páginas do site não têm editor no painel: peça o ajuste ao agente (/link-flow conteudo <slug>) e publique.";
+  }
+  return "Corrija na tela correspondente e publique de novo.";
+}
+
+/** Imagens sem alt: contagem real do HTML nas páginas; lista do painel nos demais. */
+function imagensSemAlt(ix: Indexavel): number {
+  if (ix.real) return ix.real.imagens.semAlt;
+  return ix.imagens.filter((img) => img.src && !img.alt.trim()).length;
+}
+
+const LIM_TITLE = 60;
+const LIM_META = 160;
+const MIN_META = 80;
 
 function badgeTipoDoNo(ix: Indexavel): string | undefined {
   if (ix.tipo === "post") return "blog";
@@ -75,12 +104,27 @@ export function auditarTecnica(
   redirects: Redirect[],
   robots: string,
   /**
-   * true só quando `indexaveis` foi montado com o grafo REAL de links do HTML
-   * (lib/links-internos.ts). Sem ele, "ninguém linka para cá" é só a ausência
-   * de dado, não um achado — então a regra de órfã não roda.
+   * `linksReaisDisponiveis`: true só quando `indexaveis` foi montado com o grafo
+   * REAL de links do HTML (lib/links-internos.ts). Sem ele, "ninguém linka para
+   * cá" é só a ausência de dado, não um achado — então a regra de órfã não roda.
+   * `quebrados`: links internos cujo destino não existe (grafo real).
+   * `sitemapUrls`: URLs do sitemap do site lido (null = site sem sitemap;
+   * undefined = não conseguiu ler o site, regra não roda).
+   * `integracoes`: o que o site configura (lib/legal-site.ts integracoesAtivas);
+   * undefined = config não carregou (nenhuma regra de GA roda, nem cobra nem elogia).
+   * `bingVerificacao`: valor do config (undefined = config não carregou).
+   * `dominio`: domínio real (compara com o host do canonical).
    */
-  linksReaisDisponiveis = false,
+  opts: {
+    linksReaisDisponiveis?: boolean;
+    quebrados?: Record<string, string[]>;
+    sitemapUrls?: string[] | null;
+    integracoes?: { analiticos: boolean; marketing: boolean; nomes: string[] };
+    bingVerificacao?: string;
+    dominio?: string;
+  } = {},
 ): Problema[] {
+  const linksReaisDisponiveis = opts.linksReaisDisponiveis ?? false;
   const problemas: Problema[] = [];
   const mapa = new Map(indexaveis.map((ix) => [ix.node_id, ix]));
 
@@ -110,10 +154,14 @@ export function auditarTecnica(
       if (!mapa.has(alvoid)) {
         problemas.push({
           id: `link-quebrado-${ix.node_id}-${alvoid}`,
-          tipo: "link_quebrado",
+          tipo: alvoid.startsWith("cat-") ? "referencia_categoria" : alvoid.startsWith("autor-") ? "referencia_autor" : "referencia_sem_destino",
           severidade: "prejudica",
-          titulo: "Link interno quebrado",
-          detalhe: `"${ix.title}" aponta para o nó "${alvoid}" que não existe no site.`,
+          titulo: alvoid.startsWith("cat-")
+            ? "Artigo com categoria que não existe"
+            : alvoid.startsWith("autor-")
+              ? "Artigo com autor que não existe"
+              : "Referência interna sem destino",
+          detalhe: `"${ix.title}" (${ix.url}) está ligado a ${alvoid.startsWith("cat-") ? "uma categoria" : alvoid.startsWith("autor-") ? "um autor" : "um item"} que não existe mais no painel (${alvoid}). ${comoCorrigir(ix)} Escolha uma categoria/autor existente.`,
           node_ids: [ix.node_id],
           href_conserto: hrefParaNo(ix),
           procedencia: "calculado_no_build",
@@ -146,7 +194,7 @@ export function auditarTecnica(
         detalhe: `"${ix.title}" (${ix.url}) deve linkar para ${alvoTitle} (${alvoUrl}), mas o link não está no corpo.`,
         node_ids: [ix.node_id],
         href_conserto: hrefParaNo(ix),
-        label_conserto: "Abrir o editor",
+        label_conserto: ix.tipo === "post" ? "Abrir o editor" : undefined,
         procedencia: "calculado_no_build",
         badge_tipo: badgeTipoDoNo(ix),
       });
@@ -261,17 +309,17 @@ export function auditarTecnica(
     }
   }
 
-  // ── 6. Imagem com alt vazio ───────────────────────────────────────────
+  // ── 6. Imagem sem alt (contagem real do HTML nas páginas) ─────────────
   for (const ix of indexaveis) {
-    const semAlt = ix.imagens.filter((img) => img.src && !img.alt.trim());
-    if (semAlt.length > 0) {
+    const n = imagensSemAlt(ix);
+    if (n > 0) {
       const nome = ix.title || ix.h1 || ix.url;
       problemas.push({
         id: `alt-vazio-${ix.node_id}`,
         tipo: "imagem_sem_alt",
         severidade: "prejudica",
         titulo: "Imagem sem texto alternativo",
-        detalhe: `"${nome}" tem ${semAlt.length} imagem${semAlt.length > 1 ? "ns" : ""} sem alt. Prejudica acessibilidade e indexação de imagens.`,
+        detalhe: `"${nome}" (${ix.url}) tem ${n} imagem${n > 1 ? "ns" : ""} sem alt. Prejudica acessibilidade e indexação de imagens. ${ix.tipo === "post" ? "Preencha o texto alternativo da imagem no editor do post." : ix.tipo === "pagina" ? "Suba a imagem com texto alternativo na Mídia e peça ao agente para trocar na página." : "Preencha o texto alternativo da imagem."}`,
         node_ids: [ix.node_id],
         href_conserto: ix.tipo === "post" ? hrefParaNo(ix) : "/midia",
         procedencia: "calculado_no_build",
@@ -280,20 +328,40 @@ export function auditarTecnica(
     }
   }
 
-  // ── 7. Title fora de 3–70 chars ──────────────────────────────────────
+  // ── 6b. Página cujo HTML não pôde ser lido ────────────────────────────
+  for (const ix of indexaveis) {
+    if (ix.real?.erroLeitura) {
+      problemas.push({
+        id: `leitura-${ix.node_id}`,
+        tipo: "html_ilegivel",
+        severidade: "verificar",
+        titulo: "Não foi possível verificar esta página",
+        detalhe: `"${ix.url}": ${ix.real.erroLeitura}. As regras de title, meta, H1, noindex e imagens não rodaram para ela. Publique o site de novo; se persistir, o arquivo no servidor está com problema.`,
+        node_ids: [ix.node_id],
+        href_conserto: "",
+        procedencia: "calculado_no_build",
+        badge_tipo: badgeTipoDoNo(ix),
+      });
+    }
+  }
+
+  // ── 7. Title: ausente ou maior que 60 chars (número real do HTML) ─────
   for (const ix of indexaveis) {
     // Categoria ainda não tem página pública no site (lib/urls-publicas.ts)
     // — não existe title/meta publicado para auditar.
     if (ix.tipo === "categoria") continue;
+    if (ix.real?.erroLeitura) continue;
     const len = ix.title.length;
-    if (len < 3 || len > 70) {
+    if (len < 3 || len > LIM_TITLE) {
       const nome = ix.title || ix.h1 || ix.url;
       problemas.push({
         id: `title-${ix.node_id}`,
         tipo: len === 0 ? "title_ausente" : len < 3 ? "title_curto" : "title_longo",
         severidade: "prejudica",
         titulo: len === 0 ? "Title SEO ausente" : len < 3 ? "Title SEO muito curto" : "Title SEO muito longo",
-        detalhe: `"${nome.slice(0, 55)}${nome.length > 55 ? "…" : ""}" (${ix.url}) tem ${len} chars (limite: 3–70).`,
+        detalhe: len === 0
+          ? `${ix.url} não tem <title>. ${comoCorrigir(ix)}`
+          : `"${nome.slice(0, 55)}${nome.length > 55 ? "…" : ""}" (${ix.url}) tem ${len} caracteres (o Google costuma mostrar até ${LIM_TITLE}). ${comoCorrigir(ix)}`,
         node_ids: [ix.node_id],
         href_conserto: hrefParaNo(ix),
         procedencia: "calculado_no_build",
@@ -302,34 +370,248 @@ export function auditarTecnica(
     }
   }
 
-  // ── 8. Meta description ausente ou fora de 80–165 ────────────────────
+  // ── 8. Meta description: ausente, < 80 ou > 160 (número real do HTML) ─
   for (const ix of indexaveis) {
-    // Categoria ainda não tem página pública no site (lib/urls-publicas.ts)
-    // — não existe title/meta publicado para auditar.
     if (ix.tipo === "categoria") continue;
+    if (ix.real?.erroLeitura) continue;
     const len = ix.meta_description.length;
-    if (len === 0 || len < 80 || len > 165) {
+    if (len === 0 || len < MIN_META || len > LIM_META) {
       const msg =
         len === 0
           ? "Meta description ausente"
-          : len < 80
+          : len < MIN_META
             ? "Meta description muito curta"
             : "Meta description muito longa";
       const nome = ix.title || ix.h1 || ix.url;
       problemas.push({
         id: `meta-${ix.node_id}`,
-        tipo: len === 0 ? "meta_ausente" : len < 80 ? "meta_curta" : "meta_longa",
+        tipo: len === 0 ? "meta_ausente" : len < MIN_META ? "meta_curta" : "meta_longa",
         severidade: "prejudica",
         titulo: msg,
         detalhe:
           len === 0
-            ? `"${nome}" (${ix.url}) não tem meta description. O Google pode usar texto aleatório do conteúdo.`
-            : `"${nome}" (${ix.url}) tem meta description de ${len} chars (ideal: 80–165).`,
+            ? `"${nome}" (${ix.url}) não tem meta description. O Google pode usar texto aleatório do conteúdo. ${comoCorrigir(ix)}`
+            : `"${nome}" (${ix.url}) tem meta description de ${len} caracteres (ideal: ${MIN_META}–${LIM_META}). ${comoCorrigir(ix)}`,
         node_ids: [ix.node_id],
         href_conserto: hrefParaNo(ix),
         procedencia: "calculado_no_build",
         badge_tipo: badgeTipoDoNo(ix),
       });
+    }
+  }
+
+  // ── 8b. H1 ausente (páginas, lido do HTML) ────────────────────────────
+  for (const ix of indexaveis) {
+    if (ix.tipo !== "pagina" || !ix.real || ix.real.erroLeitura) continue;
+    if (!ix.h1.trim()) {
+      problemas.push({
+        id: `h1-${ix.node_id}`,
+        tipo: "h1_ausente",
+        severidade: "prejudica",
+        titulo: "Página sem H1",
+        detalhe: `${ix.url} não tem nenhum título H1 no HTML publicado. O H1 diz ao Google e ao visitante sobre o que é a página. ${comoCorrigir(ix)}`,
+        node_ids: [ix.node_id],
+        href_conserto: hrefParaNo(ix),
+        procedencia: "calculado_no_build",
+        badge_tipo: badgeTipoDoNo(ix),
+      });
+    }
+  }
+
+  // ── 8c. noindex e nofollow REAIS (meta robots do HTML publicado) ──────
+  // Money Page nasce noindex de propósito (rascunho até a Fase 3 escrever o
+  // conteúdo real — skills/fase2-site-astro ETAPA 4.3): AVISO explicativo.
+  // Vira ERRO quando é página que deveria estar no Google (home, pilar,
+  // institucionais...) ou quando o noindex vem de onde o conteúdo não pede.
+  for (const ix of indexaveis) {
+    if (ix.tipo !== "pagina" || !ix.real || ix.real.erroLeitura) continue;
+    const nome = ix.title || ix.h1 || ix.url;
+    const meta = ix.real.robotsMeta.join(" | ");
+    if (ix.real.noindex) {
+      if (ix.tipo_pagina === "money" && ix.real.noindexNoConteudo === true) {
+        problemas.push({
+          id: `noindex-rascunho-${ix.node_id}`,
+          tipo: "noindex_rascunho",
+          severidade: "aviso",
+          titulo: "Página ainda fora do Google (noindex)",
+          detalhe: `"${nome}" (${ix.url}) está marcada como noindex (${meta}); o Google não vai indexá-la até você liberar. É o esperado enquanto o conteúdo real da Fase 3 não foi escrito e aprovado. Para liberar: conclua a Fase 3 desta página (/link-flow conteudo <slug>) e publique.`,
+          node_ids: [ix.node_id],
+          href_conserto: hrefParaNo(ix),
+          procedencia: "calculado_no_build",
+          badge_tipo: badgeTipoDoNo(ix),
+        });
+      } else if (ix.tipo_pagina === "supporting") {
+        // O motor marca noindex em página de autor ou de categoria sem artigos
+        // (pages/autor/[slug].astro, pages/[slug].astro): página rala, que sai
+        // do noindex sozinha quando houver conteúdo. Não é erro.
+        problemas.push({
+          id: `noindex-apoio-${ix.node_id}`,
+          tipo: "noindex_apoio",
+          severidade: "aviso",
+          titulo: "Página de apoio fora do Google (noindex)",
+          detalhe: `"${nome}" (${ix.url}) está marcada como noindex (${meta}). O site faz isso de propósito com páginas de apoio ainda sem conteúdo, como autor ou categoria sem artigos; ela sai do noindex sozinha quando houver artigos. Se esta página já tem conteúdo e deveria aparecer no Google, peça ao agente para revisar.`,
+          node_ids: [ix.node_id],
+          href_conserto: hrefParaNo(ix),
+          procedencia: "calculado_no_build",
+          badge_tipo: badgeTipoDoNo(ix),
+        });
+      } else {
+        const origemDoNoindex =
+          ix.tipo_pagina === "money"
+            ? ix.real.noindexNoConteudo === false
+              ? "O arquivo de conteúdo desta página NÃO pede noindex, então a marca vem de outro lugar (tema ou configuração do site)."
+              : "Não encontrei o arquivo de conteúdo desta página para saber se o noindex é intencional."
+            : "Esta página deveria aparecer no Google.";
+        problemas.push({
+          id: `noindex-inesperado-${ix.node_id}`,
+          tipo: "noindex_inesperado",
+          severidade: "bloqueia",
+          titulo: "Página bloqueada para o Google (noindex)",
+          detalhe: `"${nome}" (${ix.url}) está com meta robots noindex (${meta}) e o Google não vai indexá-la. ${origemDoNoindex} Peça ao agente para remover o noindex e publique.`,
+          node_ids: [ix.node_id],
+          href_conserto: hrefParaNo(ix),
+          procedencia: "calculado_no_build",
+          badge_tipo: badgeTipoDoNo(ix),
+        });
+      }
+    }
+    if (ix.real.nofollow) {
+      problemas.push({
+        id: `nofollow-${ix.node_id}`,
+        tipo: "nofollow_pagina",
+        severidade: "verificar",
+        titulo: "Página com nofollow",
+        detalhe: `"${nome}" (${ix.url}) tem meta robots com nofollow (${meta}): o Google não segue os links desta página. Se não foi de propósito, peça ao agente para remover.`,
+        node_ids: [ix.node_id],
+        href_conserto: hrefParaNo(ix),
+        procedencia: "calculado_no_build",
+        badge_tipo: badgeTipoDoNo(ix),
+      });
+    }
+  }
+
+  // ── 8d. Canonical real ─────────────────────────────────────────────────
+  const dominioBase = (opts.dominio ?? "").toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/+$/, "");
+  for (const ix of indexaveis) {
+    if (ix.tipo !== "pagina" || !ix.real || ix.real.erroLeitura) continue;
+    const nome = ix.title || ix.h1 || ix.url;
+    const c = ix.real.canonical;
+    if (!c) {
+      problemas.push({
+        id: `canonical-ausente-${ix.node_id}`,
+        tipo: "canonical_ausente",
+        severidade: "verificar",
+        titulo: "Página sem canonical",
+        detalhe: `"${nome}" (${ix.url}) não declara <link rel="canonical">. Sem ele o Google escolhe sozinho qual endereço considerar o oficial. ${comoCorrigir(ix)}`,
+        node_ids: [ix.node_id],
+        href_conserto: hrefParaNo(ix),
+        procedencia: "calculado_no_build",
+        badge_tipo: badgeTipoDoNo(ix),
+      });
+      continue;
+    }
+    let caminho = c;
+    let host = "";
+    try {
+      const u = new URL(c, "http://relativo.local");
+      caminho = u.pathname;
+      host = u.hostname === "relativo.local" ? "" : u.hostname.toLowerCase().replace(/^www\./, "");
+    } catch {
+      /* mantém cru */
+    }
+    if (normalizarUrl(caminho) !== normalizarUrl(ix.url)) {
+      problemas.push({
+        id: `canonical-diverge-${ix.node_id}`,
+        tipo: "canonical_divergente",
+        severidade: "prejudica",
+        titulo: "Canonical aponta para outra URL",
+        detalhe: `"${nome}" (${ix.url}) declara canonical ${c}, que não é o próprio endereço da página. O Google tende a ignorar esta página em favor da outra. ${comoCorrigir(ix)}`,
+        node_ids: [ix.node_id],
+        href_conserto: hrefParaNo(ix),
+        procedencia: "calculado_no_build",
+        badge_tipo: badgeTipoDoNo(ix),
+      });
+    } else if (dominioBase && host && host !== dominioBase) {
+      problemas.push({
+        id: `canonical-host-${ix.node_id}`,
+        tipo: "canonical_dominio",
+        severidade: "verificar",
+        titulo: "Canonical em outro domínio",
+        detalhe: `"${nome}" (${ix.url}) declara canonical em ${host}, mas o domínio configurado do site é ${dominioBase}. Confira o endereço do site nas Configurações e publique de novo.`,
+        node_ids: [ix.node_id],
+        href_conserto: "",
+        procedencia: "calculado_no_build",
+        badge_tipo: badgeTipoDoNo(ix),
+      });
+    }
+  }
+
+  // ── 8e. Links internos quebrados (grafo real) ─────────────────────────
+  if (opts.quebrados) {
+    const origensRedirect = new Set(redirects.map((r) => normalizarUrl(r.origem)));
+    const porUrl = new Map(indexaveis.filter((ix) => ix.url).map((ix) => [normalizarUrl(ix.url), ix]));
+    for (const [origem, destinos] of Object.entries(opts.quebrados)) {
+      const alvos = destinos.filter((d) => !origensRedirect.has(normalizarUrl(d)));
+      if (alvos.length === 0) continue;
+      const ix = porUrl.get(normalizarUrl(origem));
+      const nome = ix ? ix.title || ix.h1 || ix.url : origem;
+      problemas.push({
+        id: `link-quebrado-real-${origem}`,
+        tipo: "link_quebrado_real",
+        severidade: "prejudica",
+        titulo: "Link interno quebrado",
+        detalhe: `"${nome}" (${origem}) tem ${alvos.length} link${alvos.length > 1 ? "s" : ""} para endereços que não existem no site: ${alvos.slice(0, 5).join(", ")}${alvos.length > 5 ? ` e mais ${alvos.length - 5}` : ""}. Corrija o link na página ou crie um redirecionamento em SEO > Redirecionamentos.`,
+        node_ids: ix ? [ix.node_id] : [],
+        href_conserto: ix ? hrefParaNo(ix) : "",
+        procedencia: "calculado_no_build",
+        badge_tipo: ix ? badgeTipoDoNo(ix) : undefined,
+      });
+    }
+  }
+
+  // ── 8f. Sitemap coerente com noindex ──────────────────────────────────
+  if (opts.sitemapUrls === null) {
+    problemas.push({
+      id: "sitemap-ausente",
+      tipo: "sitemap_ausente",
+      severidade: "verificar",
+      titulo: "O site não tem sitemap.xml",
+      detalhe: "Não encontrei sitemap no site lido. Sem ele o Google descobre as páginas só pelos links. Republique o site; o sitemap é gerado no build.",
+      node_ids: [],
+      href_conserto: "/seo/sitemap",
+      procedencia: "calculado_no_build",
+    });
+  } else if (opts.sitemapUrls) {
+    const noSitemap = new Set(opts.sitemapUrls.map(normalizarUrl));
+    for (const ix of indexaveis) {
+      if (ix.tipo !== "pagina" || !ix.real || ix.real.erroLeitura) continue;
+      const nome = ix.title || ix.h1 || ix.url;
+      const listada = noSitemap.has(normalizarUrl(ix.url));
+      if (ix.real.noindex && listada) {
+        problemas.push({
+          id: `sitemap-noindex-${ix.node_id}`,
+          tipo: "sitemap_lista_noindex",
+          severidade: "verificar",
+          titulo: "Sitemap lista página noindex",
+          detalhe: `"${nome}" (${ix.url}) está no sitemap mas tem noindex: são sinais contraditórios para o Google. Republique o site para o sitemap ser gerado de novo.`,
+          node_ids: [ix.node_id],
+          href_conserto: "/seo/sitemap",
+          procedencia: "calculado_no_build",
+          badge_tipo: badgeTipoDoNo(ix),
+        });
+      } else if (!ix.real.noindex && !listada) {
+        problemas.push({
+          id: `sitemap-falta-${ix.node_id}`,
+          tipo: "sitemap_sem_pagina",
+          severidade: "verificar",
+          titulo: "Página indexável fora do sitemap",
+          detalhe: `"${nome}" (${ix.url}) pode ser indexada mas não está no sitemap do site. Republique o site para o sitemap ser gerado de novo.`,
+          node_ids: [ix.node_id],
+          href_conserto: "/seo/sitemap",
+          procedencia: "calculado_no_build",
+          badge_tipo: badgeTipoDoNo(ix),
+        });
+      }
     }
   }
 
@@ -385,44 +667,45 @@ export function auditarTecnica(
     }
   }
 
-  // ── 12. GA4 sem banner de cookies ────────────────────────────────────
-  problemas.push({
-    id: "ga4-sem-cookie-banner",
-    tipo: "lgpd_cookies",
-    severidade: "prejudica",
-    titulo: "GA4 ativo sem banner de cookies configurado",
-    detalhe:
-      "GA4 define cookies de rastreamento. Sem banner ativo, o site pode estar em desconformidade com a LGPD e perder dados de sessão em navegadores com bloqueio.",
-    node_ids: [],
-    href_conserto: "/privacidade/cookies",
-    procedencia: "calculado_no_build",
-  });
+  // ── 12. Google Analytics / GTM — só se o site de fato carrega ─────────
+  // Fonte única: integracoesAtivas (config do site) + o que o HTML realmente
+  // tem (real.rastreadores). Sem ID e sem gtag no HTML: nada é dito aqui — a
+  // tela mostra "não configurado" como estado neutro (nem falha, nem sucesso).
+  if (opts.integracoes) {
+    const noHtml = new Set<string>();
+    for (const ix of indexaveis) for (const r of ix.real?.rastreadores ?? []) noHtml.add(r);
+    const semPixel = (n: string) => !/pixel/i.test(n);
+    const nomes = new Set([...opts.integracoes.nomes.filter(semPixel), ...[...noHtml].filter(semPixel)]);
+    if (opts.integracoes.analiticos || nomes.size > 0) {
+      problemas.push({
+        id: "analytics-cookies",
+        tipo: "lgpd_cookies",
+        severidade: "verificar",
+        titulo: `${[...nomes].join(" e ") || "Medição de visitas"} em uso: confirme o aviso de cookies`,
+        detalhe:
+          "O site carrega uma ferramenta de medição, que grava cookies de rastreamento. Confira em Privacidade > Cookies que a categoria Analíticos está descrita e que o site informa o visitante (LGPD).",
+        node_ids: [],
+        href_conserto: "/privacidade/cookies",
+        label_conserto: "Abrir Cookies",
+        procedencia: "calculado_no_build",
+      });
+    }
+  }
 
-  // ── 13. IndexNow não ativado ──────────────────────────────────────────
-  problemas.push({
-    id: "indexnow-off",
-    tipo: "indexnow",
-    severidade: "verificar",
-    titulo: "IndexNow não ativado",
-    detalhe:
-      "Bing, Yandex e outros participantes não recebem notificação imediata de mudanças no conteúdo. Pode atrasar a reindexação de posts atualizados.",
-    node_ids: [],
-    href_conserto: "/seo/verificacoes",
-    procedencia: "calculado_no_build",
-  });
-
-  // ── 14. Bing Webmaster Tools não configurado ──────────────────────────
-  problemas.push({
-    id: "bing-webmaster",
-    tipo: "webmaster_tools",
-    severidade: "verificar",
-    titulo: "Bing Webmaster Tools não configurado",
-    detalhe:
-      "Sem propriedade verificada no Bing, não há dados de rastreamento, cobertura ou diagnóstico de erros para o segundo buscador mais usado no Brasil.",
-    node_ids: [],
-    href_conserto: "/seo/verificacoes",
-    procedencia: "calculado_no_build",
-  });
+  // ── 13. Bing Webmaster Tools (só se o config já carregou) ─────────────
+  if (opts.bingVerificacao !== undefined && !opts.bingVerificacao.trim()) {
+    problemas.push({
+      id: "bing-webmaster",
+      tipo: "webmaster_tools",
+      severidade: "verificar",
+      titulo: "Bing Webmaster Tools sem código de verificação",
+      detalhe:
+        "O site não tem o código de verificação do Bing configurado, então não há dados de rastreamento e cobertura do Bing. Cole o código em SEO > Verificações.",
+      node_ids: [],
+      href_conserto: "/seo/verificacoes",
+      procedencia: "calculado_no_build",
+    });
+  }
 
   // Ordenar por consequência: money → pilar → blog → resto
   // O sort estável preserva a ordem relativa dentro de mesmo prioTipo.

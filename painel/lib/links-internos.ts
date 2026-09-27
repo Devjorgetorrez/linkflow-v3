@@ -1,6 +1,6 @@
 /**
  * lib/links-internos.ts — grafo REAL de links internos do site publicado,
- * lido do HTML gerado em _astro/dist/.
+ * lido do HTML do site publicado (fallback: _astro/dist — lib/site-lido.ts).
  *
  * Fonte única para tudo que precisa saber "quem linka para quem" (contagem
  * de links recebidos por página e regra de página órfã da auditoria de SEO).
@@ -12,6 +12,7 @@
 import fs from "fs";
 import path from "path";
 import { normalizarUrl } from "@/lib/urls-publicas";
+import { lerPaginaCache, listarPaginas } from "@/lib/site-lido";
 
 /** origem (URL da página) → destino (URL da página) → nº de links */
 export type GrafoLinks = Record<string, Record<string, number>>;
@@ -20,6 +21,8 @@ export interface LeituraLinks {
   /** URLs de todas as páginas encontradas no dist (ex: "/", "/servicos") */
   urls: string[];
   links: GrafoLinks;
+  /** origem → destinos internos que não existem no site */
+  quebrados: Record<string, string[]>;
 }
 
 function semWww(host: string): string {
@@ -57,61 +60,67 @@ export function resolverHref(
   return normalizarUrl(u.pathname);
 }
 
-function listarPaginas(dir: string, base: string, saida: { url: string; arquivo: string }[]) {
-  if (!fs.existsSync(dir)) return;
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (entry.name.startsWith("_") || entry.name === "midia") continue;
-    if (entry.isDirectory()) {
-      listarPaginas(path.join(dir, entry.name), `${base}/${entry.name}`, saida);
-    } else if (entry.name === "index.html") {
-      saida.push({ url: base || "/", arquivo: path.join(dir, entry.name) });
+/** Existe no site lido um arquivo/página para este caminho? (asset, página ou .html) */
+function caminhoExiste(dir: string, caminho: string): boolean {
+  const raiz = path.resolve(dir);
+  const rel = caminho.replace(/^\/+/, "");
+  const candidatos = [rel, path.join(rel, "index.html"), `${rel}.html`];
+  for (const c of candidatos) {
+    const abs = path.resolve(raiz, c);
+    if (abs !== raiz && !abs.startsWith(raiz + path.sep)) continue;
+    try {
+      if (fs.statSync(abs).isFile()) return true;
+    } catch {
+      /* não existe */
     }
   }
+  return false;
 }
 
-/** Hosts do próprio site, pela <link rel="canonical"> de cada página. */
-function hostsDasCanonicals(htmls: string[]): Set<string> {
+/**
+ * Lê o site (publicado ou prévia — ver lib/site-lido.ts) e monta o grafo.
+ * Devolve null se a pasta não existe ou não tem nenhuma página (site ainda
+ * não gerado): nesse caso NÃO há dado real, e quem chama não pode tratar
+ * "sem dados" como "sem links".
+ * Auto-links (página linkando para si mesma) são ignorados.
+ * `quebrados`: links internos cujo destino não existe no site (nem página,
+ * nem arquivo como imagem/PDF/sitemap).
+ */
+export function lerGrafoLinks(distDir: string): LeituraLinks | null {
+  const paginas = listarPaginas(distDir);
+  if (paginas.length === 0) return null;
+
+  const lidas = paginas.map((p) => lerPaginaCache(p.arquivo));
   const hosts = new Set<string>();
-  for (const html of htmls) {
-    const m = html.match(/<link[^>]+rel=["']canonical["'][^>]*href=["']([^"']+)["']/i)
-      ?? html.match(/<link[^>]+href=["']([^"']+)["'][^>]*rel=["']canonical["']/i);
-    if (!m) continue;
+  for (const l of lidas) {
+    const c = l.dados?.canonical;
+    if (!c) continue;
     try {
-      hosts.add(semWww(new URL(m[1]).hostname));
+      hosts.add(semWww(new URL(c).hostname));
     } catch {
       /* canonical relativa: sem host a aprender */
     }
   }
-  return hosts;
-}
-
-/**
- * Lê o dist e monta o grafo. Devolve null se o dist não existe ou não tem
- * nenhuma página (site ainda não buildado): nesse caso NÃO há dado real, e
- * quem chama não pode tratar "sem dados" como "sem links".
- * Auto-links (página linkando para si mesma) são ignorados.
- */
-export function lerGrafoLinks(distDir: string): LeituraLinks | null {
-  const paginas: { url: string; arquivo: string }[] = [];
-  listarPaginas(distDir, "", paginas);
-  if (paginas.length === 0) return null;
-
-  const htmls = paginas.map((p) => fs.readFileSync(p.arquivo, "utf-8"));
-  const hosts = hostsDasCanonicals(htmls);
   const conhecidas = new Set(paginas.map((p) => normalizarUrl(p.url)));
 
   const links: GrafoLinks = {};
+  const quebrados: Record<string, string[]> = {};
   paginas.forEach((p, i) => {
     const origem = normalizarUrl(p.url);
-    for (const m of htmls[i].matchAll(/<a\s[^>]*?href\s*=\s*(?:"([^"]*)"|'([^']*)')/gi)) {
-      const destino = resolverHref(m[1] ?? m[2] ?? "", origem, hosts);
-      if (!destino || destino === origem || !conhecidas.has(destino)) continue;
-      links[origem] ??= {};
-      links[origem][destino] = (links[origem][destino] ?? 0) + 1;
+    for (const href of lidas[i].hrefs) {
+      const destino = resolverHref(href, origem, hosts);
+      if (!destino || destino === origem) continue;
+      if (conhecidas.has(destino)) {
+        links[origem] ??= {};
+        links[origem][destino] = (links[origem][destino] ?? 0) + 1;
+      } else if (!caminhoExiste(distDir, destino)) {
+        const lista = (quebrados[origem] ??= []);
+        if (!lista.includes(destino)) lista.push(destino);
+      }
     }
   });
 
-  return { urls: [...conhecidas], links };
+  return { urls: [...conhecidas], links, quebrados };
 }
 
 /** Quantos links cada página recebe das OUTRAS páginas. */

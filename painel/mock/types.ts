@@ -114,13 +114,47 @@ export interface Secao {
   itens?: SecaoItem[];
 }
 
+/**
+ * O que o HTML PUBLICADO da página realmente diz (lib/html-pagina.ts, lido por
+ * /api/paginas). Só existe em páginas vindas da API; nada aqui é inferido.
+ */
+export interface DadosPaginaReal {
+  /** de onde o HTML foi lido: site publicado ou última prévia local (dist) */
+  origem: "publicado" | "previa";
+  /** metas robots/googlebot como estão no HTML; vazio = página sem meta robots */
+  robotsMeta: string[];
+  noindex: boolean;
+  nofollow: boolean;
+  canonical: string | null;
+  /** tipos do JSON-LD (achatados, inclusive @graph); vazio = sem dados estruturados */
+  schemaTipos: string[];
+  jsonldBlocos: number;
+  jsonldInvalidos: number;
+  og: { title: string | null; description: string | null; image: string | null; type: string | null };
+  palavras: number;
+  imagens: { total: number; semAlt: number };
+  linksEnviados: number;
+  /** rastreadores que o HTML carrega de fato (Google Analytics, GTM, Meta Pixel) */
+  rastreadores: string[];
+  /**
+   * Só para Money Page (coleção `servicos`): o arquivo de conteúdo pede noindex
+   * (rascunho até a Fase 3)? null = a página não tem arquivo em content/.
+   */
+  noindexNoConteudo: boolean | null;
+  /** HTML maior que o limite de leitura: title/meta/palavras podem estar incompletos */
+  parcial?: boolean;
+  /** o arquivo não pôde ser lido: os campos vêm vazios, e a tela diz isso */
+  erroLeitura?: string;
+}
+
 export interface Pagina {
   id: string;
   titulo: string;
   url: string;
   paiId: string | null;
   tipo: TipoPagina;
-  intencao: Intencao;
+  /** só existe se vier de fonte real (o HTML não traz); a API de páginas não preenche */
+  intencao?: Intencao;
   status: "publicado" | "rascunho";
   h1: string;
   seoTitle: string;
@@ -134,6 +168,8 @@ export interface Pagina {
   node_id?: string;
   links_internos_obrigatorios?: string[]; // node_ids que esta página é responsável por linkar
   ultimaMod?: string; // ISO date (YYYY-MM-DD) da última atualização real — usado pelo sitemap
+  /** dados lidos do HTML publicado (ausente em páginas de demonstração/mock) */
+  real?: DadosPaginaReal;
 }
 
 export interface Midia {

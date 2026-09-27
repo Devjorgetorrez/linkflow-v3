@@ -11,22 +11,6 @@ const MAX_URLS = 1_000;
 
 /* ------------------------------------------------------------------ */
 
-const CODIGOS_INDEXNOW: Record<number, { cor: string; msg: string }> = {
-  200: { cor: "text-success", msg: "Lista recebida com sucesso." },
-  202: { cor: "text-[#d97706]", msg: "Chave em validação — normal no primeiro envio." },
-  400: { cor: "text-danger", msg: "Formato do pedido inválido." },
-  403: { cor: "text-danger", msg: "Chave inválida ou arquivo inacessível." },
-  422: { cor: "text-danger", msg: "Alguma URL não pertence ao domínio." },
-  429: { cor: "text-danger", msg: "Envios em excesso — aguardar antes de reenviar." },
-};
-
-function gerarChave(): string {
-  const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  return Array.from({ length: 32 }, () =>
-    chars[Math.floor(Math.random() * chars.length)],
-  ).join("");
-}
-
 function formatarData(iso: string): string {
   const [ano, mes, dia] = iso.split("-");
   return `${dia}/${mes}/${ano}`;
@@ -58,21 +42,14 @@ function derivarTipo(url: string, tipo: string, tipoPagina?: string): string {
 
 /* ------------------------------------------------------------------ */
 
-interface UltimoEnvio {
-  data: string;       // ISO datetime
-  quantidade: number;
-  codigoResposta: number;
-  urls: string[];
-}
-
 /* ------------------------------------------------------------------ */
 
 export default function SitemapPage() {
   const { posts, categorias, autores } = useStore();
   // Páginas reais do site (dist/), nunca o mock do store — ver lib/usePaginasReais.ts
   const { paginas } = usePaginasReais();
-  const [DOMAIN, setDomain] = useState("seudominio.com.br");
-  const SITEMAP_URL = `https://${DOMAIN}/sitemap.xml`;
+  const [DOMAIN, setDomain] = useState("");
+  const SITEMAP_URL = DOMAIN ? `https://${DOMAIN}/sitemap.xml` : "domínio ainda não configurado";
 
   useEffect(() => {
     fetch("/api/config")
@@ -94,7 +71,9 @@ export default function SitemapPage() {
     );
 
     // Excluded by noindex: published posts where noindex = true
-    const noindexCount = posts.filter((p) => p.noindex).length;
+    const noindexCount =
+      posts.filter((p) => p.noindex).length +
+      indexaveis.filter((ix) => ix.tipo === "pagina" && ix.real?.noindex).length;
 
     // Excluded by taxonomy: all categoria nodes (excluded from sitemap by config)
     const taxonomiaCount = indexaveis.filter((ix) => ix.tipo === "categoria").length;
@@ -117,89 +96,12 @@ export default function SitemapPage() {
   const [copiado, setCopiado] = useState(false);
 
   function copiarUrl() {
+    if (!DOMAIN) return;
     navigator.clipboard.writeText(SITEMAP_URL).then(() => {
       setCopiado(true);
       setTimeout(() => setCopiado(false), 1500);
     });
   }
-
-  // ── IndexNow ───────────────────────────────────────────────────────
-  const [chave, setChave] = useState<string | null>(null);
-  const [chaveCopiada, setChaveCopiada] = useState(false);
-  const [verificando, setVerificando] = useState(false);
-  const [verificacaoResult, setVerificacaoResult] = useState<{ ok: boolean; msg: string } | null>(null);
-  const [enviando, setEnviando] = useState(false);
-  const [ultimoEnvio, setUltimoEnvio] = useState<UltimoEnvio | null>(null);
-  const [erroEnvio, setErroEnvio] = useState<{ codigo: number; msg: string } | null>(null);
-
-  const chaveUrl = chave ? `https://${DOMAIN}/${chave}.txt` : null;
-
-  // URLs alteradas desde o último envio (por lastmod)
-  const urlsAlteradas = useMemo(() => {
-    if (!ultimoEnvio) return entradas; // tudo, se nunca enviou
-    return entradas.filter((e) => e.ultimaMod > ultimoEnvio.data.slice(0, 10));
-  }, [entradas, ultimoEnvio]);
-
-  function gerarNovaChave() {
-    setChave(gerarChave());
-    setVerificacaoResult(null);
-    setErroEnvio(null);
-  }
-
-  function copiarChaveUrl() {
-    if (!chaveUrl) return;
-    navigator.clipboard.writeText(chaveUrl).then(() => {
-      setChaveCopiada(true);
-      setTimeout(() => setChaveCopiada(false), 1500);
-    });
-  }
-
-  function verificarArquivo() {
-    if (!chave) return;
-    setVerificando(true);
-    setVerificacaoResult(null);
-    // Simula GET ao arquivo da chave — no build real seria servido pela Vercel
-    setTimeout(() => {
-      setVerificando(false);
-      setVerificacaoResult({ ok: true, msg: "200 OK — conteúdo correto" });
-    }, 1200);
-  }
-
-  function enviarIndexNow() {
-    if (!chave || urlsAlteradas.length === 0) return;
-    setEnviando(true);
-    setErroEnvio(null);
-    const urlList = urlsAlteradas.map((e) => `https://${DOMAIN}${e.loc}`);
-
-    // Simula POST para https://api.indexnow.org/indexnow
-    setTimeout(() => {
-      const codigo = 200; // mock: primeiro envio retorna 200
-      setEnviando(false);
-      setUltimoEnvio({
-        data: new Date().toISOString(),
-        quantidade: urlList.length,
-        codigoResposta: codigo,
-        urls: urlList,
-      });
-      if (codigo !== 200 && codigo !== 202) {
-        setErroEnvio({ codigo, msg: CODIGOS_INDEXNOW[codigo]?.msg ?? "Erro desconhecido." });
-      }
-    }, 1500);
-  }
-
-  const labelEnvio = (() => {
-    if (enviando) return "Enviando…";
-    if (urlsAlteradas.length === 0)
-      return ultimoEnvio
-        ? `Nenhuma URL alterada desde ${formatarDataHora(ultimoEnvio.data)}`
-        : "Nenhuma URL no sitemap";
-    const ref = ultimoEnvio
-      ? ` desde ${formatarData(ultimoEnvio.data.slice(0, 10))}`
-      : "";
-    return `Enviar ${urlsAlteradas.length} URL${urlsAlteradas.length > 1 ? "s" : ""} alterada${urlsAlteradas.length > 1 ? "s" : ""}${ref}`;
-  })();
-
-  const envioDesabilitado = enviando || urlsAlteradas.length === 0 || !chave;
 
   return (
     <div className="flex min-h-full flex-col">
@@ -247,104 +149,11 @@ export default function SitemapPage() {
           {/* IndexNow */}
           <div className="rounded-[var(--radius)] border border-[var(--line)] bg-[var(--surface-2)] p-4 space-y-3">
             <p className="text-[12px] font-semibold text-[var(--ink)]">IndexNow</p>
-
-            {!chave ? (
-              <>
-                <p className="text-[11px] text-[var(--ink-muted)]">
-                  Um POST atinge todos os buscadores participantes (Bing, Yandex, Seznam, Naver). A chave autentica o domínio — o arquivo{" "}
-                  <code className="rounded bg-[var(--surface)] px-1 font-mono text-[10.5px]">{"{chave}.txt"}</code>{" "}
-                  precisa estar acessível na raiz antes do primeiro envio.
-                </p>
-                <button
-                  onClick={gerarNovaChave}
-                  className="rounded-[var(--radius)] bg-[var(--primary)] px-3 py-1.5 text-[12px] font-medium text-[var(--primary-ink)] hover:opacity-90 transition-opacity"
-                >
-                  Gerar chave de 32 caracteres
-                </button>
-              </>
-            ) : (
-              <>
-                {/* Arquivo da chave */}
-                <div className="space-y-1.5">
-                  <p className="text-[11px] font-medium text-[var(--ink-muted)]">Arquivo da chave</p>
-                  <div className="flex items-center gap-2">
-                    <code className="flex-1 overflow-hidden truncate rounded border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1 font-mono text-[10.5px] text-[var(--ink)]">
-                      {chaveUrl}
-                    </code>
-                    <button
-                      onClick={copiarChaveUrl}
-                      title="Copiar URL do arquivo"
-                      className="flex shrink-0 items-center gap-1 rounded border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[11px] text-[var(--ink-muted)] hover:text-[var(--ink)]"
-                    >
-                      {chaveCopiada ? <Check size={11} className="text-success" /> : <Copy size={11} />}
-                    </button>
-                    <button
-                      onClick={verificarArquivo}
-                      disabled={verificando}
-                      title="Verificar se o arquivo está acessível"
-                      className="flex shrink-0 items-center gap-1 rounded border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1 text-[11px] text-[var(--ink-muted)] hover:text-[var(--ink)] disabled:opacity-50"
-                    >
-                      <RefreshCw size={11} className={verificando ? "animate-spin" : ""} />
-                      Verificar
-                    </button>
-                  </div>
-                  {verificacaoResult && (
-                    <p className={cn("text-[11px]", verificacaoResult.ok ? "text-success" : "text-danger")}>
-                      {verificacaoResult.ok ? "✓" : "✗"} {verificacaoResult.msg}
-                    </p>
-                  )}
-                </div>
-
-                {/* Botão de envio */}
-                <div className="space-y-1.5">
-                  <button
-                    onClick={enviarIndexNow}
-                    disabled={envioDesabilitado}
-                    className={cn(
-                      "flex items-center gap-1.5 rounded-[var(--radius)] px-3 py-1.5 text-[12px] font-medium transition-opacity",
-                      envioDesabilitado
-                        ? "cursor-not-allowed bg-[var(--surface)] border border-[var(--line)] text-[var(--ink-muted)]"
-                        : "bg-[var(--primary)] text-[var(--primary-ink)] hover:opacity-90",
-                    )}
-                  >
-                    <Send size={12} />
-                    {labelEnvio}
-                  </button>
-                  <p className="text-[10.5px] text-[var(--ink-muted)]">
-                    O envio automático roda no deploy. Este botão é reforço manual. URLs despublicadas ou convertidas em 410 entram no próximo envio automaticamente.
-                  </p>
-                </div>
-
-                {/* Erro de envio */}
-                {erroEnvio && (
-                  <div className="rounded border border-danger/30 bg-danger/5 px-3 py-2 text-[11px] text-danger">
-                    <span className="font-medium">{erroEnvio.codigo}</span> — {erroEnvio.msg}
-                  </div>
-                )}
-
-                {/* Último envio */}
-                {ultimoEnvio && !erroEnvio && (
-                  <div className="space-y-1">
-                    <p className={cn("text-[11px] font-medium", CODIGOS_INDEXNOW[ultimoEnvio.codigoResposta]?.cor ?? "text-[var(--ink)]")}>
-                      {ultimoEnvio.codigoResposta} — {CODIGOS_INDEXNOW[ultimoEnvio.codigoResposta]?.msg ?? "Resposta desconhecida."}
-                    </p>
-                    <p className="text-[11px] text-[var(--ink-muted)]">
-                      {formatarDataHora(ultimoEnvio.data)} · {ultimoEnvio.quantidade} URL{ultimoEnvio.quantidade > 1 ? "s" : ""}
-                    </p>
-                    <details className="group">
-                      <summary className="cursor-pointer list-none text-[11px] text-[var(--primary)] hover:underline">
-                        Ver URLs enviadas
-                      </summary>
-                      <ul className="mt-1 space-y-0.5">
-                        {ultimoEnvio.urls.map((u) => (
-                          <li key={u} className="font-mono text-[10.5px] text-[var(--ink-muted)]">{u}</li>
-                        ))}
-                      </ul>
-                    </details>
-                  </div>
-                )}
-              </>
-            )}
+            <p className="text-[11px] text-[var(--ink-muted)]">
+              O envio de URLs por IndexNow (Bing, Yandex, Seznam, Naver) ainda não está disponível no painel, e o site
+              não tem uma chave IndexNow instalada. Nada é enviado por esta tela. Enquanto isso, o Google e o Bing
+              descobrem as páginas pelo sitemap acima.
+            </p>
           </div>
         </div>
 

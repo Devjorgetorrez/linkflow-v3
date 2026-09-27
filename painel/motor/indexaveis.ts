@@ -1,4 +1,4 @@
-import type { Autor, Categoria, Pagina, Post, StatusPost } from "@/mock/types";
+import type { Autor, Categoria, DadosPaginaReal, Pagina, Post, StatusPost } from "@/mock/types";
 import type { GrafoLinks } from "@/lib/links-internos";
 import { normalizarUrl, urlAutor, urlCategoria, urlPost } from "@/lib/urls-publicas";
 
@@ -25,6 +25,8 @@ export interface Indexavel {
   links_internos_obrigatorios: string[]; // node_ids que esta página deve linkar (planejado, pode não estar no corpo)
   ultima_mod: string;   // ISO date YYYY-MM-DD — fonte do lastmod no sitemap
   imagens: ImagemIndexavel[];
+  /** dados lidos do HTML publicado (só páginas vindas de /api/paginas) */
+  real?: DadosPaginaReal;
   fontes_count?: number;   // posts only — usado para checar E-E-A-T
   credencial_ok?: boolean; // autores only — conselho + registro preenchidos
 }
@@ -105,18 +107,20 @@ export function gerarIndexaveis(dados: {
       tipo: "pagina",
       tipo_pagina: pag.tipo,
       status: pag.status,
-      indexavel: pag.status === "publicado",
+      // noindex real do HTML publicado tira a página do que "deveria ser indexado"
+      indexavel: pag.status === "publicado" && !pag.real?.noindex,
+      real: pag.real,
       title: pag.seoTitle,
       meta_description: pag.metaDescription,
       h1: pag.h1,
       kw_primaria: kwDeSeoTitle(pag.seoTitle),
       canonical_derivado: `${DOMINIO}${pag.url}`,
-      schemas_emitidos: pag.schema ? [pag.schema] : [],
+      schemas_emitidos: pag.real ? pag.real.schemaTipos : pag.schema ? [pag.schema] : [],
       links_saindo: linksS,
       links_entrando: [],
       links_internos_obrigatorios: pag.links_internos_obrigatorios ?? [],
       ultima_mod: pag.ultimaMod ?? "2026-01-01",
-      imagens: [],
+      imagens: [], // a contagem real de imagens sem alt está em real.imagens
     });
   }
 

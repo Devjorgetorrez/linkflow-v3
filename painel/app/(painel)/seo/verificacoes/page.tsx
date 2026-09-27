@@ -195,7 +195,7 @@ function gerarChaveHex(): string {
 function CardIndexNow() {
   const [chave, setChave] = useState<string | null>(null);
   const [copiado, setCopiado] = useState(false);
-  const [dominio, setDominio] = useState("seudominio.com.br");
+  const [dominio, setDominio] = useState("[DOMINIO]");
 
   useEffect(() => {
     fetch("/api/config").then(r => r.json()).then(data => {

@@ -1,23 +1,36 @@
 /**
  * app/api/paginas/route.ts
- * GET /api/paginas → lista páginas do site lendo _astro/dist/ do Astro
+ * GET /api/paginas → páginas do site, com o que o HTML PUBLICADO realmente diz.
  *
- * Campos estruturais (composicao, secoes, paiId, linksRecebidos) usam
- * defaults seguros — esses dados não existem no HTML gerado, só no projeto.md.
- * nivel = cliques reais a partir da home (grafo de links do HTML); sem grafo ou
- * página inalcançável, cai no nível planejado da árvore de silos.
- * linksRecebidos é calculado a partir dos links reais do HTML (lib/links-internos.ts).
+ * ORIGEM DO HTML (lib/site-lido.ts): o site publicado (LINKFLOW_SITE_DIR ||
+ * /var/www/<slug>, a pasta que o build copia); só se ela não existir cai na
+ * última prévia local (_astro/dist). A resposta diz qual foi usada:
+ * `origem` ("publicado" | "previa" | "nenhuma") e `origemRotulo`
+ * ("site publicado" / "última prévia local (dist)"). Cache por mtime+tamanho
+ * por arquivo; HTML gigante é lido só até o limite (`real.parcial`) e arquivo
+ * ilegível vira `real.erroLeitura`, sem derrubar as outras páginas.
+ *
+ * Por página (lib/html-pagina.ts): title completo, meta description, meta
+ * robots (robots/googlebot), canonical, H1, JSON-LD real (todos os blocos,
+ * tipos achatados), Open Graph, palavras do texto visível, imagens sem alt,
+ * links recebidos/enviados (grafo real de links) e nível = cliques a partir da
+ * home. NADA é inferido: intenção de busca, composição, seções e "schema
+ * previsto" não existem no HTML e por isso NÃO são devolvidos (a UI mostra "—"
+ * ou omite). `tipo`/`paiId` vêm da coleção de conteúdo de onde o slug saiu
+ * (servicos → money), fato estrutural e não palpite.
+ * Somente leitura.
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
-import { getContentDir, getLinkflowDir, getRotaPilar } from "@/lib/fs";
+import { getContentDir, getRotaPilar, lerArquivo, parseMd } from "@/lib/fs";
 import { exigirPapel } from "@/lib/auth";
 import { MATRIZ } from "@/lib/permissoes";
 import { lerGrafoLinks, contarRecebidos, profundidadeDeCliques } from "@/lib/links-internos";
+import { lerPaginaCache, listarPaginas, lerSitemap, resolverOrigemSite } from "@/lib/site-lido";
 import { normalizarUrl } from "@/lib/urls-publicas";
-import type { Pagina, TipoPagina, Intencao } from "@/mock/types";
+import type { Pagina, TipoPagina } from "@/mock/types";
 
 // ─── Classificação pelo CONTEÚDO, não pela URL ──────────────────────────────
 // Com URL plana (regra do Jorge), serviço interno e artigo moram ambos em
@@ -52,54 +65,16 @@ function classificar(url: string, servicos: Set<string>, slugPilar: string): {
   return { tipo: "supporting", paiId: "home", nivel: 1 };
 }
 
-// Inferir Intencao a partir do tipo
-function inferirIntencao(tipo: TipoPagina, url: string): Intencao {
-  if (tipo === "money") return "T";         // Transacional (serviço + cidade = busca de contratação)
-  if (tipo === "institucional") return "N"; // Navegar
-  if (url === "/blog") return "I";          // Informar
-  return "T";                               // Transacional
-}
-
-interface PaginaRaw {
-  url: string;
-  titulo: string;
-  metaDescription: string;
-  h1: string;
-  ultimaMod: string;
-}
-
-function varrerDist(dir: string, base: string): PaginaRaw[] {
-  const paginas: PaginaRaw[] = [];
-  if (!fs.existsSync(dir)) return paginas;
-
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (entry.name.startsWith("_") || entry.name === "midia") continue;
-
-    if (entry.isDirectory()) {
-      paginas.push(...varrerDist(path.join(dir, entry.name), `${base}/${entry.name}`));
-    } else if (entry.name === "index.html") {
-      const url = base || "/";
-      const filePath = path.join(dir, entry.name);
-      const raw = fs.readFileSync(filePath, "utf-8");
-      const stat = fs.statSync(filePath);
-
-      const titleMatch = raw.match(/<title>([^<]*)<\/title>/);
-      const metaMatch = raw.match(/<meta\s+name="description"\s+content="([^"]*)"/i);
-      const h1Match = raw.match(/<h1[^>]*>([^<]*)<\/h1>/i);
-
-      const titulo = (titleMatch?.[1] ?? url).replace(/\s*[|–-].*$/, "").trim();
-
-      paginas.push({
-        url,
-        titulo,
-        metaDescription: metaMatch?.[1] ?? "",
-        h1: h1Match?.[1]?.trim() ?? titulo,
-        ultimaMod: stat.mtime.toISOString().split("T")[0],
-      });
-    }
+/** noindex declarado no frontmatter do arquivo de conteúdo (Money Page = rascunho até a Fase 3). */
+function noindexDoConteudo(colecao: string, slug: string): boolean | null {
+  const raw = lerArquivo(path.join(getContentDir(), colecao, `${slug}.md`));
+  if (raw === null) return null;
+  try {
+    const v = parseMd(raw).frontmatter.noindex;
+    return v === true || v === "true";
+  } catch {
+    return null;
   }
-
-  return paginas;
 }
 
 export async function GET(req: NextRequest) {
@@ -107,48 +82,74 @@ export async function GET(req: NextRequest) {
   if (auth) return auth;
 
   try {
-    // dist/ inteiro é o site (pós-promoção) — nunca dist/<slug>/
-    const distDir = path.join(getLinkflowDir(), "_astro/dist");
+    const o = resolverOrigemSite();
+    if (!o.dir || o.origem === "nenhuma") {
+      return NextResponse.json({
+        ok: true, paginas: [], origem: "nenhuma", origemRotulo: o.rotulo, sitemapUrls: null,
+      });
+    }
+    const origem: "publicado" | "previa" = o.origem;
     const servicos = slugsDaColecao("servicos");
     const slugPilar = getRotaPilar().slice(1);
     const posts = slugsDaColecao("posts");
-    // Artigos saem daqui: são listados por /api/posts. Sem este filtro, com
-    // URL plana, cada artigo apareceria duas vezes (como página e como post).
-    const rawTodas = varrerDist(distDir, "");
-    const rawPaginas = rawTodas.filter(
-      (p) => !posts.has(p.url.replace(/^\//, "").toLowerCase()),
-    );
 
-    // linksRecebidos vem do grafo REAL de links do HTML gerado (mesma fonte
-    // da auditoria de SEO — lib/links-internos.ts). Link de artigo para
-    // serviço conta; link da própria página para ela mesma não.
-    const grafo = lerGrafoLinks(distDir);
+    const arquivos = listarPaginas(o.dir)
+      // Artigos saem daqui: são listados por /api/posts. Sem este filtro, com
+      // URL plana, cada artigo apareceria duas vezes (como página e como post).
+      .filter((p) => !posts.has(p.url.replace(/^\//, "").toLowerCase()));
+
+    // linksRecebidos/nível vêm do grafo REAL de links do HTML (mesma fonte da
+    // auditoria de SEO — lib/links-internos.ts).
+    const grafo = lerGrafoLinks(o.dir);
     const linksRecebidosMap = grafo ? contarRecebidos(grafo.links) : new Map<string, number>();
-
     const cliques = grafo ? profundidadeDeCliques(grafo.links) : new Map<string, number>();
 
-    const paginas: Pagina[] = rawPaginas.map((p) => {
+    let maisRecente = 0;
+    const paginas: Pagina[] = arquivos.map((p) => {
+      const lida = lerPaginaCache(p.arquivo);
+      const d = lida.dados;
       const { tipo, paiId, nivel: nivelPlanejado } = classificar(p.url, servicos, slugPilar);
       const nivel = cliques.get(normalizarUrl(p.url)) ?? nivelPlanejado;
+      const slug = p.url.replace(/^\//, "");
+      const mt = lida.mtime ? Date.parse(lida.mtime) : 0;
+      if (mt > maisRecente) maisRecente = mt;
+      const enviados = Object.values(grafo?.links[normalizarUrl(p.url)] ?? {}).reduce((a, n) => a + n, 0);
       return {
         // id = slug da URL ("/" -> "home"). paiId aponta para esse mesmo id:
         // serviço interno -> slug do pilar ("servicos" ou "planos"), o resto -> "home".
-        id: p.url === "/" ? "home" : p.url.replace(/^\//, "").replace(/\//g, "--"),
-        titulo: p.titulo,
+        id: p.url === "/" ? "home" : slug.replace(/\//g, "--"),
+        titulo: d?.h1 || d?.title || p.url,
         url: p.url,
         paiId,
         tipo,
-        intencao: inferirIntencao(tipo, p.url),
         status: "publicado" as const,
-        h1: p.h1,
-        seoTitle: p.titulo,
-        metaDescription: p.metaDescription,
-        schema: "",
-        composicao: "",   // não disponível no HTML gerado
-        secoes: [],       // não disponível no HTML gerado
+        h1: d?.h1 ?? "",
+        seoTitle: d?.title ?? "",
+        metaDescription: d?.metaDescription ?? "",
+        schema: "", // o JSON-LD real está em real.schemaTipos
+        composicao: "", // não existe no HTML: a UI não exibe
+        secoes: [],
         nivel,
         linksRecebidos: linksRecebidosMap.get(normalizarUrl(p.url)) ?? 0,
-        ultimaMod: p.ultimaMod,
+        ultimaMod: lida.mtime ? lida.mtime.split("T")[0] : undefined,
+        real: {
+          origem,
+          robotsMeta: d?.robotsMeta ?? [],
+          noindex: d?.noindex ?? false,
+          nofollow: d?.nofollow ?? false,
+          canonical: d?.canonical ?? null,
+          schemaTipos: d?.jsonld.tipos ?? [],
+          jsonldBlocos: d?.jsonld.blocos ?? 0,
+          jsonldInvalidos: d?.jsonld.invalidos ?? 0,
+          og: d?.og ?? { title: null, description: null, image: null, type: null },
+          palavras: d?.palavras ?? 0,
+          imagens: d?.imagens ?? { total: 0, semAlt: 0 },
+          linksEnviados: enviados,
+          rastreadores: d?.rastreadores ?? [],
+          noindexNoConteudo: tipo === "money" ? noindexDoConteudo("servicos", slug) : null,
+          ...(lida.parcial ? { parcial: true } : {}),
+          ...(lida.erro ? { erroLeitura: lida.erro } : {}),
+        },
       };
     });
 
@@ -159,7 +160,14 @@ export async function GET(req: NextRequest) {
       return a.url.localeCompare(b.url);
     });
 
-    return NextResponse.json({ ok: true, paginas });
+    return NextResponse.json({
+      ok: true,
+      paginas,
+      origem,
+      origemRotulo: o.rotulo,
+      geradoEm: maisRecente ? new Date(maisRecente).toISOString() : null,
+      sitemapUrls: lerSitemap(o.dir),
+    });
   } catch (err) {
     console.error("[api/paginas GET]", err);
     return NextResponse.json({ ok: false, erro: String(err) }, { status: 500 });
