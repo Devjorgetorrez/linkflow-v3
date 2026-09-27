@@ -173,7 +173,8 @@ function calcularStatusPost(
   p: Post,
 ): { status: StatusItem; problemas: ProblemaValidacao[] } {
   const bloqueantes: ProblemaValidacao[] = [];
-  if (p.seoTitle.length < 3 || p.seoTitle.length > 70)
+  const tituloBusca = p.seoTitle || p.titulo; // título SEO vazio = o site usa o título do artigo
+  if (tituloBusca.length < 3 || tituloBusca.length > 70)
     bloqueantes.push({
       mensagem: "O título está fora do tamanho ideal para busca (máx. 70 caracteres).",
       href: "/posts",

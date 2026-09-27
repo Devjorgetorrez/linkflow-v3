@@ -71,7 +71,7 @@ export function gerarIndexaveis(dados: {
       tipo: "post",
       status: post.status,
       indexavel: !post.noindex && post.status === "publicado",
-      title: post.seoTitle,
+      title: post.seoTitle || post.titulo,
       meta_description: post.metaDescription,
       h1: post.titulo,
       kw_primaria: ((post as Post & { kwPrimaria?: string }).kwPrimaria ?? "").trim().toLowerCase(),

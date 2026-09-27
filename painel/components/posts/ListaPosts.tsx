@@ -319,7 +319,7 @@ function EdicaoRapida({ post, colspan, autores, categorias, somenteLeituraStatus
                 onChange={(e) => setAutorId(e.target.value)}
               >
                 {!autores.some((a) => a.id === autorId) && (
-                  <option value={autorId}>{autorId || "(sem autor)"}</option>
+                  <option value={autorId}>{post.autorNome || "—"}</option>
                 )}
                 {autores.map((a) => (
                   <option key={a.id} value={a.id}>
@@ -479,18 +479,19 @@ export function ListaPosts() {
 
   /* Posts do store (dados reais do servidor) com o que a tabela mostra já resolvido */
   const posts: Post[] = useMemo(() => {
-    const nomeAutor = (id: string) => autores.find((a) => a.id === id)?.nome ?? id;
+    // Nome do autor: nunca o código. Vem do servidor (slug/id → nome) ou da lista de autores; senão "—".
+    const nomeAutor = (p: PostBase) => autores.find((a) => a.id === p.autorId)?.nome || p.autorNome || "—";
     const nomeCat = (id: string) => categorias.find((c) => c.id === id)?.nome ?? id;
     const montar = (p: PostBase, naLixeira: boolean): Post => ({
       ...p,
       id: naLixeira ? `lixeira:${p.slug}` : p.id,
       status: naLixeira ? "lixeira" : p.status,
       naLixeira,
-      autor: nomeAutor(p.autorId),
+      autor: nomeAutor(p),
       categorias: p.categoriaId ? [nomeCat(p.categoriaId)] : [],
       categoriaNome: p.categoriaId ? nomeCat(p.categoriaId) : "",
       palavraChave: p.kwPrimaria ?? "",
-      titleSEO: p.seoTitle,
+      titleSEO: p.seoTitle || p.titulo, // vazio = o site usa o título
       linksInternos: extrairLinks(p.corpo, siteInfo.dominio).internos.length,
       origemAgente: p.geradoPorIA === true,
     });

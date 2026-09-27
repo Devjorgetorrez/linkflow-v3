@@ -14,7 +14,12 @@ import { MATRIZ } from "@/lib/permissoes";
 import { ehPostDoUsuario } from "@/lib/usuarios-regras";
 import { buscarPorId, lerUsuarios } from "@/lib/usuarios";
 import { lerDados } from "@/lib/dados";
-import { camposDoCorpo, camposParaLimpar, frontmatterInicial, hojeISO, removerCamposFrontmatter, validarCamposPost } from "@/lib/posts-campos";
+import {
+  camposDoCorpo, camposParaLimpar, frontmatterInicial, hojeISO, removerCamposFrontmatter, validarCamposPost, validarCorpoRequisicao,
+} from "@/lib/posts-campos";
+import { postParaApi } from "@/lib/posts-api";
+import { liberarEnderecoDePost, postEstaNoSite, registrarRenomeacao } from "@/lib/redirects";
+import { slugPublicavel } from "@/lib/sync-autores";
 import { caminhoPost, gravarAtomico, gravarNovoAtomico, moverParaLixeira, slugLivre, slugOcupado } from "@/lib/posts-fs";
 import { SLUGS_RESERVADOS, normalizarCorpo, slugDoTitulo } from "@/lib/posts-regras";
 import type { Categoria } from "@/mock/types";
@@ -48,8 +53,10 @@ export async function GET(
   if (await autorNaoEDono(req, raw)) {
     return NextResponse.json({ ok: false, erro: "Autor só acessa os próprios posts" }, { status: 403 });
   }
-  const { frontmatter, content } = parseMd(raw);
-  return NextResponse.json({ ok: true, post: { slug, ...frontmatter, corpo: content } });
+  const { frontmatter } = parseMd(raw);
+  // frontmatter cru (compatível) + os campos já resolvidos como o painel os lê (corpo em HTML, autor, faq…)
+  const post = postParaApi(slug, raw, lerUsuarios(), lerDados<Categoria[]>("categorias.json", []));
+  return NextResponse.json({ ok: true, post: { ...frontmatter, ...post } });
 }
 
 export async function PATCH(
@@ -83,6 +90,8 @@ export async function PATCH(
 
     const usuarios = lerUsuarios();
     const categorias = lerDados<Categoria[]>("categorias.json", []);
+    const erroCorpo = validarCorpoRequisicao(body, usuarios);
+    if (erroCorpo) return NextResponse.json({ ok: false, erro: erroCorpo.erro }, { status: erroCorpo.status });
     // Só campos que o site conhece, com o nome do site (lib/frontmatter-post.ts)
     const campos = camposDoCorpo(body, usuarios, categorias);
     const corpo = typeof body.corpo === "string" ? normalizarCorpo(body.corpo, body.corpoFormato === "html") : undefined;
@@ -99,6 +108,7 @@ export async function PATCH(
       if (!gravarNovoAtomico(filePath, stringifyMd(fm, corpo ?? ""))) {
         return NextResponse.json({ ok: false, erro: "Já existe um post com esse endereço (slug)." }, { status: 409 });
       }
+      liberarEnderecoDePost(slug);
       return NextResponse.json({ ok: true, slug, criado: true });
     }
 
@@ -133,6 +143,12 @@ export async function PATCH(
     // Post antigo sem data de publicação quebra o build: completa ao salvar.
     const extras: Record<string, unknown> = {};
     if (!fmAtual.publicadoEm && campos.publicadoEm === undefined) extras.publicadoEm = hojeISO();
+    // Post antigo com id de usuário em `autor`: ao salvar, vira o slug do autor (quando ele assina).
+    if (campos.autor === undefined && body.autorId === undefined && body.autor === undefined) {
+      const atual = String(fmAtual.autor ?? "").trim();
+      const slugAutor = atual ? slugPublicavel(atual, usuarios) : null;
+      if (slugAutor && slugAutor !== atual) extras.autor = slugAutor;
+    }
     const gravar = { ...campos, ...extras, atualizadoEm: hojeISO() };
 
     // Edição cirúrgica: só as linhas dos campos alterados mudam; o resto do
@@ -156,7 +172,30 @@ export async function PATCH(
       }
     }
 
-    return NextResponse.json({ ok: true, slug: slugFinal, renomeado: slugFinal !== slug });
+    // Endereço novo: quem já teve o endereço antigo no ar precisa ser redirecionado (301), sem cadeia nem laço.
+    let redirecionamento: { origem: string; destino: string } | null = null;
+    let avisoRedirect: string | undefined;
+    if (slugFinal !== slug) {
+      const estevNoAr = ["publicado", "pronto", "agendado"].includes(statusAtual) || postEstaNoSite(slug);
+      try {
+        if (estevNoAr) {
+          redirecionamento = registrarRenomeacao(slug, slugFinal).criado;
+        } else {
+          liberarEnderecoDePost(slugFinal); // rascunho nunca no ar: só garante que não sobra redirect saindo do endereço novo
+        }
+      } catch (err) {
+        console.error("[api/posts PATCH] redirecionamento:", err);
+        avisoRedirect = "O post foi renomeado, mas não consegui criar o redirecionamento do endereço antigo. Crie em SEO > Redirecionamentos.";
+      }
+    }
+
+    return NextResponse.json({
+      ok: true,
+      slug: slugFinal,
+      renomeado: slugFinal !== slug,
+      ...(redirecionamento ? { redirecionamento } : {}),
+      ...(avisoRedirect ? { aviso: avisoRedirect } : {}),
+    });
   } catch (err) {
     console.error("[api/posts PATCH]", err);
     return NextResponse.json({ ok: false, erro: String(err) }, { status: 500 });

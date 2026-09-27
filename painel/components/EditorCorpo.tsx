@@ -23,6 +23,7 @@ import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useSta
 
 import { SeletorMidia } from "@/components/SeletorMidia";
 import { Botao, Entrada } from "@/components/ui";
+import { caminhoDaMidia } from "@/lib/site-config-cliente";
 import { cn, contarPalavras, tempoLeitura } from "@/lib/utils";
 
 type Pedido = "link" | "url" | "ancora" | null;
@@ -334,7 +335,8 @@ export const EditorCorpo = forwardRef<
         onInput={sincronizar}
         onBlur={() => {
           guardarSelecao();
-          sincronizar();
+          // só envia se algo mudou (abrir e clicar fora não pode reescrever o arquivo)
+          if (area.current && area.current.innerHTML !== valor) sincronizar();
         }}
         onKeyUp={guardarSelecao}
         onMouseUp={guardarSelecao}
@@ -363,15 +365,16 @@ export const EditorCorpo = forwardRef<
       <div className="flex items-center gap-3 border-t border-line px-3 py-1.5 text-[10.5px] text-ink-muted">
         <span className="font-mono">{palavras} palavras</span>
         <span className="font-mono">{tempoLeitura(palavras)} min de leitura</span>
-        <span className="ml-auto">Rascunho salvo só nesta sessão</span>
+        <span className="ml-auto">Salvo automaticamente enquanto você escreve</span>
       </div>
 
       <SeletorMidia
         aberto={bibliotecaAberta}
         aoFechar={() => setBiblioteca(false)}
         aoEscolher={(m) =>
+          // imagem de verdade (caminho do site), com texto alternativo — nunca um bloco de gradiente
           inserir(
-            `<figure data-midia="${m.id}"><div style="background-image:linear-gradient(${m.gradiente});aspect-ratio:16/9;border-radius:6px"></div><figcaption>${m.alt || m.titulo}</figcaption></figure><p></p>`,
+            `<figure><img src="${caminhoDaMidia(m.url).replace(/"/g, "&quot;")}" alt="${(m.alt || m.titulo).replace(/"/g, "&quot;")}"><figcaption>${m.alt || m.titulo}</figcaption></figure><p></p>`,
           )
         }
       />

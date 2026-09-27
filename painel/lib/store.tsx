@@ -25,6 +25,7 @@ import type {
   Redirect,
   Usuario,
 } from "@/mock/types";
+import { useSession } from "next-auth/react";
 import { lerStatusPost } from "@/lib/status-post";
 import { tituloValido } from "@/lib/posts-regras";
 
@@ -42,14 +43,16 @@ function postDaApi(p: Record<string, unknown>): Post {
     id: slug,
     slug,
     titulo: txt(p.titulo),
-    resumo: txt(p.resumo ?? p.descricao),
+    resumo: txt(p.resumo),
     corpo: txt(p.corpo),
-    autorId: txt(p.autorId ?? p.autor),
+    autorId: txt(p.autorId),
+    autorNome: txt(p.autorNome),
+    autorReconhecido: p.autorReconhecido !== false,
     categoriaId: txt(p.categoriaId ?? p.categoria),
     data: txt(p.data ?? p.publicadoEm).slice(0, 10),
     status: lerStatusPost(p.status),
     destaque: p.destaque === true,
-    seoTitle: txt(p.seoTitle ?? p.titulo),
+    seoTitle: txt(p.seoTitle), // vazio = o site usa o título
     metaDescription: txt(p.metaDescription ?? p.descricao),
     canonical: txt(p.canonical),
     noindex: p.noindex === true,
@@ -58,7 +61,10 @@ function postDaApi(p: Record<string, unknown>): Post {
     capa: txt(p.capa),
     capaAlt: txt(p.capaAlt),
     kwPrimaria: txt(p.kwPrimaria ?? p.palavraChave),
-    faq: [],
+    faq: Array.isArray(p.faq)
+      ? (p.faq as Record<string, unknown>[]).map((f, i) => ({ id: txt(f.id) || `f${i + 1}`, pergunta: txt(f.pergunta), resposta: txt(f.resposta) }))
+      : [],
+    kwSecundarias: Array.isArray(p.kwSecundarias) ? (p.kwSecundarias as unknown[]).map((k) => txt(k)) : [],
     fontes: [],
     palavras: Number(p.palavras ?? 0) || 0,
     geradoPorIA: p.geradoPorIA === true,
@@ -116,6 +122,14 @@ const CAMPOS_GRAVADOS: Record<string, string> = {
   categoriaId: "categoriaId",
   kwPrimaria: "kwPrimaria",
   destaque: "destaque",
+  seoTitle: "seoTitle",
+  resumo: "resumo",
+  canonical: "canonical",
+  noindex: "noindex",
+  faq: "faq",
+  kwSecundarias: "kwSecundarias",
+  capa: "capa",
+  capaAlt: "capaAlt",
 };
 
 export interface EstadoSalvamento {
@@ -124,6 +138,8 @@ export interface EstadoSalvamento {
   erro?: string;
   /** Quando o último salvamento terminou com sucesso. */
   quando?: number;
+  /** Informação do servidor sobre o que ele fez além de salvar (ex.: redirecionamento do endereço antigo). */
+  aviso?: string;
 }
 
 async function carregarLista<T>(url: string, chave: string): Promise<T[] | null> {
@@ -388,8 +404,13 @@ interface Estado {
   recarregarMidia: () => Promise<Midia[] | null>;
   adicionarRedirect: (r: Redirect) => void;
   deletarRedirect: (id: string) => void;
+  /** Depois de uma publicação: relê do servidor quantas alterações ainda faltam. */
   publicarAlteracoes: () => void;
+  /** Alterações de conteúdo ainda fora do site — calculado NO SERVIDOR (não zera no F5). */
   pendentes: number;
+  /** true = o site nunca foi publicado */
+  nuncaPublicado: boolean;
+  recarregarPendentes: () => Promise<void>;
   reverterDeploy: (id: string) => void;
 }
 
@@ -594,11 +615,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [postsCarregados, setPostsCarregados] = useState(false);
   const [erroPosts, setErroPosts] = useState("");
   const [salvamento, setSalvamento] = useState<EstadoSalvamento>({ estado: "ocioso" });
-  const [postsAlterados, setPostsAlterados] = useState<string[]>([]);
   const renomeados = useRef<Record<string, string>>({});
   const filas = useRef(new Map<string, FilaPost>());
   const confirmados = useRef(new Map<string, { status: Post["status"] }>());
-  const [dadosReaisCarregados, setDadosReaisCarregados] = useState(false);
+  const { data: sessao, status: statusSessao } = useSession();
+  const usuarioSessao = (sessao?.user as { id?: string; email?: string | null } | undefined);
+  const chaveSessao = statusSessao === "authenticated" ? String(usuarioSessao?.id ?? usuarioSessao?.email ?? "sessao") : "";
   const [autores, setAutores] = useState<Autor[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [paginas, setPaginas] = useState<Pagina[]>([]);
@@ -620,55 +642,96 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [configContato, setConfigContatoState] = useState<ConfigContato>(CONFIG_CONTATO_INICIAL);
   const [configRedes, setConfigRedesState] = useState<ConfigRedes>(CONFIG_REDES_INICIAL);
   const [pendentes, setPendentes] = useState(0);
+  const [nuncaPublicado, setNuncaPublicado] = useState(false);
 
   const tokensAtivos = tema === "escuro" ? aparencia.tokensEscuro : aparencia.tokensClaro;
 
-  // Carregar dados reais da API no boot
+  /** Zera tudo que é do usuário/sessão anterior (troca de usuário ou saída). */
+  const limparDadosDaSessao = useCallback(() => {
+    for (const f of filas.current.values()) if (f.timer) clearTimeout(f.timer);
+    filas.current.clear();
+    confirmados.current.clear();
+    renomeados.current = {};
+    setPosts([]);
+    setPostsLixeira([]);
+    setPostsCarregados(false);
+    setErroPosts("");
+    setSalvamento({ estado: "ocioso" });
+    setAutores([]);
+    setCategorias([]);
+    setPaginas([]);
+    setMidia([]);
+    setRedirects([]);
+    setTarefas([]);
+    setFormularios([]);
+    setLeads([]);
+    setUsuarios([]);
+    setPendentes(0);
+    setNuncaPublicado(false);
+  }, []);
+
+  // Carrega os dados reais da API SÓ quando há sessão (na tela de login tudo dá 401 e
+  // ficaria vazio até o F5). Ao trocar de usuário, limpa e carrega de novo. A dependência é
+  // a CHAVE da sessão (texto), nunca um objeto: não há laço de recarga.
+  const sessaoCarregada = useRef("");
   useEffect(() => {
-    if (dadosReaisCarregados) return;
+    if (statusSessao === "loading") return;
+    if (!chaveSessao) {
+      if (sessaoCarregada.current) {
+        sessaoCarregada.current = "";
+        limparDadosDaSessao();
+      }
+      return;
+    }
+    if (sessaoCarregada.current === chaveSessao) return;
+    if (sessaoCarregada.current) limparDadosDaSessao(); // trocou de usuário
+    sessaoCarregada.current = chaveSessao;
 
     // Carregar posts reais
     carregarPostsReais().then(async (postsReais) => {
+      if (sessaoCarregada.current !== chaveSessao) return; // a sessão mudou no meio do caminho
       if (postsReais !== null) {
         setPosts(postsReais);
         postsReais.forEach((p) => confirmados.current.set(p.id, { status: p.status }));
         setErroPosts("");
         const lixeira = await carregarLixeiraReal();
+        if (sessaoCarregada.current !== chaveSessao) return;
         const legados = new Set(postsReais.filter((p) => p.status === "lixeira").map((p) => p.id));
         setPostsLixeira(lixeira.filter((p) => !legados.has(p.slug)));
       } else {
         setErroPosts("Não consegui ler os posts do servidor. Recarregue a página; se persistir, avise o suporte.");
       }
       setPostsCarregados(true);
-      setDadosReaisCarregados(true);
     });
 
     // Carregar autores reais (derivados de usuarios.json)
     carregarAutoresReais().then((autoresReais) => {
-      if (autoresReais !== null) setAutores(autoresReais);
+      if (autoresReais !== null && sessaoCarregada.current === chaveSessao) setAutores(autoresReais);
     });
 
     // Carregar categorias reais
     carregarCategoriasReais().then((categoriasReais) => {
-      if (categoriasReais !== null) setCategorias(categoriasReais);
+      if (categoriasReais !== null && sessaoCarregada.current === chaveSessao) setCategorias(categoriasReais);
     });
 
     // Demais listas: SEMPRE da API, nunca de dados de demonstração. Se a API
     // falhar, a lista fica vazia (a tela mostra estado vazio) — nunca um
     // site fictício no lugar do site do cliente.
-    carregarLista<Pagina>("/api/paginas", "paginas").then((l) => l && setPaginas(l));
-    carregarLista<Midia>("/api/midia", "midia").then((l) => l && setMidia(l));
-    carregarLista<Redirect>("/api/redirects", "redirects").then((l) => l && setRedirects(l));
-    carregarLista<Tarefa>("/api/tarefas", "tarefas").then((l) => l && setTarefas(l));
-    carregarLista<Formulario>("/api/formularios", "formularios").then((l) => l && setFormularios(l));
-    carregarLista<Lead>("/api/leads", "leads").then((l) => l && setLeads(l));
-    carregarLista<Usuario>("/api/usuarios", "usuarios").then((l) => l && setUsuarios(l));
+    const vale = () => sessaoCarregada.current === chaveSessao;
+    carregarLista<Pagina>("/api/paginas", "paginas").then((l) => l && vale() && setPaginas(l));
+    carregarLista<Midia>("/api/midia", "midia").then((l) => l && vale() && setMidia(l));
+    carregarLista<Redirect>("/api/redirects", "redirects").then((l) => l && vale() && setRedirects(l));
+    carregarLista<Tarefa>("/api/tarefas", "tarefas").then((l) => l && vale() && setTarefas(l));
+    carregarLista<Formulario>("/api/formularios", "formularios").then((l) => l && vale() && setFormularios(l));
+    carregarLista<Lead>("/api/leads", "leads").then((l) => l && vale() && setLeads(l));
+    carregarLista<Usuario>("/api/usuarios", "usuarios").then((l) => l && vale() && setUsuarios(l));
+    void recarregarPendentesRef.current();
 
     // Carregar config real do site para popular aparencia globalmente
     fetch("/api/config")
       .then((r) => r.json())
       .then((data) => {
-        if (!data.ok || !data.config) return;
+        if (!data.ok || !data.config || !vale()) return;
         const c = data.config;
         setAparenciaState((prev) => ({
           ...prev,
@@ -677,7 +740,40 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         }));
       })
       .catch(console.error);
-  }, [dadosReaisCarregados]);
+  }, [statusSessao, chaveSessao, limparDadosDaSessao]);
+
+  /* Alterações pendentes: contadas NO SERVIDOR (arquivos mais novos que o último build ok). */
+  const recarregarPendentes = useCallback(async () => {
+    try {
+      const res = await fetch("/api/build", { cache: "no-store" });
+      if (!res.ok) return; // papel sem acesso (autor): não há contador
+      const d = await res.json();
+      if (d.ok && typeof d.pendentes === "number") {
+        setPendentes(d.pendentes);
+        setNuncaPublicado(d.nuncaPublicado === true);
+      }
+    } catch {
+      /* mantém o último valor */
+    }
+  }, []);
+  const recarregarPendentesRef = useRef(recarregarPendentes);
+  recarregarPendentesRef.current = recarregarPendentes;
+
+  // Depois que algo foi salvo: relê (com uma pausa curta para juntar várias gravações seguidas)
+  const timerPendentes = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const marcarPendente = useCallback(() => {
+    if (timerPendentes.current) clearTimeout(timerPendentes.current);
+    timerPendentes.current = setTimeout(() => { void recarregarPendentesRef.current(); }, 500);
+  }, []);
+
+  // Outra pessoa (ou outra aba) pode ter mexido: relê ao voltar para a aba e a cada 30 s.
+  useEffect(() => {
+    if (!chaveSessao) return;
+    const ao = () => { if (document.visibilityState === "visible") void recarregarPendentesRef.current(); };
+    const id = setInterval(ao, 30_000);
+    document.addEventListener("visibilitychange", ao);
+    return () => { clearInterval(id); document.removeEventListener("visibilitychange", ao); };
+  }, [chaveSessao]);
 
   /* aplica tokens e forma no documento */
   useEffect(() => {
@@ -704,12 +800,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     );
   }, [tema, tokensAtivos, aparencia.raio, aparencia.densidade, aparencia.fonteDisplay, aparencia.fonteCorpo]);
 
-  const marcarPendente = useCallback(() => setPendentes((n) => n + 1), []);
-
   const setAparencia = useCallback((patch: Partial<Aparencia>) => {
     setAparenciaState((a) => ({ ...a, ...patch }));
-    setPendentes((n) => n + 1);
-  }, []);
+    marcarPendente();
+  }, [marcarPendente]);
 
   const setToken = useCallback(
     (chave: ChaveToken, valor: string) => {
@@ -734,9 +828,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return atual;
   }, []);
 
-  const marcarPostAlterado = useCallback((id: string) => {
-    setPostsAlterados((l) => (l.includes(id) ? l : [...l, id]));
-  }, []);
+  const marcarPostAlterado = useCallback((_id: string) => {
+    marcarPendente(); // o contador vem do servidor
+  }, [marcarPendente]);
 
   const enviarPost = useCallback(async (idEntrada: string): Promise<boolean> => {
     const id = resolverIdPost(idEntrada);
@@ -771,6 +865,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
 
     setSalvamento({ estado: "salvando" });
+    let avisoServidor: string | undefined;
     fila.emVoo = (async () => {
       try {
         const res = await fetch(`/api/posts/${id}`, {
@@ -786,6 +881,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           confirmados.current.set(id, { status: lerStatusPost(envio.status) });
         }
         const novoId = typeof data.slug === "string" && data.slug ? data.slug : id;
+        avisoServidor =
+          data.redirecionamento && typeof data.redirecionamento === "object"
+            ? "O endereço antigo foi redirecionado para o novo."
+            : typeof data.aviso === "string" ? data.aviso : undefined;
         if (novoId !== id) {
           // O arquivo mudou de nome (slug novo): a fila, o id e o link do editor passam para o novo nome.
           filas.current.delete(id);
@@ -800,7 +899,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           setPosts((l) =>
             l.map((p) => (p.id === id ? { ...p, id: novoId, slug: slugPendente ? p.slug : novoId } : p)),
           );
-          setPostsAlterados((l) => l.map((x) => (x === id ? novoId : x)));
         } else if (envio.slug !== undefined && fila.patch.slug === undefined) {
           setPosts((l) => l.map((p) => (p.id === id ? { ...p, slug: id } : p)));
         }
@@ -841,9 +939,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setSalvamento({ estado: "erro", erro: "O título precisa ter de 3 a 70 caracteres; o resto foi salvo." });
       return false;
     }
-    setSalvamento({ estado: "salvo", quando: Date.now() });
+    setSalvamento({ estado: "salvo", quando: Date.now(), aviso: avisoServidor });
+    marcarPendente();
     return true;
-  }, [resolverIdPost]);
+  }, [resolverIdPost, marcarPendente]);
 
   const atualizarPost = useCallback(
     (idEntrada: string, patch: Partial<Post> & { slugAuto?: boolean }) => {
@@ -1131,12 +1230,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       // Só zera o contador de pendências. O build de verdade é do botão Publicar
       // (Topo.tsx → POST /api/build) e este método só é chamado DEPOIS de o
       // build terminar com sucesso — não dispara build nem inventa deploy.
-      publicarAlteracoes: () => {
-        setPendentes(0);
-        setPostsAlterados([]);
-      },
-      // Posts: um por post alterado (não uma por tecla). Demais telas seguem contando à parte.
-      pendentes: pendentes + postsAlterados.length,
+      publicarAlteracoes: () => { void recarregarPendentes(); },
+      pendentes,
+      nuncaPublicado,
+      recarregarPendentes,
       reverterDeploy: (id) => {
         setDeploys((lista) => lista.map((d) => ({ ...d, atual: d.id === id })));
       },
@@ -1167,7 +1264,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       postsCarregados,
       erroPosts,
       salvamento,
-      postsAlterados,
+      nuncaPublicado,
+      recarregarPendentes,
       atualizarPost,
       salvarPost,
       resolverIdPost,

@@ -83,6 +83,12 @@ export interface Post {
   fontes: Fonte[];
   palavras: number;
   kwPrimaria?: string;
+  /** Palavras-chave secundárias (uso interno; não aparecem no site). */
+  kwSecundarias?: string[];
+  /** Nome do autor resolvido pelo servidor (vazio = não reconhecido). */
+  autorNome?: string;
+  /** false = o `autor` gravado no arquivo não é um autor conhecido (valor antigo/inválido). */
+  autorReconhecido?: boolean;
   /** Marcador real no frontmatter (geradoPorIA: true): so ele liga o selo IA na lista. */
   geradoPorIA?: boolean;
 }

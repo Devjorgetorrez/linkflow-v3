@@ -4,25 +4,9 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
-import { lerDados, salvarDados } from "@/lib/dados";
-import { getSiteSlug } from "@/lib/fs";
+import { lerRedirects, salvarRedirects } from "@/lib/redirects";
 import { exigirPapel } from "@/lib/auth";
 import { MATRIZ } from "@/lib/permissoes";
-import type { Redirect } from "@/mock/types";
-
-function gerarArquivoRedirects(redirects: Redirect[]): void {
-  const siteDir = `/var/www/${getSiteSlug()}`;
-  const linhas = redirects.map((r) =>
-    r.codigo === 410 ? `${r.origem}  /410  410` : `${r.origem}  ${r.destino}  ${r.codigo}`
-  );
-  try {
-    if (fs.existsSync(siteDir)) {
-      fs.writeFileSync(path.join(siteDir, "_redirects"), linhas.join("\n"), "utf-8");
-    }
-  } catch { /* silencioso */ }
-}
 
 export async function DELETE(
   req: NextRequest,
@@ -33,7 +17,7 @@ export async function DELETE(
 
   try {
     const { id } = await params;
-    const redirects = lerDados<Redirect[]>("redirects.json", []);
+    const redirects = lerRedirects();
     const idx = redirects.findIndex((r) => r.id === id);
 
     if (idx === -1) {
@@ -41,8 +25,7 @@ export async function DELETE(
     }
 
     redirects.splice(idx, 1);
-    salvarDados("redirects.json", redirects);
-    gerarArquivoRedirects(redirects);
+    salvarRedirects(redirects);
 
     return NextResponse.json({ ok: true });
   } catch (err) {

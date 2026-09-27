@@ -6,14 +6,18 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import path from "path";
-import { listarArquivos, lerArquivo, stringifyMd, atualizarFrontmatter, parseMd } from "@/lib/fs";
+import { listarArquivos, lerArquivo, stringifyMd, atualizarFrontmatter, parseMd, removerChavesFrontmatter } from "@/lib/fs";
 import { exigirPapel, obterAtor, validarSlug } from "@/lib/auth";
 import { MATRIZ } from "@/lib/permissoes";
 import { ehPostDoUsuario } from "@/lib/usuarios-regras";
 import { buscarPorId, lerUsuarios } from "@/lib/usuarios";
 import { lerDados } from "@/lib/dados";
 import { postParaApi } from "@/lib/posts-api";
-import { autorPadrao, camposDoCorpo, frontmatterInicial, hojeISO, validarCamposPost } from "@/lib/posts-campos";
+import {
+  ERRO_AUTOR_SEM_PERFIL, autorPadrao, camposDoCorpo, frontmatterInicial, hojeISO, validarCamposPost, validarCorpoRequisicao,
+} from "@/lib/posts-campos";
+import { liberarEnderecoDePost } from "@/lib/redirects";
+import { slugPublicavel } from "@/lib/sync-autores";
 import { caminhoPost, dirPosts, gravarNovoAtomico, slugLivre, slugOcupado } from "@/lib/posts-fs";
 import {
   SLUGS_RESERVADOS, TITULO_MAX, TITULO_PROVISORIO, normalizarCorpo, slugDoTitulo,
@@ -88,24 +92,37 @@ export async function POST(req: NextRequest) {
         destaque: false,
         palavraChave: "", // a cópia não pode canibalizar a palavra-chave do original
       };
+      // `autor` é sempre o slug de um autor que assina, nunca id de usuário: o do original se ele
+      // for reconhecido; senão o de quem está duplicando. Se ninguém puder assinar, sai do arquivo.
       const dono = autorPadrao(ator, usuarios);
-      if (ehAutor && dono) campos.autor = dono;
-      const novo = atualizarFrontmatter(raw, campos);
+      if (ehAutor && !dono) return NextResponse.json({ ok: false, erro: ERRO_AUTOR_SEM_PERFIL }, { status: 422 });
+      const autorCopia = ehAutor ? dono : slugPublicavel(String(fmOrigem.autor ?? ""), usuarios) ?? dono;
+      if (autorCopia) campos.autor = autorCopia;
+      let novo = atualizarFrontmatter(raw, campos);
+      if (!autorCopia) novo = removerChavesFrontmatter(novo, ["autor"]);
       if (!gravarNovoAtomico(caminhoPost(slug), novo)) {
         return NextResponse.json({ ok: false, erro: "Já existe um post com esse endereço." }, { status: 409 });
       }
+      liberarEnderecoDePost(slug);
       return NextResponse.json({ ok: true, slug, duplicadoDe: origem });
     }
 
     // ── Criar ───────────────────────────────────────────────────────────────
     // Autor cria só rascunho e sempre em seu próprio nome (não publica nem assina por outro).
+    let donoDoAutor: string | undefined;
     if (ehAutor) {
       body.status = "rascunho";
       delete body.autor;
-      body.autorId = ator.id;
+      delete body.autorId;
+      donoDoAutor = autorPadrao(ator, usuarios);
+      if (!donoDoAutor) return NextResponse.json({ ok: false, erro: ERRO_AUTOR_SEM_PERFIL }, { status: 422 });
     }
 
+    const erroCorpo = validarCorpoRequisicao(body, usuarios);
+    if (erroCorpo) return NextResponse.json({ ok: false, erro: erroCorpo.erro }, { status: erroCorpo.status });
+
     const campos = camposDoCorpo(body, usuarios, categorias);
+    if (donoDoAutor) campos.autor = donoDoAutor;
     const fm = frontmatterInicial(campos, ator, usuarios);
     const invalido = validarCamposPost(fm, String(fm.metaDescription ?? ""));
     if (invalido) return NextResponse.json({ ok: false, erro: invalido.erro }, { status: invalido.status });
@@ -130,6 +147,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, erro: "Já existe um post com esse endereço (slug)." }, { status: 409 });
     }
 
+    liberarEnderecoDePost(slug); // se esse endereço já foi origem de um redirecionamento, ele sai
     return NextResponse.json({ ok: true, slug, titulo: fm.titulo, status: fm.status });
   } catch (err) {
     console.error("[api/posts POST]", err);

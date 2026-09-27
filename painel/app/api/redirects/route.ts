@@ -5,39 +5,16 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
-import { lerDados, salvarDados } from "@/lib/dados";
-import { getLinkflowDir, getSiteSlug } from "@/lib/fs";
+import { lerRedirects, salvarRedirects } from "@/lib/redirects";
 import { exigirPapel } from "@/lib/auth";
 import { MATRIZ } from "@/lib/permissoes";
 import type { Redirect } from "@/mock/types";
-
-function gerarArquivoRedirects(redirects: Redirect[]): void {
-  // Gerar arquivo _redirects para o site (compatível com Netlify/Cloudflare)
-  // e também um arquivo nginx-redirects.conf para o Nginx no VPS
-  const siteDir = `/var/www/${getSiteSlug()}`;
-  const linhasNetlify = redirects
-    .filter((r) => r.codigo !== 410)
-    .map((r) => `${r.origem}  ${r.destino}  ${r.codigo}`);
-  const linhasGone = redirects
-    .filter((r) => r.codigo === 410)
-    .map((r) => `${r.origem}  /410  410`);
-
-  const conteudoNetlify = [...linhasNetlify, ...linhasGone].join("\n");
-
-  try {
-    if (fs.existsSync(siteDir)) {
-      fs.writeFileSync(path.join(siteDir, "_redirects"), conteudoNetlify, "utf-8");
-    }
-  } catch { /* silencioso se não tiver permissão */ }
-}
 
 export async function GET(req: NextRequest) {
   const auth = await exigirPapel(req, MATRIZ["redirects:GET"]);
   if (auth) return auth;
 
-  const redirects = lerDados<Redirect[]>("redirects.json", []);
+  const redirects = lerRedirects();
   return NextResponse.json({ ok: true, redirects });
 }
 
@@ -57,7 +34,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, erro: "Código inválido (301, 302 ou 410)" }, { status: 400 });
     }
 
-    const redirects = lerDados<Redirect[]>("redirects.json", []);
+    const redirects = lerRedirects();
 
     // Verificar duplicata de origem
     if (redirects.some((r) => r.origem === body.origem)) {
@@ -75,8 +52,7 @@ export async function POST(req: NextRequest) {
     };
 
     redirects.push(novo);
-    salvarDados("redirects.json", redirects);
-    gerarArquivoRedirects(redirects);
+    salvarRedirects(redirects);
 
     return NextResponse.json({ ok: true, redirect: novo });
   } catch (err) {

@@ -2,7 +2,7 @@
  * app/api/build/route.ts
  * POST /api/build → valida o conteúdo e dispara o build do Astro em segundo plano
  *                   (202 iniciado · 409 já há build rodando · 422 conteúdo inválido)
- * GET  /api/build → estado do último build (lib/build-estado.ts)
+ * GET  /api/build → estado do último build (lib/build-estado.ts) + `pendentes` (lib/pendentes.ts)
  * GET  /api/build?log=1 → log completo do último build (texto puro)
  *
  * O estado fica em $LINKFLOW_DIR/dados/build-estado.json; a rota nunca diz
@@ -15,6 +15,7 @@ import { getSiteSlug } from "@/lib/fs";
 import { exigirPapel, validarSlug } from "@/lib/auth";
 import { MATRIZ } from "@/lib/permissoes";
 import { caminhoLogUltimo, iniciarBuild, lerEstado } from "@/lib/build-estado";
+import { contarPendentes } from "@/lib/pendentes";
 
 export const dynamic = "force-dynamic";
 
@@ -69,7 +70,8 @@ export async function GET(req: NextRequest) {
         headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" },
       });
     }
-    return NextResponse.json({ ok: true, estado: lerEstado() }, { headers: { "Cache-Control": "no-store" } });
+    // `pendentes`: alterações de conteúdo ainda fora do site, calculadas no disco (não zeram no F5)
+    return NextResponse.json({ ok: true, estado: lerEstado(), ...contarPendentes() }, { headers: { "Cache-Control": "no-store" } });
   } catch (err) {
     console.error("[api/build GET]", err);
     return NextResponse.json({ ok: false, erro: String(err) }, { status: 500 });

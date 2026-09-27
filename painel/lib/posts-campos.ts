@@ -4,11 +4,13 @@
  * pelo PATCH que cria um post novo: os dois nascem IGUAIS (válidos para o
  * schema do site) em vez de cada um inventar os seus campos.
  */
-import { painelParaFrontmatter } from "@/lib/frontmatter-post";
+import { faqCompleto, listaLimpa, painelParaFrontmatter } from "@/lib/frontmatter-post";
+import { removerChavesFrontmatter, slugify } from "@/lib/fs";
+import { salvarUsuarios } from "@/lib/usuarios";
 import {
   META_MAX, META_MIN, TITULO_MAX, TITULO_MIN, TITULO_PROVISORIO, statusVaiAoAr, tituloValido,
 } from "@/lib/posts-regras";
-import { ehAutorPublicavel, slugDoAutor } from "@/lib/sync-autores";
+import { slugParaAssinar, slugPublicavel } from "@/lib/sync-autores";
 import { slugDoCategoria } from "@/lib/sync-categorias";
 import type { Ator } from "@/lib/auth";
 import type { Usuario } from "@/lib/usuarios";
@@ -54,6 +56,75 @@ export function validarCamposPost(fm: Record<string, unknown>, metaFinal: string
   return null;
 }
 
+const LIM = { seoTitle: 70, resumo: 300, canonical: 500, capa: 500, capaAlt: 300, faq: 30, pergunta: 300, resposta: 3000, kws: 30, kw: 100 };
+
+/**
+ * Tipo e tamanho dos campos extras do corpo da requisição. Nada é aceito pela
+ * metade: valor de tipo errado é recusado com a mensagem (400), nunca ignorado.
+ */
+export function validarCorpoRequisicao(body: Record<string, unknown>, usuarios: Usuario[]): ErroCampos | null {
+  const bad = (erro: string): ErroCampos => ({ erro, status: 400 });
+  const texto = (chave: string, max: number, nome: string): ErroCampos | null => {
+    const v = body[chave];
+    if (v === undefined || v === null) return null;
+    if (typeof v !== "string") return bad(`${nome}: precisa ser um texto.`);
+    if (v.trim().length > max) return bad(`${nome}: passa de ${max} caracteres.`);
+    return null;
+  };
+  const e =
+    texto("seoTitle", LIM.seoTitle, "Título SEO") ||
+    texto("resumo", LIM.resumo, "Resumo") ||
+    texto("canonical", LIM.canonical, "Canonical") ||
+    texto("capa", LIM.capa, "Imagem de capa") ||
+    texto("imagemCapa", LIM.capa, "Imagem de capa") ||
+    texto("capaAlt", LIM.capaAlt, "Texto alternativo da capa") ||
+    texto("imagemCapaAlt", LIM.capaAlt, "Texto alternativo da capa");
+  if (e) return e;
+
+  const canonical = typeof body.canonical === "string" ? body.canonical.trim() : "";
+  if (canonical) {
+    let ok = false;
+    try {
+      const u = new URL(canonical);
+      ok = u.protocol === "https:" || u.protocol === "http:";
+    } catch { /* inválida */ }
+    if (!ok) return bad("Canonical: use um endereço completo, começando com https://.");
+  }
+  for (const chave of ["capa", "imagemCapa"]) {
+    const v = typeof body[chave] === "string" ? String(body[chave]).trim() : "";
+    if (v && !/^(https?:\/\/|\/(?!\/))/i.test(v)) return bad("Imagem de capa: use um endereço que comece com / ou https://.");
+  }
+  for (const chave of ["noindex", "geradoPorIA"]) {
+    if (body[chave] !== undefined && typeof body[chave] !== "boolean") return bad(`${chave}: precisa ser verdadeiro ou falso.`);
+  }
+  if (body.faq !== undefined) {
+    if (!Array.isArray(body.faq)) return bad("FAQ: precisa ser uma lista de perguntas e respostas.");
+    if (body.faq.length > LIM.faq) return bad(`FAQ: no máximo ${LIM.faq} perguntas.`);
+    for (const f of body.faq) {
+      if (!f || typeof f !== "object") return bad("FAQ: cada item precisa ter pergunta e resposta.");
+      const { pergunta, resposta } = f as Record<string, unknown>;
+      if ((pergunta !== undefined && typeof pergunta !== "string") || (resposta !== undefined && typeof resposta !== "string")) {
+        return bad("FAQ: pergunta e resposta precisam ser textos.");
+      }
+      if (String(pergunta ?? "").trim().length > LIM.pergunta) return bad(`FAQ: pergunta passa de ${LIM.pergunta} caracteres.`);
+      if (String(resposta ?? "").trim().length > LIM.resposta) return bad(`FAQ: resposta passa de ${LIM.resposta} caracteres.`);
+    }
+  }
+  if (body.kwSecundarias !== undefined) {
+    if (!Array.isArray(body.kwSecundarias) || body.kwSecundarias.some((k) => typeof k !== "string")) {
+      return bad("Palavras-chave secundárias: precisa ser uma lista de textos.");
+    }
+    if (body.kwSecundarias.length > LIM.kws) return bad(`Palavras-chave secundárias: no máximo ${LIM.kws}.`);
+    if (body.kwSecundarias.some((k: string) => k.trim().length > LIM.kw)) return bad(`Palavras-chave secundárias: cada uma com até ${LIM.kw} caracteres.`);
+  }
+  // Autor: só slug/id de autor que pode assinar (o arquivo nunca guarda id de usuário).
+  const pedido = body.autor ?? body.autorId;
+  if (pedido !== undefined && pedido !== null && String(pedido).trim() !== "" && slugPublicavel(String(pedido), usuarios) === null) {
+    return bad("Autor inválido: escolha alguém com perfil público de autor (nome e endereço próprio).");
+  }
+  return null;
+}
+
 /** Aceita "2026-09-26" e "2026-09-26T10:30…" (edição rápida antiga); devolve AAAA-MM-DD. */
 export function normalizarData(v: unknown): string | undefined {
   if (v === undefined || v === null || v === "") return undefined;
@@ -69,21 +140,30 @@ export function camposDoCorpo(
 ): Record<string, unknown> {
   const fm = painelParaFrontmatter(body);
   if (typeof fm.publicadoEm === "string") fm.publicadoEm = normalizarData(fm.publicadoEm);
-  if (typeof fm.autor === "string") fm.autor = slugDoAutor(fm.autor, usuarios);
+  if (typeof fm.autor === "string") {
+    const slug = slugPublicavel(fm.autor, usuarios); // nunca id de usuário no arquivo
+    if (slug) fm.autor = slug;
+    else delete fm.autor;
+  }
   if (typeof fm.categoria === "string") fm.categoria = slugDoCategoria(fm.categoria, categorias);
   if (typeof body.imagemHero === "string" && body.imagemHero) fm.imagemHero = body.imagemHero;
   return fm;
 }
 
-/** Autor com que o post nasce: o próprio usuário logado (slug do site quando ele assina). */
+/**
+ * Autor com que o post nasce: o slug do perfil do usuário logado. Se ele pode
+ * assinar mas ainda não tem slug, o slug é gerado do nome e gravado no perfil
+ * dele. Se não pode assinar, devolve undefined (o post nasce sem `autor`).
+ */
 export function autorPadrao(ator: Ator | null, usuarios: Usuario[]): string | undefined {
   if (ator?.via !== "sessao") return undefined;
   const u = usuarios.find((x) => x.id === ator.id);
   if (!u) return undefined;
-  if (ehAutorPublicavel(u)) return u.autoria!.slug.trim();
-  // Autor (papel) sem perfil público ainda: o id mantém a posse do post.
-  return ator.papel === "autor" ? u.id : undefined;
+  return slugParaAssinar(u, usuarios, salvarUsuarios, slugify) ?? undefined;
 }
+
+export const ERRO_AUTOR_SEM_PERFIL =
+  "Seu perfil ainda não tem nome público de autor, então não dá para assinar posts. Peça a um administrador para completar o seu perfil em Usuários.";
 
 /**
  * Frontmatter de um post NOVO, sempre válido para o schema do site:
@@ -119,17 +199,25 @@ export function frontmatterInicial(
  */
 export function camposParaLimpar(body: Record<string, unknown>): string[] {
   const limpar: string[] = [];
+  const vazio = (v: unknown) => typeof v === "string" && v.trim() === "";
   if (body.categoriaId === "" || body.categoria === "") limpar.push("categoria");
   if (body.kwPrimaria === "" || body.palavraChave === "") limpar.push("palavraChave");
+  if (vazio(body.autorId) || vazio(body.autor)) limpar.push("autor");
+  if (vazio(body.seoTitle)) limpar.push("seoTitle");
+  if (vazio(body.resumo)) limpar.push("resumo");
+  if (vazio(body.canonical)) limpar.push("canonical");
+  if (vazio(body.capa) || vazio(body.imagemCapa)) limpar.push("imagemCapa");
+  if (vazio(body.capaAlt) || vazio(body.imagemCapaAlt)) limpar.push("imagemCapaAlt");
+  if (body.noindex === false) limpar.push("noindex");
+  if (body.geradoPorIA === false) limpar.push("geradoPorIA");
+  if (faqCompleto(body.faq)?.length === 0) limpar.push("faq");
+  if (listaLimpa(body.kwSecundarias)?.length === 0) limpar.push("kwSecundarias");
+  // Sem imagem não há texto alternativo sobrando.
+  if ((vazio(body.capa) || vazio(body.imagemCapa)) && body.capaAlt === undefined && body.imagemCapaAlt === undefined) limpar.push("imagemCapaAlt");
   return limpar;
 }
 
-/** Tira do frontmatter as linhas de primeiro nível com as chaves dadas. */
+/** Tira do frontmatter as linhas de primeiro nível com as chaves dadas (e o bloco de cada uma). */
 export function removerCamposFrontmatter(raw: string, chaves: string[]): string {
-  if (chaves.length === 0) return raw;
-  const texto = raw.replace(/\r\n/g, "\n");
-  const m = texto.match(/^---\n([\s\S]*?)\n---/);
-  if (!m) return raw;
-  const linhas = m[1].split("\n").filter((l) => !chaves.some((k) => l.startsWith(`${k}:`)));
-  return `---\n${linhas.join("\n")}\n---${texto.slice(m[0].length)}`;
+  return removerChavesFrontmatter(raw, chaves);
 }

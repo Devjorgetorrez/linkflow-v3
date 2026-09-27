@@ -80,6 +80,11 @@ export function escreverAtomico(arquivo: string, conteudo: string) {
 
 function gravarEstado(e: EstadoBuild) {
   escreverAtomico(arqEstado(), JSON.stringify(e, null, 2));
+  // O contador de alterações pendentes (lib/pendentes.ts) mede contra o último build OK,
+  // mesmo que um build com erro venha depois e troque o estado.
+  if (e.status === "ok") {
+    escreverAtomico(path.join(dirDados(), "ultimo-build-ok.json"), JSON.stringify({ inicio: e.inicio, fim: e.fim }, null, 2));
+  }
 }
 
 function pidVivo(pid: number): boolean {

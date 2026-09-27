@@ -28,5 +28,8 @@ export function salvarDados<T>(arquivo: string, dados: T): void {
   const filePath = getDadosPath(arquivo);
   const dir = path.dirname(filePath);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(filePath, JSON.stringify(dados, null, 2), "utf-8");
+  // atômico: temporário + troca de nome (nunca deixa o JSON pela metade)
+  const tmp = `${filePath}.tmp-${process.pid}-${Date.now()}`;
+  fs.writeFileSync(tmp, JSON.stringify(dados, null, 2), "utf-8");
+  fs.renameSync(tmp, filePath);
 }

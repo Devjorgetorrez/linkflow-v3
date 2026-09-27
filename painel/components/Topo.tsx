@@ -109,14 +109,14 @@ export function Topo() {
         return;
       }
       if (res.status === 409) {
-        setAviso("Já existe uma publicação em andamento.");
+        setAviso("Já existe uma atualização do site em andamento.");
         return;
       }
       if (res.status === 422) {
         setDetalhes(true); // mostra logo o que precisa ser corrigido
         return;
       }
-      setAviso(data.erro ?? `Não foi possível iniciar a publicação (${res.status}).`);
+      setAviso(data.erro ?? `Não foi possível iniciar a atualização do site (${res.status}).`);
     } catch (err) {
       setAviso(`Não foi possível falar com o servidor: ${String(err)}`);
     }
@@ -153,21 +153,31 @@ export function Topo() {
   const limiteMin = build?.timeoutMs ? Math.round(build.timeoutMs / 6000) / 10 : 5;
   const etapaTxt =
     build?.etapa === "validando" ? "conferindo o conteúdo" : build?.etapa === "copiando" ? "enviando ao site" : "construindo o site";
+  // "Atualizar o site" leva TUDO o que foi salvo ao site no ar (posts, páginas, configurações).
+  // Nada pendente + última atualização ok = nada a fazer: o botão fica desligado, com a explicação.
+  const semNadaAFazer = !rodando && !emErro && build?.status === "ok" && pendentes === 0;
   const labelPublicar = rodando
-    ? "Publicando…"
+    ? "Atualizando o site…"
     : emErro
-    ? "Erro ao publicar"
+    ? "Erro ao atualizar o site"
     : pendentes > 0
-    ? `Publicar (${pendentes})`
-    : "Publicar";
+    ? `Atualizar o site (${pendentes})`
+    : "Atualizar o site";
+  const dicaPublicar = !podePublicar
+    ? "Sem permissão para o seu papel"
+    : semNadaAFazer
+    ? "O site já está atualizado: nada mudou desde a última atualização."
+    : pendentes > 0
+    ? `Leva ao site no ar tudo o que foi salvo: ${pendentes} ${pendentes === 1 ? "alteração" : "alterações"} (posts, páginas e configurações).`
+    : "Leva ao site no ar tudo o que foi salvo (posts, páginas e configurações).";
   const infoBuild = !podePublicar
     ? null
     : rodando
     ? `${etapaTxt} · ${decorrido}s (limite ${limiteMin} min)`
     : build?.status === "ok"
-    ? `Publicado às ${hhmm(build.fim)}`
+    ? `Site atualizado às ${hhmm(build.fim)}`
     : build?.status === "nunca"
-    ? "Nunca publicado"
+    ? "O site ainda não foi atualizado"
     : null;
 
   return (
@@ -241,7 +251,7 @@ export function Topo() {
             title={aviso ?? build?.resumo}
           >
             <AlertTriangle size={11} className="shrink-0" />
-            <span className="truncate">{aviso ?? build?.resumo ?? "A publicação falhou."}</span>
+            <span className="truncate">{aviso ?? build?.resumo ?? "A atualização do site falhou."}</span>
           </button>
         )}
 
@@ -268,12 +278,12 @@ export function Topo() {
           {tema === "escuro" ? <Sun size={13} /> : <Moon size={13} />}
         </button>
 
-        {/* Publicar */}
+        {/* Atualizar o site (o build inteiro; publicar UM artigo é o botão de dentro do editor) */}
         <Botao
           variante={pendentes > 0 || rodando || emErro ? "primario" : "secundario"}
           onClick={publicar}
-          disabled={rodando || !podePublicar}
-          title={!podePublicar ? "Sem permissão para o seu papel" : undefined}
+          disabled={rodando || !podePublicar || semNadaAFazer}
+          title={dicaPublicar}
           className={cn("transition-all", emErro && "bg-danger text-white border-danger")}
         >
           {rodando ? <Loader2 size={12} className="animate-spin" /> : <Rocket size={12} />}
@@ -290,7 +300,7 @@ export function Topo() {
       {detalhes && (emErro || aviso) && !rodando && (
         <div className="absolute top-[56px] right-3 z-40 max-h-[70vh] w-[520px] max-w-[calc(100vw-260px)] overflow-auto rounded-[var(--radius)] border border-danger/40 bg-surface-2 p-3 shadow-xl">
           <div className="mb-1.5 flex items-center justify-between gap-2">
-            <p className="text-[12px] font-medium text-danger">A publicação não foi concluída</p>
+            <p className="text-[12px] font-medium text-danger">A atualização do site não foi concluída</p>
             <button type="button" onClick={() => setDetalhes(false)} className="text-[11px] text-ink-muted hover:text-ink">
               Fechar
             </button>

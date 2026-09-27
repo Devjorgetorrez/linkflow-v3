@@ -5,7 +5,8 @@
  */
 import { parseMd } from "@/lib/fs";
 import { lerStatusPost } from "@/lib/status-post";
-import { idDoAutor } from "@/lib/sync-autores";
+import { resolverAutorDoPost } from "@/lib/sync-autores";
+import { corpoParaEditor } from "@/lib/posts-corpo";
 import { idDoCategoria } from "@/lib/sync-categorias";
 import { contarPalavrasHtml } from "@/lib/posts-texto";
 import type { Usuario } from "@/lib/usuarios";
@@ -23,6 +24,22 @@ export function veioDaIA(fm: Record<string, unknown>): boolean {
   return origem === "ia" || origem === "agente";
 }
 
+/** faq do frontmatter → [{id, pergunta, resposta}] (o painel precisa de id para editar a lista). */
+export function faqDoFrontmatter(v: unknown): { id: string; pergunta: string; resposta: string }[] {
+  if (!Array.isArray(v)) return [];
+  return v
+    .filter((f): f is Record<string, unknown> => !!f && typeof f === "object")
+    .map((f, i) => ({ id: `f${i + 1}`, pergunta: txt(f.pergunta), resposta: txt(f.resposta) }))
+    .filter((f) => f.pergunta !== "" || f.resposta !== "");
+}
+
+/** kwSecundarias do frontmatter → lista de textos. */
+export function listaTextos(v: unknown): string[] {
+  if (Array.isArray(v)) return v.map((x) => txt(x).trim()).filter(Boolean);
+  const t = txt(v).trim();
+  return t ? [t] : [];
+}
+
 export function postParaApi(
   chave: string,
   raw: string,
@@ -30,27 +47,39 @@ export function postParaApi(
   categorias: Categoria[],
 ) {
   const { frontmatter: fm, content } = parseMd(raw);
+  const titulo = txt(fm.titulo ?? fm.title) || "(sem título)";
+  const meta = txt(fm.metaDescription ?? fm.descricao ?? fm.description);
+  // Markdown (skills) vira HTML para o editor; o título não fica dentro do corpo.
+  const { html: corpo, formato } = corpoParaEditor(content, fm, titulo);
+  const autor = resolverAutorDoPost(txt(fm.autor), usuarios);
+  const faq = faqDoFrontmatter(fm.faq);
   return {
     id: chave,
     slug: chave,
-    titulo: txt(fm.titulo ?? fm.title) || "(sem título)",
-    resumo: txt(fm.metaDescription ?? fm.descricao ?? fm.description),
-    corpo: content,
+    titulo,
+    resumo: txt(fm.resumo),
+    corpo,
+    corpoFormato: formato,
     data: txt(fm.publicadoEm ?? fm.date),
     status: lerStatusPost(fm.status),
     destaque: fm.destaque === true,
     palavraChave: txt(fm.palavraChave),
-    seoTitle: txt(fm.titulo),
-    metaDescription: txt(fm.metaDescription ?? fm.descricao ?? fm.description),
-    canonical: "",
-    noindex: false,
+    kwSecundarias: listaTextos(fm.kwSecundarias),
+    seoTitle: txt(fm.seoTitle), // vazio = o site usa o título
+    metaDescription: meta,
+    canonical: txt(fm.canonical), // vazio = automático
+    noindex: fm.noindex === true,
     ogImagem: txt(fm.imagemHero),
-    schemaTipo: "Article",
-    faq: [],
+    capa: txt(fm.imagemCapa),
+    capaAlt: txt(fm.imagemCapaAlt),
+    schemaTipo: faq.length > 0 ? "FAQPage" : "Article",
+    faq,
     fontes: [],
-    palavras: contarPalavrasHtml(content),
+    palavras: contarPalavrasHtml(corpo),
     categoriaId: idDoCategoria(txt(fm.categoria), categorias),
-    autorId: idDoAutor(txt(fm.autor), usuarios),
+    autorId: autor.id,
+    autorNome: autor.nome,
+    autorReconhecido: autor.reconhecido,
     geradoPorIA: veioDaIA(fm),
   };
 }

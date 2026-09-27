@@ -122,3 +122,73 @@ export function idDoAutor(valor: string, usuarios: Usuario[]): string {
   const u = usuarios.find((x) => x.autoria?.slug === v) ?? usuarios.find((x) => x.id === v);
   return u?.id ?? v;
 }
+
+/**
+ * Valor de `autor` (slug ou id de usuário) → slug de um autor PUBLICÁVEL, ou
+ * null. É o único jeito de um valor virar `autor:` no frontmatter: o arquivo
+ * do post nunca guarda id de usuário.
+ */
+export function slugPublicavel(valor: string, usuarios: Usuario[]): string | null {
+  const v = valor.trim();
+  if (!v) return null;
+  const u = usuarios.find((x) => ehAutorPublicavel(x) && (x.autoria!.slug.trim() === v || x.id === v));
+  return u ? u.autoria!.slug.trim() : null;
+}
+
+/** Nome de um autor que só existe como arquivo do site (content/autores/<slug>.md, escrito pelo agente). */
+export function nomeAutorDoArquivo(slug: string): string {
+  if (!SLUG_VALIDO.test(slug)) return "";
+  try {
+    const texto = fs.readFileSync(path.join(dirAutores(), `${slug}.md`), "utf-8");
+    const m = texto.match(/^nome:\s*(.+)$/m);
+    return m ? m[1].trim().replace(/^["']|["']$/g, "") : "";
+  } catch {
+    return "";
+  }
+}
+
+/** Quem é o autor de um post, para a tela: id (do usuário), nome e se o valor gravado é reconhecido. */
+export function resolverAutorDoPost(
+  valor: string,
+  usuarios: Usuario[],
+): { id: string; nome: string; reconhecido: boolean } {
+  const v = valor.trim();
+  if (!v) return { id: "", nome: "", reconhecido: true };
+  const pub = usuarios.find((x) => ehAutorPublicavel(x) && (x.autoria!.slug.trim() === v || x.id === v));
+  if (pub) return { id: pub.id, nome: pub.autoria!.nomePublico.trim(), reconhecido: true };
+  // Valor antigo: id de um usuário que não assina (ou sem perfil público completo).
+  const usu = usuarios.find((x) => x.id === v);
+  if (usu) {
+    const nome = (usu.autoria?.nomePublico ?? "").trim();
+    return { id: usu.id, nome, reconhecido: false };
+  }
+  const doArquivo = nomeAutorDoArquivo(v);
+  if (doArquivo) return { id: v, nome: doArquivo, reconhecido: true };
+  return { id: "", nome: "", reconhecido: false };
+}
+
+/**
+ * O usuário logado como autor de um post novo: o slug do perfil dele. Se pode
+ * assinar e tem nome público mas ainda não tem slug, gera o slug do nome
+ * (sem colidir com outro autor) e grava no perfil dele. Devolve null se ele
+ * não puder assinar — aí o post nasce sem `autor`.
+ */
+export function slugParaAssinar(
+  u: Usuario,
+  usuarios: Usuario[],
+  gravar: (usuariosAtualizados: Usuario[]) => void,
+  slugify: (s: string) => string,
+): string | null {
+  if (ehAutorPublicavel(u)) return u.autoria!.slug.trim();
+  const nome = (u.autoria?.nomePublico ?? "").trim();
+  if (!u.podeAssinar || !u.autoria || nome.length < 2) return null;
+  const base = slugify(nome) || "autor";
+  const ocupados = new Set(
+    usuarios.filter((x) => x.id !== u.id).map((x) => (x.autoria?.slug ?? "").trim()).filter(Boolean),
+  );
+  let slug = base;
+  for (let n = 2; ocupados.has(slug) || fs.existsSync(path.join(dirAutores(), `${slug}.md`)); n++) slug = `${base}-${n}`;
+  const atualizados = usuarios.map((x) => (x.id === u.id ? { ...x, autoria: { ...x.autoria!, slug } } : x));
+  gravar(atualizados);
+  return slug;
+}

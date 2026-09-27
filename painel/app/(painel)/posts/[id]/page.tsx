@@ -39,15 +39,15 @@ import {
   Vazio,
 } from "@/components/ui";
 import { useStore } from "@/lib/store";
+import { caminhoDaMidia } from "@/lib/site-config-cliente";
 import { useSiteInfo } from "@/lib/useSiteInfo";
 import { cn, contarPalavras, slugify } from "@/lib/utils";
-import { TITULO_MAX, TITULO_PROVISORIO, slugDoTitulo, slugSegueTitulo } from "@/lib/posts-regras";
+import { TITULO_MAX, TITULO_MIN, TITULO_PROVISORIO, slugDoTitulo, slugSegueTitulo } from "@/lib/posts-regras";
 import { urlPost } from "@/lib/urls-publicas";
 import type { Post } from "@/mock/types";
 import { analisarSEO, extrairLinks, stripTags, type ResultadoSEO, type TesteKw } from "@/motor/analise-seo";
 import { gerarGraphPost } from "@/motor/schema-graph";
 
-const TIPOS_SCHEMA: Post["schemaTipo"][] = ["Article", "FAQPage", "HowTo", "Recipe"];
 const LIMITE_TITLE = 70;
 const MINIMO_TITLE = 3;
 const LIMITE_META = 165;
@@ -187,23 +187,21 @@ export default function EditorPostPage() {
 
   /* Estado local */
   const [palavraChave, setPalavraChave] = useState(post?.kwPrimaria ?? "");
+  // Texto cru da caixa (uma por linha): mantém linhas em branco enquanto se digita; a lista limpa vai ao servidor.
   const [palavrasSecundarias, setPalavrasSecundarias] = useState("");
 
   // Sync quando o post carrega ou muda de ID
   useEffect(() => {
-    if (post) setPalavraChave(post.kwPrimaria ?? "");
+    if (post) {
+      setPalavraChave(post.kwPrimaria ?? "");
+      setPalavrasSecundarias((post.kwSecundarias ?? []).join("\n"));
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [post?.id]);
   const [kwAtivaIdx, setKwAtivaIdx] = useState(-1);
-  const [conteudoPilar, setConteudoPilar] = useState(false);
   const [bibliotecaCapa, setBibliotecaCapa] = useState(false);
   const [avisoSalvar, setAvisoSalvar] = useState<string | null>(null);
 
-  /* Posts relacionados */
-  const [relacionados, setRelacionados] = useState<string[]>([]);
-  const [modoAuto, setModoAuto] = useState(true);
-  const [buscaRel, setBuscaRel] = useState("");
-  const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [triggers, setTriggers] = useState<Record<string, number>>({});
   const [previewModo, setPreviewModo] = useState<"desktop" | "mobile">("desktop");
   const [abaAtiva, setAbaAtiva] = useState<"seo" | "schema" | "redes">("seo");
@@ -246,22 +244,18 @@ export default function EditorPostPage() {
   );
 
   const autor = autores.find((a) => a.id === post?.autorId);
-  const capa = midia.find((m) => m.id === post?.capa);
+  // A capa é gravada como caminho do site (/midia/arquivo.jpg); se não estiver na biblioteca
+  // (ex.: endereço externo escrito pelo agente), ainda assim aparece pelo endereço.
+  const capaUrl = post?.capa ?? "";
+  const capaNaBiblioteca = capaUrl ? midia.find((m) => caminhoDaMidia(m.url) === caminhoDaMidia(capaUrl)) : undefined;
+  const capa = capaUrl
+    ? (capaNaBiblioteca ?? ({ id: capaUrl, url: capaUrl, arquivo: capaUrl.split("/").pop() || capaUrl, gradiente: "from-slate-200 to-slate-300" } as (typeof midia)[number]))
+    : undefined;
 
   const graphLd = useMemo(
     () => (post ? gerarGraphPost(post, autor, categorias, capa?.url ?? "", siteInfo) : null),
     [post, autor, categorias, capa, siteInfo],
   );
-
-  /* Posts relacionados (hooks ANTES do retorno antecipado: senão o React quebra
-     quando o post aparece depois do carregamento — o "Application error" ao recarregar) */
-  const outrosPosts = useMemo(() => posts.filter((p) => p.id !== post?.id), [posts, post?.id]);
-  const autoRelacionados = useMemo(() => {
-    const mesmaCat = outrosPosts.filter(
-      (p) => p.categoriaId && p.categoriaId === post?.categoriaId,
-    );
-    return (mesmaCat.length > 0 ? mesmaCat : outrosPosts).slice(0, 4);
-  }, [outrosPosts, post?.categoriaId]);
 
   if (!post && !postsCarregados) {
     return (
@@ -293,6 +287,10 @@ export default function EditorPostPage() {
     setAvisoSalvar(null);
   };
 
+  /** FAQ: a lista vai inteira; o tipo de schema acompanha (com perguntas = FAQPage). */
+  const editarFaq = (faq: Post["faq"]) => editar({ faq, schemaTipo: faq.length > 0 ? "FAQPage" : "Article" });
+  const faqIncompletos = post.faq.filter((f) => !f.pergunta.trim() || !f.resposta.trim()).length;
+
   /** Título digitado: o slug acompanha até ser editado à mão; ao mudar, o arquivo é renomeado no servidor. */
   const editarTitulo = (titulo: string) => {
     const seguir = slugSegueTitulo(post.slug, post.titulo === TITULO_PROVISORIO ? "" : post.titulo);
@@ -308,14 +306,16 @@ export default function EditorPostPage() {
     if (ok) setTimeout(() => setAvisoSalvar(null), 2500);
   };
 
+  /** Marca o artigo como publicado. Ele só vai ao AR quando o site for atualizado (botão do topo). */
   const publicar = async () => {
     editar({ status: "publicado" });
     const ok = await salvarPost(post.id);
-    setAvisoSalvar(ok ? "Marcado como publicado. Use Publicar no topo para colocar no ar." : null);
-    if (ok) setTimeout(() => setAvisoSalvar(null), 4000);
+    setAvisoSalvar(ok ? "Artigo marcado como publicado. Falta atualizar o site (botão no topo) para ele ir ao ar." : null);
+    if (ok) setTimeout(() => setAvisoSalvar(null), 6000);
   };
 
   const dominio = siteInfo.dominio;
+  const tituloAtual = post.titulo === TITULO_PROVISORIO ? "" : post.titulo;
 
   // URL plana: o artigo fica direto na raiz (/<slug>), nunca /blog/<slug>
   const urlPublica = `${dominio ? `https://${dominio}` : "https://seudominio.com.br"}${urlPost(post.slug || "sem-slug")}`;
@@ -370,13 +370,6 @@ export default function EditorPostPage() {
     return null;
   };
 
-  /* Posts relacionados: `outrosPosts` e `autoRelacionados` são calculados acima do retorno antecipado */
-  const resultadosBusca = buscaRel.trim()
-    ? outrosPosts
-        .filter((p) => p.titulo.toLowerCase().includes(buscaRel.toLowerCase()))
-        .slice(0, 6)
-    : [];
-
   return (
     <>
       {/* ---------------------------------------------------------------- cabeçalho */}
@@ -386,7 +379,7 @@ export default function EditorPostPage() {
         </Botao>
         <Badge tom={post.status === "publicado" ? "sucesso" : "neutro"}>
           {post.status === "publicado"
-            ? "no ar"
+            ? "publicado"
             : post.status === "rascunho"
               ? "rascunho"
               : post.status === "revisao"
@@ -405,6 +398,9 @@ export default function EditorPostPage() {
             <span className="text-[11px] text-success" role="status">
               {avisoSalvar ?? `Salvo às ${new Date(salvamento.quando ?? Date.now()).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`}
             </span>
+          )}
+          {salvamento.estado === "salvo" && salvamento.aviso && (
+            <span className="max-w-[320px] text-[11px] text-ink" role="status">{salvamento.aviso}</span>
           )}
           {salvamento.estado === "erro" && (
             <span className="max-w-[360px] text-[11px] text-danger" role="alert">
@@ -429,11 +425,16 @@ export default function EditorPostPage() {
               className={publicarBloqueado || ehAutor ? "cursor-not-allowed opacity-50" : ""}
               onClick={ehAutor ? undefined : publicar}
             >
-              <Send size={12} /> Publicar
+              <Send size={12} /> {post.status === "publicado" ? "Artigo publicado" : "Publicar artigo"}
             </Botao>
+            {!publicarBloqueado && (
+              <div className="absolute right-0 top-full z-50 mt-1.5 hidden w-[260px] rounded-[var(--radius)] border border-line bg-surface-2 p-2.5 text-[11px] leading-snug text-ink-muted shadow-lg group-hover:block">
+                Marca o artigo como publicado. Ele só vai ao ar quando você clicar em <b>Atualizar o site</b>, no topo da tela.
+              </div>
+            )}
             {publicarBloqueado && (
               <div className="absolute right-0 top-full z-50 mt-1.5 hidden min-w-[240px] rounded-[var(--radius)] border border-line bg-surface-2 p-2.5 shadow-lg group-hover:block">
-                <p className="mb-1.5 text-[11px] font-semibold text-ink">Faltam para publicar:</p>
+                <p className="mb-1.5 text-[11px] font-semibold text-ink">Faltam para publicar o artigo:</p>
                 <ul className="space-y-0.5">
                   {faltamPublicar.map((f) => (
                     <li key={f} className="flex items-start gap-1 text-[10.5px] text-danger">
@@ -451,6 +452,30 @@ export default function EditorPostPage() {
       <div className="grid gap-3 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
         {/* -------------------------------------------------------------- conteúdo */}
         <div>
+          {/* Título: campo próprio, fora do texto do artigo (é o H1 da página; o corpo não repete) */}
+          <div className="mb-2 rounded-[var(--radius)] border border-line bg-surface-2 px-3 pb-2 pt-2.5">
+            <div className="mb-1 flex items-baseline justify-between">
+              <Rotulo>Título do artigo</Rotulo>
+              <Contador atual={tituloAtual.length} max={TITULO_MAX} min={TITULO_MIN} />
+            </div>
+            <input
+              ref={titleInputRef}
+              value={tituloAtual}
+              maxLength={TITULO_MAX}
+              onChange={(e) => editarTitulo(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === "Tab") {
+                  e.preventDefault();
+                  editorRef.current?.focarInicio();
+                }
+              }}
+              placeholder="Escreva o título do artigo"
+              aria-label="Título do artigo"
+              autoFocus={!post.titulo || post.titulo === TITULO_PROVISORIO}
+              className="w-full bg-transparent font-display text-[28px] font-bold leading-tight tracking-tight text-ink outline-none placeholder:text-ink-muted/30"
+            />
+            <BarraProgresso atual={tituloAtual.length} min={TITULO_MIN} max={TITULO_MAX} />
+          </div>
           <EditorCorpo
             ref={editorRef}
             valor={post.corpo}
@@ -460,23 +485,6 @@ export default function EditorPostPage() {
               const len = titleInputRef.current?.value.length ?? 0;
               titleInputRef.current?.setSelectionRange(len, len);
             }}
-            slotTitulo={
-              <input
-                ref={titleInputRef}
-                value={post.titulo === TITULO_PROVISORIO ? "" : post.titulo}
-                maxLength={TITULO_MAX}
-                onChange={(e) => editarTitulo(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === "Tab") {
-                    e.preventDefault();
-                    editorRef.current?.focarInicio();
-                  }
-                }}
-                placeholder="Adicionar título"
-                autoFocus={!post.titulo || post.titulo === TITULO_PROVISORIO}
-                className="w-full bg-transparent px-4 pb-3 pt-3 font-display text-[30px] font-bold leading-tight tracking-tight text-ink outline-none placeholder:text-ink-muted/30"
-              />
-            }
           />
 
           {/* ============================================= Painel SEO / Schema / Redes */}
@@ -566,31 +574,32 @@ export default function EditorPostPage() {
                         );
                       })()}
                     </Campo>
-                    <Campo label="Palavras-chave secundárias" dica="Uma por linha.">
+                    <Campo label="Palavras-chave secundárias" dica="Uma por linha. Uso interno: não aparecem no site.">
                       <AreaTexto
                         rows={3}
                         value={palavrasSecundarias}
-                        onChange={(e) => setPalavrasSecundarias(e.target.value)}
+                        onChange={(e) => {
+                          setPalavrasSecundarias(e.target.value);
+                          editar({
+                            kwSecundarias: e.target.value.split("\n").map((k) => k.trim()).filter(Boolean),
+                          });
+                        }}
                         placeholder={"uma palavra-chave por linha"}
                       />
                     </Campo>
-                    <Alternador
-                      ativo={conteudoPilar}
-                      onChange={setConteudoPilar}
-                      label="Conteúdo pilar"
-                      descricao="Post principal de um cluster — receberá links dos satélites"
-                    />
                     <div>
                       <div className="mb-1 flex items-baseline justify-between">
-                        <Rotulo>Title</Rotulo>
+                        <Rotulo>Título SEO (Google)</Rotulo>
                         <Contador atual={post.seoTitle.length} max={LIMITE_TITLE} min={MINIMO_TITLE} />
                       </div>
                       <Entrada
                         value={post.seoTitle}
+                        maxLength={LIMITE_TITLE}
                         onChange={(e) => editar({ seoTitle: e.target.value })}
-                        placeholder={post.titulo || "Título que aparece no Google"}
+                        placeholder={tituloAtual || "Título que aparece no Google"}
                         aviso={titleForaDaFaixa}
                       />
+                      <p className="mt-1 text-[10.5px] text-ink-muted">Vazio = o Google mostra o título do artigo.</p>
                       <BarraProgresso atual={post.seoTitle.length} min={MINIMO_TITLE} max={LIMITE_TITLE} />
                     </div>
                     <Campo label="Slug">
@@ -799,35 +808,14 @@ export default function EditorPostPage() {
               <div className="p-4">
                 <div className="grid gap-6 lg:grid-cols-2">
                   <div className="space-y-3">
-                    <Campo label="Tipo de schema">
-                      <Selecao
-                        value={post.schemaTipo}
-                        onChange={(e) =>
-                          editar({ schemaTipo: e.target.value as Post["schemaTipo"] })
-                        }
-                      >
-                        {TIPOS_SCHEMA.map((t) => (
-                          <option key={t} value={t}>
-                            {t}
-                          </option>
-                        ))}
-                      </Selecao>
-                    </Campo>
                     <div>
                       <div className="mb-1 flex items-center justify-between">
-                        <Rotulo>
-                          {post.schemaTipo === "HowTo" ? "Passos" : "Perguntas e respostas"}
-                        </Rotulo>
+                        <Rotulo>Perguntas e respostas (FAQ)</Rotulo>
                         <Botao
                           tamanho="sm"
                           variante="fantasma"
                           onClick={() =>
-                            editar({
-                              faq: [
-                                ...post.faq,
-                                { id: `f${Date.now()}`, pergunta: "", resposta: "" },
-                              ],
-                            })
+                            editarFaq([...post.faq, { id: `f${Date.now()}`, pergunta: "", resposta: "" }])
                           }
                         >
                           <Plus size={11} /> Adicionar
@@ -835,7 +823,7 @@ export default function EditorPostPage() {
                       </div>
                       {post.faq.length === 0 ? (
                         <p className="rounded-[var(--radius)] border border-dashed border-line px-3 py-3 text-center text-[11px] text-ink-muted">
-                          Nenhum item. O JSON-LD sai sem bloco de perguntas.
+                          Nenhum item. O site sai sem bloco de perguntas.
                         </p>
                       ) : (
                         <ul className="space-y-1.5">
@@ -851,9 +839,7 @@ export default function EditorPostPage() {
                                 <button
                                   type="button"
                                   title="Remover"
-                                  onClick={() =>
-                                    editar({ faq: post.faq.filter((f) => f.id !== item.id) })
-                                  }
+                                  onClick={() => editarFaq(post.faq.filter((f) => f.id !== item.id))}
                                   className="text-ink-muted transition-colors hover:text-danger"
                                 >
                                   <Trash2 size={11} />
@@ -862,11 +848,9 @@ export default function EditorPostPage() {
                               <Entrada
                                 value={item.pergunta}
                                 onChange={(e) =>
-                                  editar({
-                                    faq: post.faq.map((f) =>
-                                      f.id === item.id ? { ...f, pergunta: e.target.value } : f,
-                                    ),
-                                  })
+                                  editarFaq(
+                                    post.faq.map((f) => (f.id === item.id ? { ...f, pergunta: e.target.value } : f)),
+                                  )
                                 }
                                 placeholder="Pergunta"
                                 className="mb-1 h-7 py-0"
@@ -875,17 +859,21 @@ export default function EditorPostPage() {
                                 rows={2}
                                 value={item.resposta}
                                 onChange={(e) =>
-                                  editar({
-                                    faq: post.faq.map((f) =>
-                                      f.id === item.id ? { ...f, resposta: e.target.value } : f,
-                                    ),
-                                  })
+                                  editarFaq(
+                                    post.faq.map((f) => (f.id === item.id ? { ...f, resposta: e.target.value } : f)),
+                                  )
                                 }
                                 placeholder="Resposta"
                               />
                             </li>
                           ))}
                         </ul>
+                      )}
+                      {faqIncompletos > 0 && (
+                        <p className="mt-1.5 text-[10.5px] text-danger" role="status">
+                          {faqIncompletos === 1 ? "1 item está incompleto" : `${faqIncompletos} itens estão incompletos`}: só
+                          {faqIncompletos === 1 ? " vai" : " vão"} para o site quando tiver pergunta e resposta.
+                        </p>
                       )}
                     </div>
                   </div>
@@ -913,6 +901,8 @@ export default function EditorPostPage() {
                     <div className="overflow-hidden rounded-[var(--radius)] border border-line">
                       <Thumb
                         gradiente={capa.gradiente}
+                        url={capa.url}
+                        alt={post.capaAlt ?? ""}
                         className="aspect-[1.91/1] w-full rounded-none border-0"
                       />
                       <div className="bg-surface px-2.5 py-1.5">
@@ -985,7 +975,7 @@ export default function EditorPostPage() {
 
             {capa ? (
               <>
-                <Thumb gradiente={capa.gradiente} className="aspect-[16/9] w-full" />
+                <Thumb gradiente={capa.gradiente} url={capa.url} alt={post.capaAlt ?? ""} className="aspect-[16/9] w-full" />
                 <p className="mt-1.5 truncate font-mono text-[10.5px] text-ink-muted">
                   {capa.arquivo}
                 </p>
@@ -1056,6 +1046,10 @@ export default function EditorPostPage() {
                   disabled={ehAutor}
                   onChange={(e) => editar({ autorId: e.target.value })}
                 >
+                  {/* valor antigo/desconhecido: aparece como "—" (ou o nome, se o servidor achou) e dá para trocar */}
+                  {!autores.some((a) => a.id === post.autorId) && (
+                    <option value={post.autorId}>{post.autorNome || "—"}</option>
+                  )}
                   {autores.map((a) => (
                     <option key={a.id} value={a.id}>
                       {a.nome}
@@ -1236,161 +1230,6 @@ export default function EditorPostPage() {
             </div>
           </PainelRecolhivel>
 
-          {/* ================================================ 10. Posts relacionados */}
-          <PainelRecolhivel titulo="Posts relacionados" inicialAberto={false}>
-            <p className="mb-3 text-[11.5px] text-ink-muted">
-              Até 4 posts exibidos no rodapé do artigo como sugestão de leitura.
-            </p>
-
-            <div className="mb-3">
-              <Alternador
-                ativo={!modoAuto}
-                onChange={(v) => setModoAuto(!v)}
-                label="Seleção manual"
-                descricao="Desligado = seleção automática por cluster"
-              />
-            </div>
-
-            {modoAuto ? (
-              <>
-                <p className="mb-2 text-[10.5px] font-semibold uppercase tracking-wider text-ink-muted">
-                  Seleção automática por cluster
-                </p>
-                {autoRelacionados.length > 0 ? (
-                  <ul className="space-y-1">
-                    {autoRelacionados.map((p, i) => (
-                      <li
-                        key={p.id}
-                        className="flex items-center gap-2 rounded-[var(--radius)] border border-line bg-surface/60 px-2 py-1.5"
-                      >
-                        <span className="w-4 shrink-0 text-center font-mono text-[10px] text-ink-muted">
-                          {i + 1}
-                        </span>
-                        <span className="min-w-0 flex-1 truncate text-[12px] text-ink">
-                          {p.titulo}
-                        </span>
-                        <BadgeStatus status={p.status} />
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-[11px] text-ink-muted">
-                    Nenhum post relacionado encontrado no cluster.
-                  </p>
-                )}
-                <p className="mt-2 text-[10.5px] text-ink-muted">
-                  Ative a seleção manual para personalizar a lista.
-                </p>
-              </>
-            ) : (
-              <>
-                {/* Posts selecionados — drag-and-drop */}
-                {relacionados.length > 0 && (
-                  <ul className="mb-3 space-y-1">
-                    {relacionados.map((rid, idx) => {
-                      const rel = outrosPosts.find((p) => p.id === rid);
-                      if (!rel) return null;
-                      return (
-                        <li
-                          key={rid}
-                          draggable
-                          onDragStart={() => setDragIdx(idx)}
-                          onDragOver={(e) => e.preventDefault()}
-                          onDrop={(e) => {
-                            e.preventDefault();
-                            if (dragIdx !== null && dragIdx !== idx) {
-                              const nova = [...relacionados];
-                              const [item] = nova.splice(dragIdx, 1);
-                              nova.splice(idx, 0, item);
-                              setRelacionados(nova);
-                            }
-                            setDragIdx(null);
-                          }}
-                          onDragEnd={() => setDragIdx(null)}
-                          className={cn(
-                            "flex cursor-grab items-center gap-2 rounded-[var(--radius)] border border-line bg-surface px-2 py-1.5 active:cursor-grabbing",
-                            dragIdx === idx && "opacity-40",
-                          )}
-                        >
-                          <GripVertical size={12} className="shrink-0 text-ink-muted/50" />
-                          <span className="w-4 shrink-0 text-center font-mono text-[10px] text-ink-muted">
-                            {idx + 1}
-                          </span>
-                          <span className="min-w-0 flex-1 truncate text-[12px] text-ink">
-                            {rel.titulo}
-                          </span>
-                          <button
-                            title="Remover"
-                            onClick={() =>
-                              setRelacionados(relacionados.filter((r) => r !== rid))
-                            }
-                            className="shrink-0 rounded p-0.5 text-ink-muted transition-colors hover:text-danger"
-                          >
-                            <X size={11} />
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-
-                {/* Busca de novos posts */}
-                {relacionados.length < 4 ? (
-                  <>
-                    <div className="relative mb-2">
-                      <Search
-                        size={12}
-                        className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-muted"
-                      />
-                      <input
-                        type="text"
-                        placeholder="Buscar post por título…"
-                        value={buscaRel}
-                        onChange={(e) => setBuscaRel(e.target.value)}
-                        className="w-full rounded-[var(--radius)] border border-line bg-surface-2 py-1.5 pl-8 pr-3 text-[12px] text-ink placeholder:text-ink-muted/70 outline-none focus:border-primary"
-                      />
-                    </div>
-
-                    {resultadosBusca.length > 0 && (
-                      <ul className="space-y-0.5">
-                        {resultadosBusca
-                          .filter((p) => !relacionados.includes(p.id))
-                          .map((p) => (
-                            <li key={p.id}>
-                              <button
-                                onClick={() => {
-                                  setRelacionados([...relacionados, p.id]);
-                                  setBuscaRel("");
-                                }}
-                                className="flex w-full items-center gap-2 rounded-[var(--radius)] px-2 py-1.5 text-left text-[12px] text-ink transition-colors hover:bg-secondary"
-                              >
-                                <Plus size={11} className="shrink-0 text-ink-muted" />
-                                <span className="min-w-0 flex-1 truncate">{p.titulo}</span>
-                                <BadgeStatus status={p.status} />
-                              </button>
-                            </li>
-                          ))}
-                      </ul>
-                    )}
-
-                    {buscaRel.trim() &&
-                      resultadosBusca.filter((p) => !relacionados.includes(p.id)).length === 0 && (
-                        <p className="text-center text-[11px] text-ink-muted">Nenhum resultado.</p>
-                      )}
-
-                    {relacionados.length === 0 && !buscaRel && (
-                      <p className="text-[11px] text-ink-muted">
-                        Busque posts acima para adicionar até 4 sugestões.
-                      </p>
-                    )}
-                  </>
-                ) : (
-                  <p className="text-[10.5px] text-ink-muted">Máximo de 4 posts atingido.</p>
-                )}
-              </>
-            )}
-          </PainelRecolhivel>
-
           {/* ================================================ 11. Avançado */}
           <PainelRecolhivel titulo="Avançado" inicialAberto={false}>
             <div className="space-y-3">
@@ -1422,8 +1261,8 @@ export default function EditorPostPage() {
       <SeletorMidia
         aberto={bibliotecaCapa}
         aoFechar={() => setBibliotecaCapa(false)}
-        selecionada={post.capa}
-        aoEscolher={(m) => editar({ capa: m.id, capaAlt: m.alt || post.capaAlt || "" })}
+        selecionada={capaNaBiblioteca?.id}
+        aoEscolher={(m) => editar({ capa: caminhoDaMidia(m.url), capaAlt: post.capaAlt || m.alt || "" })}
       />
     </>
   );
