@@ -63,3 +63,17 @@ export function resolverPilar(
   if (!s) return undefined
   return { titulo: String(s.data.titulo ?? s.data.nome ?? slug), slug: s.id }
 }
+
+/**
+ * `isPartOf` do Article (JSON-LD): o artigo faz parte da página do serviço pilar.
+ * `pilar.href` é o caminho que o layout já usa no box de pilar; vira URL absoluta com o
+ * domínio do site. Sem pilar válido devolve undefined (o Article fica como era).
+ */
+export function pilarJsonLd(
+  pilar: { titulo: string; href: string } | undefined,
+  dominio: string,
+): { '@type': 'WebPage'; '@id': string; url: string; name: string } | undefined {
+  if (!pilar) return undefined
+  const url = `${String(dominio).replace(/\/+$/, '')}${pilar.href}`
+  return { '@type': 'WebPage', '@id': url, url, name: pilar.titulo }
+}

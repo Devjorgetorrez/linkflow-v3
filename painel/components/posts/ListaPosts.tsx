@@ -459,6 +459,8 @@ export function ListaPosts() {
     salvarPost,
     duplicarPost,
     moverParaLixeira,
+    referenciasDePosts,
+    ultimoAvisoSalvar,
     restaurarPost,
     excluirDefinitivo,
     esvaziarLixeira,
@@ -563,7 +565,7 @@ export function ListaPosts() {
   ) => {
     if (timerToast.current) clearTimeout(timerToast.current);
     setToast({ mensagem, tipo, acao });
-    timerToast.current = setTimeout(() => setToast(null), acao ? 9000 : 3500);
+    timerToast.current = setTimeout(() => setToast(null), acao ? 9000 : mensagem.length > 80 ? 8000 : 3500);
   };
 
   /* Erro de gravação do servidor vira aviso na tela (nunca engolido) */
@@ -665,7 +667,7 @@ export function ListaPosts() {
     if (Object.keys(dados).length === 0) return true;
     atualizarPost(post.id, dados);
     const ok = await salvarPost(post.id);
-    if (ok) mostrarToast("Post atualizado.");
+    if (ok) mostrarToast(["Post atualizado.", ultimoAvisoSalvar()].filter(Boolean).join(" "));
     return ok;
   };
 
@@ -678,7 +680,34 @@ export function ListaPosts() {
 
   const paraLixeira = async (alvos: Post[]) => {
     const ids = alvos.map((p) => p.id);
-    const movidos = await moverParaLixeira(ids);
+    // Antes de mover: quem linka para estes artigos? (links do corpo não são apagados; ficariam quebrados)
+    const refs = await referenciasDePosts(ids);
+    if (refs === null) {
+      if (!window.confirm("Não consegui verificar se outros conteúdos linkam para este artigo. Mover para a lixeira mesmo assim?")) return;
+    } else {
+      // referências vindas de posts que vão junto para a lixeira não contam
+      const juntos = new Set(alvos.map((p) => p.slug));
+      const comRef = refs
+        .map((r) => ({ ...r, referencias: r.referencias.filter((x) => !(x.tipo === "post" && juntos.has(x.slug))) }))
+        .filter((r) => r.referencias.length > 0);
+      if (comRef.length > 0) {
+        const linhas: string[] = [];
+        let total = 0;
+        for (const r of comRef) {
+          const alvo = alvos.find((p) => p.id === r.id);
+          const conteudos = new Map<string, string>();
+          for (const x of r.referencias) conteudos.set(`${x.tipo}:${x.slug}`, x.titulo);
+          total += conteudos.size;
+          linhas.push(...[...conteudos.values()].slice(0, 6).map((t) => `  • ${t}${alvos.length > 1 && alvo ? `  (aponta para "${alvo.titulo}")` : ""}`));
+          if (conteudos.size > 6) linhas.push(`  … e mais ${conteudos.size - 6}`);
+        }
+        const msg =
+          `${total} ${total === 1 ? "conteúdo linka" : "conteúdos linkam"} para ${alvos.length === 1 ? "este artigo" : "estes artigos"}:\n${linhas.join("\n")}\n\n` +
+          "Depois de mover, esses links ficarão quebrados. Corrija-os ou crie um redirecionamento em SEO › Redirects.\n\nMover para a lixeira mesmo assim?";
+        if (!window.confirm(msg)) return;
+      }
+    }
+    const { movidos, relacionadosLimpos } = await moverParaLixeira(ids);
     if (movidos.length === 0) {
       mostrarToast("Não consegui mover para a lixeira.", "erro");
       return;
@@ -687,7 +716,8 @@ export function ListaPosts() {
     setEdicaoRapida(null);
     const titulos = alvos.filter((p) => movidos.includes(p.id));
     mostrarToast(
-      movidos.length === 1 ? `"${titulos[0].titulo}" foi para a lixeira.` : `${movidos.length} posts foram para a lixeira.`,
+      (movidos.length === 1 ? `"${titulos[0].titulo}" foi para a lixeira.` : `${movidos.length} posts foram para a lixeira.`) +
+        (relacionadosLimpos > 0 ? ` Tirei de ${relacionadosLimpos} ${relacionadosLimpos === 1 ? "lista de relacionados" : "listas de relacionados"} nos outros posts.` : ""),
       "sucesso",
       {
         rotulo: "Desfazer",

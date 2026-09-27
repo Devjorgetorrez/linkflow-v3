@@ -423,6 +423,54 @@ export function acrescentarElementoNaLista(s: string, caminho: string[], obj: Re
   return s.slice(0, ult.fimComVirgula) + (temVirg ? "" : ",") + `\n${ind}${item},` + s.slice(ult.fimComVirgula);
 }
 
+/**
+ * Percorre os `href` (literais de string) dentro das listas do site indicadas em `chaves`
+ * (ex.: "nav", "navFooterColunas"), em qualquer profundidade (filhos, itens). Para cada um chama
+ * `troca(href, label)`: se devolver outro texto, só aquele literal é reescrito (mesma aspa, mesma
+ * posição); o resto do arquivo fica byte a byte igual. Devolve o texto novo e todos os hrefs vistos.
+ */
+export function percorrerHrefsDoMenu(
+  s: string,
+  chaves: string[],
+  troca?: (href: string, label: string) => string | null | undefined,
+): { s: string; hrefs: { href: string; label: string; lista: string }[]; alterados: number } {
+  const hrefs: { href: string; label: string; lista: string }[] = [];
+  const subs: { ini: number; fim: number; novo: string }[] = [];
+
+  const visitar = (ini: number, lista: string) => {
+    const c = s[ini];
+    if (c === "[") {
+      for (const el of elementosDoArray(s, ini).elementos) visitar(el.ini, lista);
+    } else if (c === "{") {
+      const o = objetoEm(s, ini);
+      const lab = o.entradas.find((e) => e.chave === "label" || e.chave === "titulo");
+      const label = lab ? lerString(s, lab) ?? "" : "";
+      for (const e of o.entradas) {
+        if (e.chave === "href") {
+          const href = lerString(s, e);
+          if (href === undefined) continue;
+          hrefs.push({ href, label, lista });
+          const novo = troca?.(href, label);
+          if (novo && novo !== href) {
+            const q = s[e.iniValor];
+            const lit = q === "'" ? literal(novo) : q === '"' ? JSON.stringify(novo) : "`" + novo.replace(/[`\\$]/g, "\\$&") + "`";
+            subs.push({ ini: e.iniValor, fim: e.fimValor, novo: lit });
+          }
+        } else if (s[e.iniValor] === "[" || s[e.iniValor] === "{") visitar(e.iniValor, lista);
+      }
+    }
+  };
+
+  const site = objetoSite(s);
+  for (const chave of chaves) {
+    const e = achar(site, chave);
+    if (e && (s[e.iniValor] === "[" || s[e.iniValor] === "{")) visitar(e.iniValor, chave);
+  }
+  let r = s;
+  for (const x of subs.sort((a, b) => b.ini - a.ini)) r = r.slice(0, x.ini) + x.novo + r.slice(x.fim);
+  return { s: r, hrefs, alterados: subs.length };
+}
+
 // ─── Leitura ──────────────────────────────────────────────────────────────────
 
 export interface Horario { dia: string; hora: string }

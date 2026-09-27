@@ -15,7 +15,6 @@ import type { Tarefa } from "@/mock/types";
 import type {
   Autor,
   Categoria,
-  Deploy,
   Formulario,
   Lead,
   Menu,
@@ -97,6 +96,30 @@ async function carregarLixeiraReal(): Promise<Post[]> {
   } catch {
     return [];
   }
+}
+
+export interface ReferenciaPost {
+  tipo: string;
+  slug: string;
+  titulo: string;
+  como: string[];
+  quantidade: number;
+}
+export interface ReferenciasDoPost { id: string; total: number; referencias: ReferenciaPost[] }
+
+/** Frase da tela sobre o que o servidor fez com os links ao renomear o endereço de um post. */
+function avisoDeLinks(data: Record<string, unknown>): string {
+  const ok = Array.isArray(data.linksAtualizados) ? (data.linksAtualizados as { quantidade?: number }[]) : [];
+  const falhas = Array.isArray(data.linksNaoAtualizados) ? (data.linksNaoAtualizados as { arquivo?: string }[]) : [];
+  const partes: string[] = [];
+  if (ok.length > 0) {
+    const n = ok.reduce((t, x) => t + (x.quantidade ?? 0), 0);
+    partes.push(`${n} ${n === 1 ? "link" : "links"} em ${ok.length} ${ok.length === 1 ? "conteúdo foi atualizado" : "conteúdos foram atualizados"} para o novo endereço.`);
+  }
+  if (falhas.length > 0) {
+    partes.push(`Não consegui atualizar os links em: ${falhas.map((f) => f.arquivo).join(", ")}. Confira e corrija à mão.`);
+  }
+  return partes.join(" ");
 }
 
 /** Fila de salvamento de UM post: o que falta enviar + o envio em andamento. */
@@ -336,7 +359,6 @@ interface Estado {
   paginas: Pagina[];
   midia: Midia[];
   redirects: Redirect[];
-  deploys: Deploy[];
   tarefas: Tarefa[];
   atualizarTarefa: (id: string, patch: Partial<Tarefa>) => void;
 
@@ -389,7 +411,12 @@ interface Estado {
   criarPost: () => Promise<ResultadoPost>;
   duplicarPost: (id: string) => Promise<ResultadoPost>;
   /** Move para a lixeira (some do site). Devolve os ids que realmente foram movidos. */
-  moverParaLixeira: (ids: string[]) => Promise<string[]>;
+  /** Move para a lixeira. `relacionadosLimpos` = quantos outros posts perderam este artigo da lista de relacionados. */
+  moverParaLixeira: (ids: string[]) => Promise<{ movidos: string[]; relacionadosLimpos: number }>;
+  /** Quem aponta para cada post (relacionados, links no corpo, menu). null = não foi possível verificar. */
+  referenciasDePosts: (ids: string[]) => Promise<ReferenciasDoPost[] | null>;
+  /** Aviso do servidor sobre o ÚLTIMO salvamento (redirect criado, links atualizados). */
+  ultimoAvisoSalvar: () => string | undefined;
   restaurarPost: (chave: string) => Promise<ResultadoPost>;
   excluirDefinitivo: (chave: string) => Promise<boolean>;
   esvaziarLixeira: () => Promise<boolean>;
@@ -415,7 +442,6 @@ interface Estado {
   /** true = o site nunca foi publicado */
   nuncaPublicado: boolean;
   recarregarPendentes: () => Promise<void>;
-  reverterDeploy: (id: string) => void;
 }
 
 export interface TermosConfig {
@@ -620,6 +646,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [erroPosts, setErroPosts] = useState("");
   const [salvamento, setSalvamento] = useState<EstadoSalvamento>({ estado: "ocioso" });
   const renomeados = useRef<Record<string, string>>({});
+  const avisoUltimoSalvar = useRef<string | undefined>(undefined);
   const filas = useRef(new Map<string, FilaPost>());
   const confirmados = useRef(new Map<string, { status: Post["status"] }>());
   const { data: sessao, status: statusSessao } = useSession();
@@ -630,7 +657,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [paginas, setPaginas] = useState<Pagina[]>([]);
   const [midiaLista, setMidia] = useState<Midia[]>([]);
   const [redirects, setRedirects] = useState<Redirect[]>([]);
-  const [deploys, setDeploys] = useState<Deploy[]>([]);
   const [tarefas, setTarefas] = useState<Tarefa[]>([]);
   const [formulariosList, setFormularios] = useState<Formulario[]>([]);
   const [leadsList, setLeads] = useState<Lead[]>([]);
@@ -886,9 +912,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         }
         const novoId = typeof data.slug === "string" && data.slug ? data.slug : id;
         avisoServidor =
-          data.redirecionamento && typeof data.redirecionamento === "object"
-            ? "O endereço antigo foi redirecionado para o novo."
-            : typeof data.aviso === "string" ? data.aviso : undefined;
+          [
+            data.redirecionamento && typeof data.redirecionamento === "object"
+              ? "O endereço antigo foi redirecionado para o novo."
+              : typeof data.aviso === "string" ? data.aviso : "",
+            avisoDeLinks(data),
+          ].filter(Boolean).join(" ") || undefined;
         if (novoId !== id) {
           // O arquivo mudou de nome (slug novo): a fila, o id e o link do editor passam para o novo nome.
           filas.current.delete(id);
@@ -943,6 +972,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setSalvamento({ estado: "erro", erro: "O título precisa ter de 3 a 70 caracteres; o resto foi salvo." });
       return false;
     }
+    avisoUltimoSalvar.current = avisoServidor;
     setSalvamento({ estado: "salvo", quando: Date.now(), aviso: avisoServidor });
     marcarPendente();
     return true;
@@ -1029,8 +1059,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return { ok: true, slug: r.dados.slug };
   }, [enviarPost, marcarPostAlterado, pedirAoServidor, recarregarPosts, resolverIdPost]);
 
-  const moverParaLixeira = useCallback(async (ids: string[]): Promise<string[]> => {
+  const referenciasDePosts = useCallback(async (ids: string[]): Promise<ReferenciasDoPost[] | null> => {
+    const r: ReferenciasDoPost[] = [];
+    for (const idEntrada of ids) {
+      const id = resolverIdPost(idEntrada);
+      const resp = await pedirAoServidor(`/api/posts/${encodeURIComponent(id)}/referencias`, { cache: "no-store" });
+      if (!resp.ok) return null;
+      const lista = Array.isArray(resp.dados.referencias) ? (resp.dados.referencias as ReferenciaPost[]) : [];
+      r.push({ id: idEntrada, total: lista.length, referencias: lista });
+    }
+    return r;
+  }, [pedirAoServidor, resolverIdPost]);
+
+  const moverParaLixeira = useCallback(async (ids: string[]): Promise<{ movidos: string[]; relacionadosLimpos: number }> => {
     const movidos: string[] = [];
+    let relacionadosLimpos = 0;
     for (const idEntrada of ids) {
       const fila = filas.current.get(resolverIdPost(idEntrada));
       if (fila) {
@@ -1042,6 +1085,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const r = await pedirAoServidor(`/api/posts/${id}`, { method: "DELETE" });
       if (r.ok) {
         movidos.push(idEntrada);
+        if (Array.isArray(r.dados.relacionadosLimpos)) relacionadosLimpos += r.dados.relacionadosLimpos.length;
         filas.current.delete(id);
         marcarPostAlterado(id);
       } else {
@@ -1049,7 +1093,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }
     }
     await recarregarPosts();
-    return movidos;
+    return { movidos, relacionadosLimpos };
   }, [marcarPostAlterado, pedirAoServidor, recarregarPosts, resolverIdPost]);
 
   const restaurarPost = useCallback(async (chave: string): Promise<ResultadoPost> => {
@@ -1123,7 +1167,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       paginas,
       midia: midiaLista,
       redirects,
-      deploys,
       tarefas,
       atualizarTarefa: (id, patch) =>
         setTarefas((lista) => lista.map((t) => (t.id === id ? { ...t, ...patch } : t))),
@@ -1177,6 +1220,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       criarPost,
       duplicarPost,
       moverParaLixeira,
+      referenciasDePosts,
+      ultimoAvisoSalvar: () => avisoUltimoSalvar.current,
       restaurarPost,
       excluirDefinitivo,
       esvaziarLixeira,
@@ -1233,14 +1278,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       },
       // Só zera o contador de pendências. O build de verdade é do botão Publicar
       // (Topo.tsx → POST /api/build) e este método só é chamado DEPOIS de o
-      // build terminar com sucesso — não dispara build nem inventa deploy.
+      // build terminar com sucesso — não dispara build.
       publicarAlteracoes: () => { void recarregarPendentes(); },
       pendentes,
       nuncaPublicado,
       recarregarPendentes,
-      reverterDeploy: (id) => {
-        setDeploys((lista) => lista.map((d) => ({ ...d, atual: d.id === id })));
-      },
     }),
     [
       autenticado,
@@ -1256,7 +1298,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       paginas,
       midiaLista,
       redirects,
-      deploys,
       tarefas,
       robots,
       llms,
@@ -1276,6 +1317,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       criarPost,
       duplicarPost,
       moverParaLixeira,
+      referenciasDePosts,
       restaurarPost,
       excluirDefinitivo,
       esvaziarLixeira,

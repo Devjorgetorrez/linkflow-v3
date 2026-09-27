@@ -19,6 +19,7 @@ import {
 } from "@/lib/posts-campos";
 import { postParaApi } from "@/lib/posts-api";
 import { liberarEnderecoDePost, postEstaNoSite, registrarRenomeacao } from "@/lib/redirects";
+import { reescreverLinksDoSlug, removerDeRelacionados, type LinkNaoAtualizado, type LinksAtualizados } from "@/lib/links-slug";
 import { slugPublicavel } from "@/lib/sync-autores";
 import { caminhoPost, gravarAtomico, gravarNovoAtomico, moverParaLixeira, slugLivre, slugOcupado } from "@/lib/posts-fs";
 import { SLUGS_RESERVADOS, normalizarCorpo, slugDoTitulo } from "@/lib/posts-regras";
@@ -200,10 +201,25 @@ export async function PATCH(
       }
     }
 
+    // Links internos para o endereço antigo passam a apontar direto para o novo (sem cadeia de redirect).
+    let linksAtualizados: LinksAtualizados[] = [];
+    let linksNaoAtualizados: LinkNaoAtualizado[] = [];
+    if (slugFinal !== slug) {
+      try {
+        const r = reescreverLinksDoSlug(slug, slugFinal);
+        linksAtualizados = r.linksAtualizados;
+        linksNaoAtualizados = r.linksNaoAtualizados;
+      } catch (err) {
+        console.error("[api/posts PATCH] links internos:", err);
+        linksNaoAtualizados = [{ arquivo: "(todos)", motivo: "não consegui atualizar os links internos" }];
+      }
+    }
+
     return NextResponse.json({
       ok: true,
       slug: slugFinal,
       renomeado: slugFinal !== slug,
+      ...(slugFinal !== slug ? { linksAtualizados, linksNaoAtualizados } : {}),
       ...(redirecionamento ? { redirecionamento } : {}),
       ...(avisoRedirect ? { aviso: avisoRedirect } : {}),
     });
@@ -232,7 +248,10 @@ export async function DELETE(
     if (!chave) {
       return NextResponse.json({ ok: false, erro: "Post não encontrado" }, { status: 404 });
     }
-    return NextResponse.json({ ok: true, slug, chave });
+    // Tira o post de `relacionados` dos outros (o site já ignora, mas não fica lixo). Links no corpo NÃO são mexidos.
+    let relacionadosLimpos: LinksAtualizados[] = [];
+    try { relacionadosLimpos = removerDeRelacionados(slug); } catch (err) { console.error("[api/posts DELETE] relacionados:", err); }
+    return NextResponse.json({ ok: true, slug, chave, relacionadosLimpos });
   } catch (err) {
     console.error("[api/posts DELETE]", err);
     return NextResponse.json({ ok: false, erro: String(err) }, { status: 500 });

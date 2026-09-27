@@ -15,7 +15,7 @@ import { textoCredencial } from '../../lib/schema.ts'
 import { seoDoPost, faqJsonLd } from '../../lib/post-seo.ts'
 import PostFaq from '../blocos/PostFaq.astro'
 import PilarBox from '../blocos/PilarBox.astro'
-import { escolherRelacionados, resolverPilar } from '../../lib/relacionados.ts'
+import { escolherRelacionados, resolverPilar, pilarJsonLd } from '../../lib/relacionados.ts'
 import { getCollection, render } from 'astro:content'
 import { ehPublicado } from '../../lib/publicacao.ts'
 import { resolverAutor, nomeAutor } from '../../lib/autores.ts'
@@ -66,6 +66,7 @@ const relacionados = escolherRelacionados(entry, await getCollection('postsT6', 
 // Conteúdo pilar — serviço que o artigo apoia (`pilar:` no frontmatter)
 const pilarServico = resolverPilar(entry, await getCollection('servicosT6'))
 const pilar = pilarServico && { titulo: pilarServico.titulo, href: `/tema-06/${pilarServico.slug}` }
+const pilarNode = pilarJsonLd(pilar, site.dominio)
 
 const shareUrl  = encodeURIComponent(canonical)
 const shareText = encodeURIComponent(entry.data.titulo)
@@ -82,6 +83,7 @@ const jsonLd = {
       ...(autorJsonLd ? { author: autorJsonLd } : {}),
       publisher: { '@id': `${site.dominio}/#organization` },
       mainEntityOfPage: { '@id': `${canonical}#webpage` },
+      ...(pilarNode ? { isPartOf: pilarNode } : {}),
     },
     {
       '@type': 'BreadcrumbList', '@id': `${canonical}#breadcrumb`,

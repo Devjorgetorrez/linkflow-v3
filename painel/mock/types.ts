@@ -164,17 +164,6 @@ export interface Redirect {
   data: string;
 }
 
-export interface Deploy {
-  id: string;
-  commit: string;
-  mensagem: string;
-  autor: string;
-  data: string;
-  status: "sucesso" | "falhou" | "construindo";
-  duracao: string;
-  atual: boolean;
-}
-
 export interface ItemSaude {
   id: string;
   label: string;
@@ -274,15 +263,6 @@ export interface Integracao {
   descricao: string;
   conectado: boolean;
   conta: string;
-}
-
-export interface EventoHistorico {
-  id: string;
-  acao: string;
-  alvo: string;
-  autor: string;
-  data: string;
-  tipo: "criou" | "editou" | "publicou" | "deletou" | "ia";
 }
 
 export type PapelUsuario = "administrador" | "editor" | "autor";

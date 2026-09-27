@@ -24,6 +24,7 @@ import { ehPublicado } from '../lib/publicacao.ts'
 import { resolverAutor } from '../lib/autores.ts'
 import { artigosDaCategoria } from '../lib/categorias.ts'
 import { seoDoPost, faqJsonLd } from '../lib/post-seo.ts'
+import { resolverPilar, pilarJsonLd } from '../lib/relacionados.ts'
 
 export async function getStaticPaths() {
   // Slugs de páginas fixas — fora deste arquivo, mas que colidiriam com a
@@ -164,6 +165,10 @@ if (tipo === 'servico') {
   nodeId = 'post'
   const faqNode = faqJsonLd(seo.faq, canonical)
 
+  // Conteúdo pilar (`pilar:` no frontmatter): o artigo é parte da página do serviço.
+  const pilarServico = resolverPilar(entry, await getCollection('servicos'))
+  const pilarNode = pilarJsonLd(pilarServico && { titulo: pilarServico.titulo, href: `/${pilarServico.slug}` }, site.dominio)
+
   // JSON-LD do artigo (o tema base não emitia nenhum). O autor aponta para a
   // página dele (/autor/<slug>) com o mesmo @id que a página de autor usa.
   const autores = await getCollection('autores')
@@ -194,6 +199,7 @@ if (tipo === 'servico') {
         ...(autorNode ? { author: autorNode } : {}),
         publisher: { '@id': `${site.dominio}/#organization` },
         mainEntityOfPage: { '@id': `${canonical}#webpage` },
+        ...(pilarNode ? { isPartOf: pilarNode } : {}),
       },
       {
         '@type': 'BreadcrumbList',

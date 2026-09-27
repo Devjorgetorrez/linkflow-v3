@@ -295,7 +295,10 @@ export default function EditorPostPage() {
 
   /** Título digitado: o slug acompanha até ser editado à mão; ao mudar, o arquivo é renomeado no servidor. */
   const editarTitulo = (titulo: string) => {
-    const seguir = slugSegueTitulo(post.slug, post.titulo === TITULO_PROVISORIO ? "" : post.titulo);
+    // Depois de publicado, o endereço NÃO acompanha mais o título (padrão de mercado): mudar
+    // a URL de um artigo no ar custa redirecionamento e ranking. Só se muda à mão, no campo do slug.
+    const noAr = ["publicado", "pronto", "agendado"].includes(String(post.status));
+    const seguir = !noAr && slugSegueTitulo(post.slug, post.titulo === TITULO_PROVISORIO ? "" : post.titulo);
     const slugNovo = slugDoTitulo(titulo);
     if (seguir && slugNovo) editar({ titulo, slug: slugNovo, slugAuto: true });
     else editar({ titulo });
