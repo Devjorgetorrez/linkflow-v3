@@ -449,11 +449,11 @@ nenhum momento.
 
 1. **Suíte Playwright**, autorizada mas não criada — cobriria os fluxos que
    só foram validados por API/build nesta sessão.
-2. **Layout do Torrez (tema-04) pode não ser o mais adequado** — achado no
-   R5: o texto fixo de `tema-04` é hoje específico de higienização de
-   estofados, não genérico. Reavaliar se `tema-06` (serviço técnico de
-   emergência) descreve melhor uma desentupidora antes de rodar a Fase 3
-   real do Torrez.
+2. ~~Layout do Torrez pode não ser o mais adequado~~ — **resolvido em
+   27/09/2026**: trocado de `tema-04` para `tema-06` (serviço técnico de
+   emergência, já cita "desentupidora" na descrição do nicho). A prosa fixa
+   do tema (H1, FAQ, "por que nos escolher", números) continua sendo de
+   demonstração — normal, é trabalho da Fase 3, que nunca rodou pro Torrez.
 3. **`clinica-sorriso-vivo-jundiai`, cliente real no VPS** (criado numa
    sessão anterior não documentada aqui) — confirmar com o Lucas/Jorge o
    que esse cliente é e o que falta nele; não foi tocado no R5.
@@ -502,9 +502,17 @@ R5.
   torrez-desentupidora`, criado do zero no R5, site em
   `teste.turboblog.com.br`, painel em `painel.teste.turboblog.com.br`
   (admin: `[EMAIL-REMOVIDO]`, senha `[SENHA-REMOVIDA]` — trocar antes de
-  qualquer uso real). Conteúdo é o real do `projeto.md` (NAP, 5 serviços),
-  mas a prosa fixa do tema-04 (fundação, FAQ) ainda é de demonstração —
-  Fase 3 nunca rodou para este cliente.
+  qualquer uso real). **Layout: `tema-06`** (trocado de `tema-04` no mesmo
+  dia — o Lucas achou que combinava mais com uma desentupidora; `tema-06` já
+  cita "desentupidora" na própria descrição do nicho e tem "Desentupimento"
+  como um dos serviços de demonstração). Conteúdo é o real do `projeto.md`
+  (NAP, 5 serviços reais, `site.paginas.home` com título/meta reais), mas a
+  prosa fixa do tema (H1 "Caça vazamento e encanador", "Treze anos
+  procurando água onde ninguém vê", FAQ, números da operação) ainda é de
+  demonstração — Fase 3 nunca rodou para este cliente. **Importante:**
+  trocar de tema recria a pasta `_astro` inteira do cliente — um post
+  publicado antes da troca (`quanto-tempo-leva-desentupimento-de-esgoto`)
+  foi perdido nessa troca e teve que ser republicado depois.
 - `/opt/linkflow/clientes/clinica-sorriso-vivo-jundiai` — cliente real,
   criado numa sessão anterior não documentada neste handoff, publicado em
   `dentista.turboblog.com.br`. **Não foi tocado no R5.** Confirmar com o
