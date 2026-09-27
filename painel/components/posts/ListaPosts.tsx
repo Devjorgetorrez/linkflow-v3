@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { useDominio } from "@/lib/useDominio";
+import { useBaseSite, useDominio } from "@/lib/useDominio";
 import { useStore } from "@/lib/store";
 import { useSiteInfo } from "@/lib/useSiteInfo";
 import { urlPost } from "@/lib/urls-publicas";
@@ -469,6 +469,7 @@ export function ListaPosts() {
   const papel = (sessao?.user as { papel?: string } | undefined)?.papel;
   const ehAutor = papel === "autor";
   const siteInfo = useSiteInfo();
+  const { base: baseSite } = useBaseSite();
   const carregando = !postsCarregados;
 
   // Ao abrir a lista, relê do servidor: pega o que o agente publicou por fora e refaz a
@@ -1199,9 +1200,9 @@ export function ListaPosts() {
                                 >
                                   Edição rápida
                                 </button>
-                                {post.status === "publicado" && siteInfo.dominio && (
+                                {post.status === "publicado" && baseSite && (
                                   <a
-                                    href={`https://${siteInfo.dominio}${urlPost(post.slug)}`}
+                                    href={`${baseSite}${urlPost(post.slug)}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="text-[11.5px] text-ink-muted hover:text-ink hover:underline"

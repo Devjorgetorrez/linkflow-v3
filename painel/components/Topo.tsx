@@ -3,10 +3,11 @@
 import { AlertTriangle, ExternalLink, FileText, FolderTree, Loader2, Moon, Plus, Rocket, Search, Sun, Users } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useStore } from "@/lib/store";
+import { useBaseSite } from "@/lib/useDominio";
 import { urlPost } from "@/lib/urls-publicas";
 import { cn } from "@/lib/utils";
 import { Botao } from "@/components/ui";
@@ -45,13 +46,9 @@ export function Topo() {
   const eraRodando = useRef(false);
 
   // Domínio real do config para o link "Ver site"
-  const [dominio, setDominio] = useState("");
-  useEffect(() => {
-    fetch("/api/config")
-      .then((r) => r.json())
-      .then((data) => { if (data.ok && data.config?.dominioHost) setDominio(data.config.dominioHost); })
-      .catch(console.error);
-  }, []);
+  const { base: baseSite, previa: ehPrevia } = useBaseSite();
+  const pathname = usePathname();
+  const naTelaDeNovoPost = pathname === "/posts/novo" || pathname === "/posts/novo/";
 
   const consultar = useCallback(async () => {
     try {
@@ -257,11 +254,11 @@ export function Topo() {
 
         {/* Ver site */}
         <Link
-          href={dominio ? `https://${dominio}` : "#"}
+          href={baseSite || "#"}
           target="_blank"
           rel="noopener noreferrer"
         >
-          <Botao variante="fantasma" title="Abrir o site publicado">
+          <Botao variante="fantasma" title={ehPrevia ? "Abrir a prévia local do site (localhost)" : "Abrir o site publicado"}>
             <ExternalLink size={12} /> Ver site
           </Botao>
         </Link>
@@ -291,9 +288,11 @@ export function Topo() {
         </Botao>
 
         {/* Novo Post */}
-        <Botao variante="primario" onClick={novoPost}>
-          <Plus size={12} /> Novo Post
-        </Botao>
+        {!naTelaDeNovoPost && (
+          <Botao variante="primario" onClick={novoPost}>
+            <Plus size={12} /> Novo Post
+          </Botao>
+        )}
       </div>
 
       {/* Detalhes da falha: resumo, problemas de conteúdo, fim do log e link do log completo */}

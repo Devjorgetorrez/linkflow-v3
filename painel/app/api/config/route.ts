@@ -103,6 +103,8 @@ export async function GET(req: NextRequest) {
       // Mesmo domínio SEM protocolo nem barra final ("cliente.com.br"). O
       // site.ts guarda com https:// (é o que o Astro usa nas canonicals);
       // as telas do painel que montam URL (https://${host}/...) usam este.
+      // Prévia local do site (só existe no computador onde ele é construído).
+      previaUrl: (process.env.LINKFLOW_PREVIA_URL?.trim() || (process.env.NODE_ENV === "production" ? "" : "http://localhost:4321")),
       dominioHost: (site.dominio ?? "").replace(/^https?:\/\//, "").replace(/\/+$/, ""),
       cnpj: site.cnpj ?? "",
       anoFundacao: site.anoFundacao ?? null,

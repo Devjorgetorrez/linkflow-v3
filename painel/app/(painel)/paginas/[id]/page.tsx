@@ -11,7 +11,7 @@ import {
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { useDominio } from "@/lib/useDominio";
+import { useBaseSite, useDominio } from "@/lib/useDominio";
 import { CabecalhoTela } from "@/components/Tela";
 import { Botao, Painel, CabecalhoPainel, BadgeStatus } from "@/components/ui";
 import { INTENCAO_DETALHE } from "@/lib/intencao";
@@ -37,6 +37,7 @@ export default function PaginaDetalhe() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const dominio = useDominio();
+  const { base: baseSite } = useBaseSite();
 
   const [pagina, setPagina] = useState<Pagina | null>(null);
   const [carregando, setCarregando] = useState(true);
@@ -76,7 +77,7 @@ export default function PaginaDetalhe() {
     );
   }
 
-  const urlPublica = dominio ? `https://${dominio}${pagina.url}` : pagina.url;
+  const urlPublica = baseSite ? `${baseSite}${pagina.url}` : dominio ? `https://${dominio}${pagina.url}` : pagina.url;
 
   return (
     <>
@@ -88,7 +89,7 @@ export default function PaginaDetalhe() {
             <Botao variante="secundario" onClick={() => router.push("/paginas")}>
               <ArrowLeft size={12} /> Páginas
             </Botao>
-            {dominio && (
+            {(baseSite || dominio) && (
               <a href={urlPublica} target="_blank" rel="noopener noreferrer">
                 <Botao variante="secundario">
                   <ExternalLink size={12} /> Ver no site
