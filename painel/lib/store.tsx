@@ -132,6 +132,15 @@ interface FilaPost {
 /** Espera entre a última tecla e o envio ao servidor. */
 const ESPERA_SALVAR_MS = 900;
 
+/**
+ * Janela em que uma leitura recente de uma lista (formulários, leads) é
+ * considerada ainda válida: uma 2ª tela que monta logo em seguida (ex.:
+ * Leads chama recarregarFormularios() ao abrir, e o usuário tinha acabado de
+ * sair de Formulários) não dispara outro fetch. Fica bem abaixo do polling
+ * de 20s de Leads, então o polling nunca é bloqueado por engano.
+ */
+const TTL_RECARGA_MS = 8_000;
+
 export type ResultadoPost = { ok: true; slug: string } | { ok: false; erro: string };
 
 /** Post (campos do painel) → corpo do PATCH. Só o que o servidor grava no arquivo; o resto fica só na tela. */
@@ -365,11 +374,27 @@ interface Estado {
   formularios: Formulario[];
   /** false até a 1ª resposta da API: as telas desabilitam ações até carregar. */
   formulariosCarregados: boolean;
-  /** Relê da API (após criar/editar/excluir e ao abrir a tela). true = leu. */
-  recarregarFormularios: () => Promise<boolean>;
+  /**
+   * Relê da API. Várias telas chamam isto ao montar (Leads e Formulários
+   * usam os mesmos dados); para não disparar um fetch novo a cada troca de
+   * tela em sequência, um pedido "de montagem" (sem `forcar`) é ignorado se
+   * já houve uma leitura bem-sucedida há menos de `TTL_RECARGA_MS`. Depois de
+   * uma ação do usuário (criar, editar, excluir, mudar status) o chamador
+   * passa `{ forcar: true }` para garantir dado fresco na hora.
+   */
+  recarregarFormularios: (opts?: { forcar?: boolean }) => Promise<boolean>;
   leads: Lead[];
   leadsCarregados: boolean;
-  recarregarLeads: () => Promise<boolean>;
+  /** Mesma regra de cache de `recarregarFormularios` — ver ali. O polling de
+   * 20s da tela de Leads chama sem `forcar`: como o intervalo do polling é
+   * maior que o TTL do cache, ele nunca é bloqueado por engano. */
+  recarregarLeads: (opts?: { forcar?: boolean }) => Promise<boolean>;
+  /** true até a 1ª resposta de /api/midia — telas próprias (Biblioteca de mídia)
+   * usam para saber quando podem parar de mostrar "carregando". */
+  midiaCarregados: boolean;
+  /** true até a 1ª resposta de /api/usuarios — tela de Usuários usa para saber
+   * quando parar de mostrar "carregando". */
+  usuariosCarregados: boolean;
   menus: Menu[];
   atualizarMenu: (id: string, patch: Partial<Menu>) => void;
 
@@ -665,6 +690,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [leadsList, setLeads] = useState<Lead[]>([]);
   const [formulariosCarregados, setFormulariosCarregados] = useState(false);
   const [leadsCarregados, setLeadsCarregados] = useState(false);
+  const [midiaCarregados, setMidiaCarregados] = useState(false);
+  const [usuariosCarregados, setUsuariosCarregados] = useState(false);
+  // Quando a última leitura de cada lista terminou (Date.now()); usado para não
+  // relêr de novo se a tela foi visitada há pouco — ver TTL_RECARGA_MS abaixo.
+  const ultimaLeituraFormularios = useRef(0);
+  const ultimaLeituraLeads = useRef(0);
   const [menusList, setMenus] = useState<Menu[]>([]);
   const [robots, setRobots] = useState(ROBOTS_INICIAL);
   const [llms, setLlms] = useState(LLMS_INICIAL);
@@ -702,6 +733,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setLeads([]);
     setFormulariosCarregados(false);
     setLeadsCarregados(false);
+    setMidiaCarregados(false);
+    setUsuariosCarregados(false);
+    ultimaLeituraFormularios.current = 0;
+    ultimaLeituraLeads.current = 0;
     setUsuarios([]);
     setPendentes(0);
     setNuncaPublicado(false);
@@ -756,12 +791,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     // site fictício no lugar do site do cliente.
     const vale = () => sessaoCarregada.current === chaveSessao;
     carregarLista<Pagina>("/api/paginas", "paginas").then((l) => l && vale() && setPaginas(l));
-    carregarLista<Midia>("/api/midia", "midia").then((l) => l && vale() && setMidia(l));
+    carregarLista<Midia>("/api/midia", "midia").then((l) => { if (vale()) { if (l) setMidia(l); setMidiaCarregados(true); } });
     carregarLista<Redirect>("/api/redirects", "redirects").then((l) => l && vale() && setRedirects(l));
     carregarLista<Tarefa>("/api/tarefas", "tarefas").then((l) => l && vale() && setTarefas(l));
-    carregarLista<Formulario>("/api/formularios", "formularios").then((l) => { if (vale()) { if (l) setFormularios(l); setFormulariosCarregados(true); } });
-    carregarLista<Lead>("/api/leads", "leads").then((l) => { if (vale()) { if (l) setLeads(l); setLeadsCarregados(true); } });
-    carregarLista<Usuario>("/api/usuarios", "usuarios").then((l) => l && vale() && setUsuarios(l));
+    carregarLista<Formulario>("/api/formularios", "formularios").then((l) => { if (vale()) { if (l) setFormularios(l); setFormulariosCarregados(true); ultimaLeituraFormularios.current = Date.now(); } });
+    carregarLista<Lead>("/api/leads", "leads").then((l) => { if (vale()) { if (l) setLeads(l); setLeadsCarregados(true); ultimaLeituraLeads.current = Date.now(); } });
+    carregarLista<Usuario>("/api/usuarios", "usuarios").then((l) => { if (vale()) { if (l) setUsuarios(l); setUsuariosCarregados(true); } });
     void recarregarPendentesRef.current();
 
     // Carregar config real do site para popular aparencia globalmente
@@ -1148,16 +1183,24 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     };
   }, [enviarPost]);
 
-  const recarregarFormularios = useCallback(async () => {
+  const recarregarFormularios = useCallback(async (opts?: { forcar?: boolean }) => {
+    if (!opts?.forcar && Date.now() - ultimaLeituraFormularios.current < TTL_RECARGA_MS) {
+      return true; // leitura recente (ex.: outra tela acabou de carregar): não repete o fetch
+    }
     const l = await carregarLista<Formulario>("/api/formularios", "formularios");
     if (l) setFormularios(l);
     setFormulariosCarregados(true);
+    ultimaLeituraFormularios.current = Date.now();
     return l !== null;
   }, []);
-  const recarregarLeads = useCallback(async () => {
+  const recarregarLeads = useCallback(async (opts?: { forcar?: boolean }) => {
+    if (!opts?.forcar && Date.now() - ultimaLeituraLeads.current < TTL_RECARGA_MS) {
+      return true; // idem — o polling de 20s da tela de Leads sempre passa esse intervalo
+    }
     const l = await carregarLista<Lead>("/api/leads", "leads");
     if (l) setLeads(l);
     setLeadsCarregados(true);
+    ultimaLeituraLeads.current = Date.now();
     return l !== null;
   }, []);
 
@@ -1197,6 +1240,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       leads: leadsList,
       leadsCarregados,
       recarregarLeads,
+      midiaCarregados,
+      usuariosCarregados,
       menus: menusList,
       atualizarMenu: (id, patch) =>
         setMenus((lista) => lista.map((m) => m.id === id ? { ...m, ...patch } : m)),
@@ -1324,6 +1369,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       leadsList,
       leadsCarregados,
       recarregarLeads,
+      midiaCarregados,
+      usuariosCarregados,
       menusList,
       robots,
       llms,

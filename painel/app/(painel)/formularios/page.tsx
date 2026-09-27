@@ -30,7 +30,7 @@ export default function FormulariosPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.ok) { setErro(data.erro || "Não foi possível duplicar o formulário."); return; }
-      await recarregarFormularios();
+      await recarregarFormularios({ forcar: true });
       router.push(`/formularios/${data.formulario.id}`);
     } catch {
       setErro("Não consegui falar com o servidor. Tente de novo.");
@@ -47,7 +47,7 @@ export default function FormulariosPage() {
       const res = await fetch(`/api/formularios/${encodeURIComponent(f.id)}`, { method: "DELETE" });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.ok) { setErro(data.erro || "Não foi possível excluir o formulário."); return; }
-      await recarregarFormularios();
+      await recarregarFormularios({ forcar: true });
     } catch {
       setErro("Não consegui falar com o servidor. Tente de novo.");
     } finally {

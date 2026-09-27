@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { BotaoCopiar } from "@/components/BotaoCopiar";
 import {
@@ -192,6 +192,13 @@ export default function FormularioEditorPage() {
   const [erro, setErro] = useState("");
   const [errosCampo, setErrosCampo] = useState<Record<string, string>>({});
   const [confirmarExcluir, setConfirmarExcluir] = useState(false);
+  // true assim que o usuário mexe em qualquer campo (patch/atualizarCampo/...). Enquanto os
+  // dados ainda não chegaram da API (carregado === false) e o usuário já começou a digitar,
+  // isto impede que a resposta tardia da API sobrescreva o que foi digitado — ver o efeito
+  // abaixo. Este é o padrão geral para "controlled input perdendo valor por re-render de um
+  // fetch tardio": nunca popular o formulário a partir de dado assíncrono depois que o
+  // usuário já editou, mesmo que esse dado só tenha chegado agora.
+  const usuarioEditou = useRef(false);
 
   // Sempre relê ao abrir a tela.
   useEffect(() => { void recarregarFormularios(); }, [recarregarFormularios]);
@@ -203,8 +210,10 @@ export default function FormularioEditorPage() {
   }, []);
 
   // Preenche o editor quando o formulário chega da API (a tela não aceita edição antes disso).
+  // Só preenche UMA vez e nunca depois que o usuário já editou algo na tela (senão uma
+  // resposta tardia da API apaga o que foi digitado enquanto ela ainda carregava).
   useEffect(() => {
-    if (NOVO || carregado) return;
+    if (NOVO || carregado || usuarioEditou.current) return;
     if (formularioExistente) { setDados(formularioExistente); setCarregado(true); }
   }, [NOVO, carregado, formularioExistente]);
 
@@ -225,6 +234,7 @@ export default function FormularioEditorPage() {
   }
 
   function patch<K extends keyof Formulario>(chave: K, valor: Formulario[K]) {
+    usuarioEditou.current = true;
     setSalvo(false);
     setDados((d) => ({ ...d, [chave]: valor }));
   }
@@ -248,7 +258,7 @@ export default function FormularioEditorPage() {
         setErrosCampo(data.campos ?? {});
         return;
       }
-      await recarregarFormularios();
+      await recarregarFormularios({ forcar: true });
       setSalvo(true);
       if (NOVO) router.replace(`/formularios/${data.formulario.id}`);
       else setDados(data.formulario);
@@ -266,7 +276,7 @@ export default function FormularioEditorPage() {
       const res = await fetch(`/api/formularios/${encodeURIComponent(dados.id)}`, { method: "DELETE" });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.ok) { setErro(data.erro || "Não foi possível excluir."); setConfirmarExcluir(false); return; }
-      await recarregarFormularios();
+      await recarregarFormularios({ forcar: true });
       router.replace("/formularios");
     } catch {
       setErro("Não consegui falar com o servidor. Tente de novo.");
@@ -278,11 +288,13 @@ export default function FormularioEditorPage() {
   /* ---- campos ---- */
 
   function atualizarCampo(campoId: string, p: Partial<CampoFormulario>) {
+    usuarioEditou.current = true;
     setSalvo(false);
     setDados((d) => ({ ...d, campos: d.campos.map((c) => (c.id === campoId ? { ...c, ...p } : c)) }));
   }
 
   function removerCampo(campoId: string) {
+    usuarioEditou.current = true;
     setSalvo(false);
     setDados((d) => ({ ...d, campos: d.campos.filter((c) => c.id !== campoId) }));
   }
@@ -296,6 +308,7 @@ export default function FormularioEditorPage() {
       ajuda: "",
       opcoes: tipo === "selecao" ? ["Opção 1", "Opção 2"] : undefined,
     };
+    usuarioEditou.current = true;
     setSalvo(false);
     setDados((d) => ({ ...d, campos: [...d.campos, novo] }));
     setAdicionandoCampo(false);

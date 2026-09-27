@@ -301,7 +301,7 @@ export default function LeadsPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.ok) { setErro(data.erro || "Não foi possível alterar o status."); return; }
-      await recarregarLeads();
+      await recarregarLeads({ forcar: true });
     } catch {
       setErro("Não consegui falar com o servidor. O status não foi alterado.");
     } finally {
@@ -318,7 +318,7 @@ export default function LeadsPage() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.ok) { setErro(data.erro || "Não foi possível excluir o lead."); return; }
       setLeadAbertoId(null);
-      await recarregarLeads();
+      await recarregarLeads({ forcar: true });
     } catch {
       setErro("Não consegui falar com o servidor. O lead não foi excluído.");
     } finally {

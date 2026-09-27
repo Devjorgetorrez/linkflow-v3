@@ -2,20 +2,17 @@
 
 import { KeyRound, PenLine, Plus, Search, Users } from "lucide-react";
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 
 import { useStore } from "@/lib/store";
 import type { Usuario as UsuarioBase } from "@/mock/types";
 import { AvatarUsuario } from "@/components/AvatarUsuario";
 import { cn } from "@/lib/utils";
 
-// Tipo local — estende o Usuario do Jorge com campos derivados da API
+// Tipo local — estende o Usuario do Jorge com campos derivados para a tela
 interface UsuarioListado extends UsuarioBase {
   nome: string;
-  iniciais?: string;
   foto?: string;
-  postsAssinados: number;
-  criadoEm: string;
 }
 
 const PAPEL_LABEL: Record<string, string> = {
@@ -54,44 +51,25 @@ function gradiente(id: string) {
 }
 
 export default function UsuariosPage() {
-  const { posts } = useStore();
-  const [usuarios, setUsuarios] = useState<UsuarioListado[]>([]);
-  const [carregando, setCarregando] = useState(true);
+  // O store já lê /api/usuarios (e /api/posts) uma vez no início da sessão.
+  // Esta tela fazia SEU PRÓPRIO fetch("/api/usuarios") de novo toda vez que
+  // era aberta — chamada redundante em toda navegação. `store.usuarios` já
+  // tem o mesmo formato (acesso/autoria), então só falta adaptar para a
+  // forma que a tabela usa (nome de exibição e foto já resolvidos).
+  const { posts, usuarios: usuariosStore, usuariosCarregados } = useStore();
   const [busca, setBusca] = useState("");
   const [filtro, setFiltro] = useState<Filtro>("todos");
 
-  // Carregar usuários reais da API
-  useEffect(() => {
-    fetch("/api/usuarios")
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.ok && Array.isArray(data.usuarios)) {
-          // API devolve formato aninhado: { acesso: { emailLogin, papel, ativo }, autoria: { nomePublico } }
-          setUsuarios(data.usuarios.map((u: Record<string, unknown>): UsuarioListado => {
-            const acesso = u.acesso as Record<string, unknown> | undefined;
-            const autoria = u.autoria as Record<string, unknown> | undefined;
-            const nome = String(autoria?.nomePublico ?? acesso?.emailLogin ?? "");
-            return {
-              id: String(u.id ?? ""),
-              nome,
-              foto: String(autoria?.foto ?? ""),
-              iniciais: String(u.iniciais ?? (nome.split(" ").slice(0, 2).map((n: string) => n[0]).join("").toUpperCase() || "?")),
-              acesso: {
-                emailLogin: String(acesso?.emailLogin ?? ""),
-                papel: String(acesso?.papel ?? "autor") as "administrador" | "editor" | "autor",
-                ativo: Boolean(acesso?.ativo),
-              },
-              podeAcessar: Boolean(u.podeAcessar),
-              podeAssinar: Boolean(u.podeAssinar),
-              postsAssinados: 0,
-              criadoEm: String(u.criadoEm ?? ""),
-            };
-          }));
-        }
-      })
-      .catch(console.error)
-      .finally(() => setCarregando(false));
-  }, []);
+  const usuarios = useMemo<UsuarioListado[]>(
+    () =>
+      usuariosStore.map((u) => ({
+        ...u,
+        nome: u.autoria?.nomePublico || u.acesso?.emailLogin || "",
+        foto: u.autoria?.foto ?? "",
+      })),
+    [usuariosStore],
+  );
+  const carregando = !usuariosCarregados;
 
   const postsPorUsuario = (uid: string) =>
     posts.filter((p) => p.autorId === uid).length;
@@ -174,7 +152,9 @@ export default function UsuariosPage() {
       </div>
 
       {/* Tabela */}
-      {filtrados.length === 0 ? (
+      {carregando ? (
+        <p className="py-12 text-center text-[13px] text-[var(--ink-muted)]">Carregando…</p>
+      ) : filtrados.length === 0 ? (
         <p className="py-12 text-center text-[13px] text-[var(--ink-muted)]">
           Nenhum usuário encontrado.
         </p>

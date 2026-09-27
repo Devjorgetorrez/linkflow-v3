@@ -563,48 +563,24 @@ function PainelDetalhe({
 /* ---------------------------------------------------------------- page */
 
 export default function BibliotecaMidiaPage() {
-  const { midia: midiaMock, atualizarMidia, recarregarMidia } = useStore();
+  // A biblioteca já é lida pelo store no início da sessão (/api/midia, uma vez).
+  // Antes esta tela fazia SEU PRÓPRIO fetch("/api/midia") de novo a cada vez que
+  // era aberta — chamada redundante em toda navegação para cá. Agora só usa o
+  // que o store já tem; `recarregarMidia()` é chamado depois de ações que
+  // realmente mudam a lista (enviar, substituir, excluir).
+  const { midia: midiaMock, midiaCarregados, atualizarMidia, recarregarMidia } = useStore();
   const { data: sessao } = useSession();
   const papelAtual = (sessao?.user as { papel?: string } | undefined)?.papel;
   const podeEnviar = papelAtual === "administrador" || papelAtual === "editor";
   const [midia, setMidia] = useState<Midia[]>(midiaMock);
-  const [carregando, setCarregando] = useState(true);
-  const [totalServidor, setTotalServidor] = useState(0);
   const [ordem, setOrdem] = useState<"recentes" | "antigas">("recentes");
 
-  // Carregar mídia real do servidor
+  // Espelha a lista do store: cobre tanto a 1ª leitura da sessão (se esta tela
+  // já estiver aberta quando ela chega) quanto qualquer recarregarMidia() feito
+  // por outra tela (ex.: SeletorMidia ao enviar um arquivo num post).
   useEffect(() => {
-    fetch("/api/midia")
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.ok && Array.isArray(data.midia)) {
-          setMidia(data.midia.map((m: Record<string, unknown>) => ({
-            id: String(m.id ?? ""),
-            arquivo: String(m.arquivo ?? ""),
-            url: String(m.url ?? ""),
-            alt: String(m.alt ?? ""),
-            titulo: String(m.titulo ?? ""),
-            legenda: String(m.legenda ?? ""),
-            credito: String(m.credito ?? ""),
-            largura: Number(m.largura ?? 0),
-            altura: Number(m.altura ?? 0),
-            bytes: Number(m.bytes ?? 0),
-            formato: String(m.formato ?? ""),
-            pasta: String(m.pasta ?? "/"),
-            tags: Array.isArray(m.tags) ? m.tags : [],
-            usadaEm: Array.isArray(m.usadaEm) ? m.usadaEm : [],
-            gradiente: String(m.gradiente ?? "from-slate-200 to-slate-300"),
-            criadoEm: typeof m.criadoEm === "string" ? m.criadoEm : undefined,
-            enviadoPor: m.enviadoPor && typeof m.enviadoPor === "object"
-              ? { id: String((m.enviadoPor as { id?: unknown }).id ?? ""), nome: String((m.enviadoPor as { nome?: unknown }).nome ?? "—") }
-              : { id: "", nome: "—" },
-          })));
-          setTotalServidor(Number(data.total ?? data.midia.length));
-        }
-      })
-      .catch(console.error)
-      .finally(() => setCarregando(false));
-  }, []);
+    setMidia(midiaMock);
+  }, [midiaMock]);
 
   const [visualizacao, setVisualizacao] = useState<"grade" | "lista">("grade");
   const [filtroTipo, setFiltroTipo] = useState<"" | "imagens" | "documentos">("");
@@ -790,7 +766,7 @@ O endereço continua o mesmo e todos os lugares que usam esta mídia${usadas ? `
           <h1 className="font-display text-[18px] font-semibold tracking-tight text-ink">
             Biblioteca de mídia
           </h1>
-          <p className="mt-0.5 text-[11.5px] text-ink-muted">{totalServidor > midia.length ? `${midia.length} de ${totalServidor} arquivos (os mais recentes)` : `${midia.length} arquivos`}</p>
+          <p className="mt-0.5 text-[11.5px] text-ink-muted">{midia.length} arquivo{midia.length !== 1 ? "s" : ""}</p>
         </div>
         {podeEnviar && (
           <>
@@ -976,8 +952,14 @@ O endereço continua o mesmo e todos os lugares que usam esta mídia${usadas ? `
         {visiveis.length === 0 ? (
           <div className="flex h-64 flex-col items-center justify-center gap-2 text-center text-[12px] text-ink-muted">
             <Upload size={22} />
-            <p>{midia.length === 0 ? "A biblioteca está vazia." : "Nenhum arquivo encontrado com estes filtros."}</p>
-            {podeEnviar && midia.length === 0 && (
+            <p>
+              {!midiaCarregados
+                ? "Carregando…"
+                : midia.length === 0
+                  ? "A biblioteca está vazia."
+                  : "Nenhum arquivo encontrado com estes filtros."}
+            </p>
+            {podeEnviar && midiaCarregados && midia.length === 0 && (
               <p>Arraste arquivos para esta área ou use “Adicionar arquivo”.</p>
             )}
           </div>

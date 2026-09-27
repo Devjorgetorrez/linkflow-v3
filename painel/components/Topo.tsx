@@ -192,6 +192,17 @@ export function Topo() {
           onBlur={() => {
             timer.current = setTimeout(() => setFocado(false), 120);
           }}
+          onKeyDown={(e) => {
+            if (e.key !== "Enter") return;
+            // Enter vai direto para o 1º resultado (o dropdown já mostra os melhores
+            // até 7); sem tela dedicada de resultados, não faz sentido "abrir busca
+            // vazia" — se não achou nada, não navega e mantém o dropdown avisando.
+            if (resultados.length === 0) return;
+            e.preventDefault();
+            router.push(resultados[0].href);
+            setBusca("");
+            setFocado(false);
+          }}
           placeholder="Buscar posts, páginas, autores…"
           className="h-7 w-full rounded-[var(--radius)] border border-line bg-surface pr-2 pl-7 text-[12px] text-ink outline-none placeholder:text-ink-muted focus:border-primary"
         />
