@@ -65,6 +65,8 @@ function postDaApi(p: Record<string, unknown>): Post {
       ? (p.faq as Record<string, unknown>[]).map((f, i) => ({ id: txt(f.id) || `f${i + 1}`, pergunta: txt(f.pergunta), resposta: txt(f.resposta) }))
       : [],
     kwSecundarias: Array.isArray(p.kwSecundarias) ? (p.kwSecundarias as unknown[]).map((k) => txt(k)) : [],
+    relacionados: Array.isArray(p.relacionados) ? (p.relacionados as unknown[]).map((k) => txt(k)).filter(Boolean) : [],
+    pilar: txt(p.pilar).trim(),
     fontes: [],
     palavras: Number(p.palavras ?? 0) || 0,
     geradoPorIA: p.geradoPorIA === true,
@@ -128,6 +130,8 @@ const CAMPOS_GRAVADOS: Record<string, string> = {
   noindex: "noindex",
   faq: "faq",
   kwSecundarias: "kwSecundarias",
+  relacionados: "relacionados",
+  pilar: "pilar",
   capa: "capa",
   capaAlt: "capaAlt",
 };

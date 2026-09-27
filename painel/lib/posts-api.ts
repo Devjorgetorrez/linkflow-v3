@@ -63,7 +63,11 @@ export function postParaApi(
     data: txt(fm.publicadoEm ?? fm.date),
     status: lerStatusPost(fm.status),
     destaque: fm.destaque === true,
-    palavraChave: txt(fm.palavraChave),
+    // `kwPrimaria` é o nome oficial; `palavraChave` (skills antigas) é lido como alias.
+    kwPrimaria: txt(fm.kwPrimaria ?? fm.palavraChave),
+    palavraChave: txt(fm.kwPrimaria ?? fm.palavraChave),
+    relacionados: listaTextos(fm.relacionados),
+    pilar: txt(fm.pilar).trim(),
     kwSecundarias: listaTextos(fm.kwSecundarias),
     seoTitle: txt(fm.seoTitle), // vazio = o site usa o título
     metaDescription: meta,

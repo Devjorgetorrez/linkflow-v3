@@ -14,7 +14,7 @@ import { buscarPorId, lerUsuarios } from "@/lib/usuarios";
 import { lerDados } from "@/lib/dados";
 import { postParaApi } from "@/lib/posts-api";
 import {
-  ERRO_AUTOR_SEM_PERFIL, autorPadrao, camposDoCorpo, frontmatterInicial, hojeISO, validarCamposPost, validarCorpoRequisicao,
+  ERRO_AUTOR_SEM_PERFIL, autorPadrao, camposDoCorpo, frontmatterInicial, hojeISO, validarCamposPost, validarCorpoRequisicao, validarVinculos,
 } from "@/lib/posts-campos";
 import { liberarEnderecoDePost } from "@/lib/redirects";
 import { slugPublicavel } from "@/lib/sync-autores";
@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
         publicadoEm: hojeISO(),
         atualizadoEm: hojeISO(),
         destaque: false,
-        palavraChave: "", // a cópia não pode canibalizar a palavra-chave do original
+        kwPrimaria: "", // a cópia não pode canibalizar a palavra-chave do original
       };
       // `autor` é sempre o slug de um autor que assina, nunca id de usuário: o do original se ele
       // for reconhecido; senão o de quem está duplicando. Se ninguém puder assinar, sai do arquivo.
@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
       if (ehAutor && !dono) return NextResponse.json({ ok: false, erro: ERRO_AUTOR_SEM_PERFIL }, { status: 422 });
       const autorCopia = ehAutor ? dono : slugPublicavel(String(fmOrigem.autor ?? ""), usuarios) ?? dono;
       if (autorCopia) campos.autor = autorCopia;
-      let novo = atualizarFrontmatter(raw, campos);
+      let novo = removerChavesFrontmatter(atualizarFrontmatter(raw, campos), ["palavraChave", "kwPrimaria"]);
       if (!autorCopia) novo = removerChavesFrontmatter(novo, ["autor"]);
       if (!gravarNovoAtomico(caminhoPost(slug), novo)) {
         return NextResponse.json({ ok: false, erro: "Já existe um post com esse endereço." }, { status: 409 });
@@ -120,6 +120,9 @@ export async function POST(req: NextRequest) {
 
     const erroCorpo = validarCorpoRequisicao(body, usuarios);
     if (erroCorpo) return NextResponse.json({ ok: false, erro: erroCorpo.erro }, { status: erroCorpo.status });
+
+    const erroVinculos = validarVinculos(body);
+    if (erroVinculos) return NextResponse.json({ ok: false, erro: erroVinculos.erro }, { status: erroVinculos.status });
 
     const campos = camposDoCorpo(body, usuarios, categorias);
     if (donoDoAutor) campos.autor = donoDoAutor;

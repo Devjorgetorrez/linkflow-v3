@@ -21,6 +21,7 @@ export const MATRIZ = {
   "posts/[slug]:PATCH": TODOS,
   "posts/[slug]:DELETE": ADM_ED,
   // Lixeira de posts: ver, restaurar e excluir de vez — administrador e editor.
+  "posts/vinculos:GET": TODOS,
   "posts/lixeira:GET": ADM_ED,
   "posts/lixeira:POST": ADM_ED,
   "posts/lixeira:DELETE": ADM_ED,

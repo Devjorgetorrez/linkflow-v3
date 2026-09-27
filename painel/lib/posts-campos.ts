@@ -5,7 +5,10 @@
  * schema do site) em vez de cada um inventar os seus campos.
  */
 import { faqCompleto, listaLimpa, painelParaFrontmatter } from "@/lib/frontmatter-post";
-import { removerChavesFrontmatter, slugify } from "@/lib/fs";
+import fs from "fs";
+import path from "path";
+import { getContentDir, removerChavesFrontmatter, slugify } from "@/lib/fs";
+import { caminhoPost } from "@/lib/posts-fs";
 import { salvarUsuarios } from "@/lib/usuarios";
 import {
   META_MAX, META_MIN, TITULO_MAX, TITULO_MIN, TITULO_PROVISORIO, statusVaiAoAr, tituloValido,
@@ -201,7 +204,9 @@ export function camposParaLimpar(body: Record<string, unknown>): string[] {
   const limpar: string[] = [];
   const vazio = (v: unknown) => typeof v === "string" && v.trim() === "";
   if (body.categoriaId === "" || body.categoria === "") limpar.push("categoria");
-  if (body.kwPrimaria === "" || body.palavraChave === "") limpar.push("palavraChave");
+  if (body.kwPrimaria === "" || body.palavraChave === "") limpar.push("kwPrimaria", "palavraChave");
+  if (Array.isArray(body.relacionados) && (listaLimpa(body.relacionados)?.length ?? 0) === 0) limpar.push("relacionados");
+  if (vazio(body.pilar)) limpar.push("pilar");
   if (vazio(body.autorId) || vazio(body.autor)) limpar.push("autor");
   if (vazio(body.seoTitle)) limpar.push("seoTitle");
   if (vazio(body.resumo)) limpar.push("resumo");
@@ -220,4 +225,41 @@ export function camposParaLimpar(body: Record<string, unknown>): string[] {
 /** Tira do frontmatter as linhas de primeiro nível com as chaves dadas (e o bloco de cada uma). */
 export function removerCamposFrontmatter(raw: string, chaves: string[]): string {
   return removerChavesFrontmatter(raw, chaves);
+}
+
+/** Máximo de posts relacionados escolhidos à mão (o site usa até 3). */
+export const MAX_RELACIONADOS = 3;
+
+/** Slugs dos serviços/páginas pilar que existem (content/servicos). */
+export function slugsDeServicos(): string[] {
+  const dir = path.join(getContentDir(), "servicos");
+  if (!fs.existsSync(dir)) return [];
+  return fs.readdirSync(dir).filter((f) => f.endsWith(".md")).map((f) => f.replace(/\.md$/, "")).sort();
+}
+
+/**
+ * `relacionados` e `pilar` do corpo da requisição: tipo certo e slugs que existem.
+ * `slugAtual` = o post que está sendo salvo (não pode listar a si mesmo).
+ */
+export function validarVinculos(body: Record<string, unknown>, slugAtual?: string): ErroCampos | null {
+  const bad = (erro: string): ErroCampos => ({ erro, status: 400 });
+  if (body.relacionados !== undefined) {
+    if (!Array.isArray(body.relacionados) || body.relacionados.some((s) => typeof s !== "string")) {
+      return bad("Posts relacionados: precisa ser uma lista de endereços (slugs) de posts.");
+    }
+    const lista = listaLimpa(body.relacionados) ?? [];
+    if (lista.length > MAX_RELACIONADOS) return bad(`Posts relacionados: no máximo ${MAX_RELACIONADOS}.`);
+    for (const s of lista) {
+      if (s === slugAtual) return bad("Posts relacionados: um artigo não pode indicar a si mesmo.");
+      if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(s) || !fs.existsSync(caminhoPost(s))) {
+        return bad(`Posts relacionados: o post "${s}" não existe.`);
+      }
+    }
+  }
+  if (body.pilar !== undefined && body.pilar !== null) {
+    if (typeof body.pilar !== "string") return bad("Conteúdo pilar: precisa ser o endereço (slug) de uma página de serviço.");
+    const s = body.pilar.trim();
+    if (s && !slugsDeServicos().includes(s)) return bad(`Conteúdo pilar: a página "${s}" não existe entre os serviços do site.`);
+  }
+  return null;
 }

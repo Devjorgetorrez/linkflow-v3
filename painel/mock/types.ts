@@ -85,6 +85,10 @@ export interface Post {
   kwPrimaria?: string;
   /** Palavras-chave secundárias (uso interno; não aparecem no site). */
   kwSecundarias?: string[];
+  /** Slugs de posts escolhidos à mão para "Posts relacionados" (até 3). Vazio = automático por categoria. */
+  relacionados?: string[];
+  /** Slug da página de serviço/pilar que o artigo apoia (link interno no fim do artigo). Vazio = nenhuma. */
+  pilar?: string;
   /** Nome do autor resolvido pelo servidor (vazio = não reconhecido). */
   autorNome?: string;
   /** false = o `autor` gravado no arquivo não é um autor conhecido (valor antigo/inválido). */

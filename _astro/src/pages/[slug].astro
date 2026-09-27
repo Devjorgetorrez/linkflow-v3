@@ -188,7 +188,7 @@ if (tipo === 'servico') {
         headline: entry.data.titulo,
         description: metaDescription,
         datePublished: entry.data.publicadoEm,
-        dateModified: entry.data.publicadoEm,
+        dateModified: entry.data.atualizadoEm || entry.data.publicadoEm,
         inLanguage: 'pt-BR',
         ...(entry.data.imagemCapa ? { image: entry.data.imagemCapa } : {}),
         ...(autorNode ? { author: autorNode } : {}),

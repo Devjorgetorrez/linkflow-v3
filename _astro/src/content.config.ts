@@ -61,6 +61,12 @@ const posts = defineCollection({
     faq:             z.array(z.object({ pergunta: z.string(), resposta: z.string() })).default([]),
     kwSecundarias:   z.array(z.string()).default([]),   // uso interno, nunca renderizado
     geradoPorIA:     z.boolean().optional(),
+    /* Vínculo editorial (painel > editor do post) — ver lib/relacionados.ts */
+    relacionados:    z.array(z.string()).optional(),   // slugs de posts (usa até 3); vazio/ausente = automático por categoria
+    pilar:           z.string().optional(),                   // slug do serviço/página pilar que o artigo apoia
+    atualizadoEm:    z.union([z.string(), z.date()]).optional()
+                      .transform((v) => (v instanceof Date ? v.toISOString().slice(0, 10) : v)),   // dateModified do JSON-LD; ausente = publicadoEm
+    kwPrimaria:      z.string().optional(),      // uso interno (palavra-chave principal), nunca renderizado
     autor:           z.string().optional(),
     autorFoto:       z.string().optional(),
     destaque:        z.boolean().default(false),
@@ -150,6 +156,12 @@ const postsT3 = defineCollection({
     faq:             z.array(z.object({ pergunta: z.string(), resposta: z.string() })).default([]),
     kwSecundarias:   z.array(z.string()).default([]),   // uso interno, nunca renderizado
     geradoPorIA:     z.boolean().optional(),
+    /* Vínculo editorial (painel > editor do post) — ver lib/relacionados.ts */
+    relacionados:    z.array(z.string()).optional(),   // slugs de posts (usa até 3); vazio/ausente = automático por categoria
+    pilar:           z.string().optional(),                   // slug do serviço/página pilar que o artigo apoia
+    atualizadoEm:    z.union([z.string(), z.date()]).optional()
+                      .transform((v) => (v instanceof Date ? v.toISOString().slice(0, 10) : v)),   // dateModified do JSON-LD; ausente = publicadoEm
+    kwPrimaria:      z.string().optional(),      // uso interno (palavra-chave principal), nunca renderizado
     /* Assinatura completa — item C da composição */
     autor:           z.string().optional(),
     autorFoto:       z.string().optional(),
@@ -246,6 +258,12 @@ const postsT4 = defineCollection({
     faq:             z.array(z.object({ pergunta: z.string(), resposta: z.string() })).default([]),
     kwSecundarias:   z.array(z.string()).default([]),   // uso interno, nunca renderizado
     geradoPorIA:     z.boolean().optional(),
+    /* Vínculo editorial (painel > editor do post) — ver lib/relacionados.ts */
+    relacionados:    z.array(z.string()).optional(),   // slugs de posts (usa até 3); vazio/ausente = automático por categoria
+    pilar:           z.string().optional(),                   // slug do serviço/página pilar que o artigo apoia
+    atualizadoEm:    z.union([z.string(), z.date()]).optional()
+                      .transform((v) => (v instanceof Date ? v.toISOString().slice(0, 10) : v)),   // dateModified do JSON-LD; ausente = publicadoEm
+    kwPrimaria:      z.string().optional(),      // uso interno (palavra-chave principal), nunca renderizado
     autor:           z.string().optional(),
     autorFoto:       z.string().optional(),
     autorCargo:      z.string().optional(),
@@ -497,6 +515,12 @@ const postsT5 = defineCollection({
     faq:             z.array(z.object({ pergunta: z.string(), resposta: z.string() })).default([]),
     kwSecundarias:   z.array(z.string()).default([]),   // uso interno, nunca renderizado
     geradoPorIA:     z.boolean().optional(),
+    /* Vínculo editorial (painel > editor do post) — ver lib/relacionados.ts */
+    relacionados:    z.array(z.string()).optional(),   // slugs de posts (usa até 3); vazio/ausente = automático por categoria
+    pilar:           z.string().optional(),                   // slug do serviço/página pilar que o artigo apoia
+    atualizadoEm:    z.union([z.string(), z.date()]).optional()
+                      .transform((v) => (v instanceof Date ? v.toISOString().slice(0, 10) : v)),   // dateModified do JSON-LD; ausente = publicadoEm
+    kwPrimaria:      z.string().optional(),      // uso interno (palavra-chave principal), nunca renderizado
     /* Assinatura completa — item C da composição */
     autor:           z.string().optional(),
     autorFoto:       z.string().optional(),
@@ -646,6 +670,12 @@ const postsT6 = defineCollection({
     faq:             z.array(z.object({ pergunta: z.string(), resposta: z.string() })).default([]),
     kwSecundarias:   z.array(z.string()).default([]),   // uso interno, nunca renderizado
     geradoPorIA:     z.boolean().optional(),
+    /* Vínculo editorial (painel > editor do post) — ver lib/relacionados.ts */
+    relacionados:    z.array(z.string()).optional(),   // slugs de posts (usa até 3); vazio/ausente = automático por categoria
+    pilar:           z.string().optional(),                   // slug do serviço/página pilar que o artigo apoia
+    atualizadoEm:    z.union([z.string(), z.date()]).optional()
+                      .transform((v) => (v instanceof Date ? v.toISOString().slice(0, 10) : v)),   // dateModified do JSON-LD; ausente = publicadoEm
+    kwPrimaria:      z.string().optional(),      // uso interno (palavra-chave principal), nunca renderizado
     /* Assinatura completa — item C da composição */
     autor:           z.string().optional(),
     autorFoto:       z.string().optional(),
@@ -798,6 +828,12 @@ const postsT7 = defineCollection({
     faq:             z.array(z.object({ pergunta: z.string(), resposta: z.string() })).default([]),
     kwSecundarias:   z.array(z.string()).default([]),   // uso interno, nunca renderizado
     geradoPorIA:     z.boolean().optional(),
+    /* Vínculo editorial (painel > editor do post) — ver lib/relacionados.ts */
+    relacionados:    z.array(z.string()).optional(),   // slugs de posts (usa até 3); vazio/ausente = automático por categoria
+    pilar:           z.string().optional(),                   // slug do serviço/página pilar que o artigo apoia
+    atualizadoEm:    z.union([z.string(), z.date()]).optional()
+                      .transform((v) => (v instanceof Date ? v.toISOString().slice(0, 10) : v)),   // dateModified do JSON-LD; ausente = publicadoEm
+    kwPrimaria:      z.string().optional(),      // uso interno (palavra-chave principal), nunca renderizado
     /* Assinatura completa — item C da composição */
     autor:           z.string().optional(),
     autorFoto:       z.string().optional(),

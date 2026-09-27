@@ -5,6 +5,8 @@ import { site }   from '../../config/site.ts'
 import { textoCredencial } from '../../lib/schema.ts'
 import { faqDoPost } from '../../lib/post-seo.ts'
 import PostFaq from '../blocos/PostFaq.astro'
+import PilarBox from '../blocos/PilarBox.astro'
+import { escolherRelacionados, resolverPilar } from '../../lib/relacionados.ts'
 import { getCollection, render } from 'astro:content'
 import { ehPublicado } from '../../lib/publicacao.ts'
 import { resolverAutor, nomeAutor } from '../../lib/autores.ts'
@@ -33,10 +35,7 @@ const categoria = resolverCategoria(entry.data.categoria, categorias)
 
 /* Posts relacionados (outros posts, exceto o atual) */
 const todosPosts = await getCollection('posts', ehPublicado)
-const relacionados = todosPosts
-  .filter(p => p.id !== entry.id)
-  .sort((a, b) => new Date(b.data.publicadoEm).getTime() - new Date(a.data.publicadoEm).getTime())
-  .slice(0, 3)
+const relacionados = escolherRelacionados(entry, todosPosts)
   .map(p => ({
     titulo:      p.data.titulo,
     categoria:   nomeCategoria(p.data.categoria, categorias),
@@ -46,6 +45,10 @@ const relacionados = todosPosts
     autor:       nomeAutor(p.data, autores),
     href:        `/${p.id}`,
   }))
+
+/* Conteúdo pilar — serviço que o artigo apoia (`pilar:` no frontmatter) */
+const pilarServico = resolverPilar(entry, await getCollection('servicos'))
+const pilar = pilarServico && { titulo: pilarServico.titulo, href: `/${pilarServico.slug}` }
 
 /* Redes sociais para compartilhar */
 const shareUrl  = encodeURIComponent(canonical)
@@ -140,6 +143,8 @@ const shareText = encodeURIComponent(entry.data.titulo)
       <div class="article-body">
         <Content />
       </div>
+
+      <PilarBox pilar={pilar} />
 
       <PostFaq faq={faq} />
 

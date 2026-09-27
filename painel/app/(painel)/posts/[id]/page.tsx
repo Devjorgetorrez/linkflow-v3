@@ -22,6 +22,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { EditorCorpo, type EditorCorpoHandle } from "@/components/EditorCorpo";
 import { SeletorMidia } from "@/components/SeletorMidia";
+import { VinculoArtigo } from "@/components/posts/VinculoArtigo";
 import {
   Alternador,
   AreaTexto,
@@ -40,6 +41,7 @@ import {
 } from "@/components/ui";
 import { useStore } from "@/lib/store";
 import { caminhoDaMidia } from "@/lib/site-config-cliente";
+import { useBaseSite } from "@/lib/useDominio";
 import { useSiteInfo } from "@/lib/useSiteInfo";
 import { cn, contarPalavras, slugify } from "@/lib/utils";
 import { TITULO_MAX, TITULO_MIN, TITULO_PROVISORIO, slugDoTitulo, slugSegueTitulo } from "@/lib/posts-regras";
@@ -319,6 +321,8 @@ export default function EditorPostPage() {
 
   // URL plana: o artigo fica direto na raiz (/<slug>), nunca /blog/<slug>
   const urlPublica = `${dominio ? `https://${dominio}` : "https://seudominio.com.br"}${urlPost(post.slug || "sem-slug")}`;
+  const { base: baseSite } = useBaseSite();
+  const urlVer = `${baseSite || (dominio ? `https://${dominio}` : "")}${urlPost(post.slug || "sem-slug")}`;
 
   /* Validação de publicação */
   const titleForaDaFaixa =
@@ -408,7 +412,7 @@ export default function EditorPostPage() {
             </span>
           )}
           {post.status === "publicado" && (
-            <a href={urlPublica} target="_blank" rel="noopener noreferrer">
+            <a href={urlVer} target="_blank" rel="noopener noreferrer">
               <Botao variante="secundario">
                 <ExternalLink size={12} /> Ver
               </Botao>
@@ -1229,6 +1233,9 @@ export default function EditorPostPage() {
               )}
             </div>
           </PainelRecolhivel>
+
+          {/* ================================================ 10. Conteúdo pilar e Posts relacionados */}
+          <VinculoArtigo post={post} posts={posts} aoEditar={editar} />
 
           {/* ================================================ 11. Avançado */}
           <PainelRecolhivel titulo="Avançado" inicialAberto={false}>

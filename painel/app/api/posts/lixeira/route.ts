@@ -21,6 +21,7 @@ import { lerUsuarios } from "@/lib/usuarios";
 import { lerDados } from "@/lib/dados";
 import { postParaApi } from "@/lib/posts-api";
 import { hojeISO } from "@/lib/posts-campos";
+import { liberarEnderecoDePost } from "@/lib/redirects";
 import {
   caminhoLixeira, caminhoPost, chavesDaLixeira, dirPosts, excluirDaLixeira, gravarAtomico, restaurarDaLixeira,
 } from "@/lib/posts-fs";
@@ -68,13 +69,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, erro: "Slug inválido" }, { status: 400 });
     }
     const restaurado = restaurarDaLixeira(slug);
-    if (restaurado) return NextResponse.json({ ok: true, slug: restaurado });
+    if (restaurado) {
+      // O endereço voltou a existir: nenhum 301 pode sair dele (senão esconderia o post restaurado).
+      let redirectsRemovidos = 0;
+      try { redirectsRemovidos = liberarEnderecoDePost(restaurado); } catch (err) { console.error("[api/posts/lixeira POST] redirects:", err); }
+      return NextResponse.json({ ok: true, slug: restaurado, ...(redirectsRemovidos ? { redirectsRemovidos } : {}) });
+    }
 
     // Post antigo com status: lixeira dentro de content/posts: volta como rascunho.
     if (chavesLegadas().includes(slug)) {
       const raw = lerArquivo(caminhoPost(slug))!;
       gravarAtomico(caminhoPost(slug), atualizarFrontmatter(raw, { status: "rascunho", atualizadoEm: hojeISO() }));
-      return NextResponse.json({ ok: true, slug });
+      let redirectsRemovidos = 0;
+      try { redirectsRemovidos = liberarEnderecoDePost(slug); } catch (err) { console.error("[api/posts/lixeira POST] redirects:", err); }
+      return NextResponse.json({ ok: true, slug, ...(redirectsRemovidos ? { redirectsRemovidos } : {}) });
     }
     return NextResponse.json({ ok: false, erro: "Post não encontrado na lixeira" }, { status: 404 });
   } catch (err) {

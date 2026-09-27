@@ -13,7 +13,7 @@ export const META_MIN = 80;
 export const META_MAX = 165;
 
 /** Slugs que não podem virar post: colidem com rotas da API (/api/posts/lixeira). */
-export const SLUGS_RESERVADOS = ["lixeira", "novo"];
+export const SLUGS_RESERVADOS = ["lixeira", "novo", "vinculos"];
 
 /** Status em que o site NÃO publica o post (mesma lista do schema do site). */
 const FORA_DO_AR = ["rascunho", "revisao", "revisão", "agendado", "lixeira"];

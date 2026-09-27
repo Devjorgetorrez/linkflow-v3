@@ -15,7 +15,7 @@ import { ehPostDoUsuario } from "@/lib/usuarios-regras";
 import { buscarPorId, lerUsuarios } from "@/lib/usuarios";
 import { lerDados } from "@/lib/dados";
 import {
-  camposDoCorpo, camposParaLimpar, frontmatterInicial, hojeISO, removerCamposFrontmatter, validarCamposPost, validarCorpoRequisicao,
+  camposDoCorpo, camposParaLimpar, frontmatterInicial, hojeISO, removerCamposFrontmatter, validarCamposPost, validarCorpoRequisicao, validarVinculos,
 } from "@/lib/posts-campos";
 import { postParaApi } from "@/lib/posts-api";
 import { liberarEnderecoDePost, postEstaNoSite, registrarRenomeacao } from "@/lib/redirects";
@@ -92,6 +92,8 @@ export async function PATCH(
     const categorias = lerDados<Categoria[]>("categorias.json", []);
     const erroCorpo = validarCorpoRequisicao(body, usuarios);
     if (erroCorpo) return NextResponse.json({ ok: false, erro: erroCorpo.erro }, { status: erroCorpo.status });
+    const erroVinculos = validarVinculos(body, slug);
+    if (erroVinculos) return NextResponse.json({ ok: false, erro: erroVinculos.erro }, { status: erroVinculos.status });
     // Só campos que o site conhece, com o nome do site (lib/frontmatter-post.ts)
     const campos = camposDoCorpo(body, usuarios, categorias);
     const corpo = typeof body.corpo === "string" ? normalizarCorpo(body.corpo, body.corpoFormato === "html") : undefined;
@@ -149,11 +151,20 @@ export async function PATCH(
       const slugAutor = atual ? slugPublicavel(atual, usuarios) : null;
       if (slugAutor && slugAutor !== atual) extras.autor = slugAutor;
     }
+    // Post antigo com `palavraChave` (skills anteriores): ao salvar, migra para `kwPrimaria` e tira a linha antiga.
+    const legadoKw = fmAtual.palavraChave !== undefined && fmAtual.palavraChave !== null ? String(fmAtual.palavraChave) : "";
+    const limpar = camposParaLimpar(body);
+    if (legadoKw) {
+      if (campos.kwPrimaria === undefined && fmAtual.kwPrimaria === undefined && !limpar.includes("kwPrimaria")) extras.kwPrimaria = legadoKw;
+      limpar.push("palavraChave");
+    } else if (fmAtual.palavraChave !== undefined) {
+      limpar.push("palavraChave");
+    }
     const gravar = { ...campos, ...extras, atualizadoEm: hojeISO() };
 
     // Edição cirúrgica: só as linhas dos campos alterados mudam; o resto do
     // arquivo (inclusive o que o painel não entende) fica intacto.
-    const novo = removerCamposFrontmatter(atualizarFrontmatter(raw, gravar, corpo), camposParaLimpar(body));
+    const novo = removerCamposFrontmatter(atualizarFrontmatter(raw, gravar, corpo), limpar);
 
     if (slugFinal === slug) {
       gravarAtomico(filePath, novo);

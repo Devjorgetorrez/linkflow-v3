@@ -63,7 +63,7 @@ export function painelParaFrontmatter(entrada: Entrada): Record<string, unknown>
   def("categoria", texto(entrada.categoria ?? entrada.categoriaId));
   def("autor", texto(entrada.autor ?? entrada.autorId));
   def("status", texto(entrada.status));
-  def("palavraChave", texto(entrada.palavraChave ?? entrada.kwPrimaria));
+  def("kwPrimaria", texto(entrada.kwPrimaria ?? entrada.palavraChave)); // `palavraChave` (skills antigas) só é aceito como alias de entrada
   if (entrada.destaque !== undefined) fm.destaque = Boolean(entrada.destaque);
 
   // Campos de SEO e capa: só o que tem conteúdo entra aqui. Esvaziar (texto vazio,
@@ -81,12 +81,16 @@ export function painelParaFrontmatter(entrada: Entrada): Record<string, unknown>
   if (faq && faq.length > 0) fm.faq = faq;
   const kws = listaLimpa(entrada.kwSecundarias);
   if (kws && kws.length > 0) fm.kwSecundarias = kws;
+  // Vínculo editorial: `relacionados` (slugs, até 3, só se houver) e `pilar` (slug do serviço).
+  const rel = listaLimpa(entrada.relacionados);
+  if (rel && rel.length > 0) fm.relacionados = rel;
+  def("pilar", cheio(entrada.pilar));
   if (entrada.corpoFormato === "html") fm.corpoFormato = "html";
 
   // Strings vazias não sobrescrevem nada útil — melhor omitir do que gravar
   // "categoria:" em branco. Exceção: metaDescription/titulo vazios são
   // gravados, para o site acusar a pendência em vez de manter texto antigo.
-  for (const chave of ["categoria", "autor", "palavraChave", "publicadoEm", "status"]) {
+  for (const chave of ["categoria", "autor", "kwPrimaria", "publicadoEm", "status"]) {
     if (fm[chave] === "") delete fm[chave];
   }
   return fm;

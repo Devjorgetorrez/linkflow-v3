@@ -97,7 +97,7 @@ gerador WordPress, mesmo como nome intermediário: já causou o build
 quebrar antes por usar `descricao`/`imagemHero` em vez do campo real):
 - `title` → `titulo`
 - `description` → `metaDescription` (nunca `descricao`)
-- `focuskw` → `palavraChave`
+- `focuskw` → `kwPrimaria` (nunca `palavraChave`: nome antigo, só o painel o lê como alias de posts velhos)
 - `coverImage` → `imagemCapa` (nunca `imagemHero` — se existir)
 - data de publicação → `publicadoEm`
 - resumo curto do artigo (se o gerador entregou) → `resumo`
@@ -137,7 +137,7 @@ Criar `_astro/src/content/posts/<slug-artigo>.md`:
 ---
 titulo: "[titulo extraído — até 70 chars]"
 metaDescription: "[descricao extraída — 80 a 165 chars, OBRIGATÓRIA para publicar]"
-palavraChave: "[focuskw]"
+kwPrimaria: "[focuskw]"
 categoria: "[slug do arquivo em content/categorias/ — ver regra abaixo]"
 autor: "[slug do autor — ver regra abaixo]"
 publicadoEm: "[data atual em YYYY-MM-DD, entre aspas]"
@@ -168,6 +168,8 @@ inventar; o site ignora campo ausente):
 | `noindex` | `true` esconde do Google e do sitemap | omitir (padrão `false`); só `true` se o operador pedir |
 | `faq` | lista de `{ pergunta, resposta }` | SOMENTE as perguntas e respostas que já estão na seção FAQ do artigo; sem FAQ real, omitir. O site gera o FAQPage (JSON-LD) e a seção visível |
 | `kwSecundarias` | lista de strings, uso interno (não aparece no site) | palavras-chave secundárias do briefing, se houver |
+| `pilar` | slug da página de serviço (money page/pilar) que o artigo apoia; o site mostra "Saiba mais sobre <serviço>" com link | só o slug de um arquivo que EXISTE em `content/servicos/`; sem vínculo claro no briefing/calendário, omitir |
+| `relacionados` | lista de slugs de posts (até 3) para "Posts relacionados"; substitui o automático | só slugs de posts que já existem e estão publicados; padrão é omitir (o site escolhe por categoria) |
 
 Exemplo de `faq` no frontmatter:
 
@@ -182,7 +184,9 @@ duplicar (o site já a renderiza no fim do artigo); se preferir manter o FAQ
 no corpo, omitir `faq`.
 
 Nomes de campo são os do schema do site (`_astro/src/content.config.ts`):
-`metaDescription` (nunca `descricao`) e `imagemCapa` (nunca `imagemHero`).
+`metaDescription` (nunca `descricao`), `imagemCapa` (nunca `imagemHero`) e
+`kwPrimaria` (nunca `palavraChave`). `atualizadoEm` (AAAA-MM-DD) vira o
+`dateModified` do JSON-LD do artigo.
 Com `status: pronto` o build **falha** se `metaDescription` tiver menos de
 80 caracteres — é proposital: artigo sem meta description não vai ao ar.
 
@@ -331,7 +335,7 @@ Trocar `| pendente |` por `| publicado |`.
 Adicionar à seção `### Registro de Publicações` (criar se não existir):
 
 ```markdown
-| [palavraChave] | [titulo] | https://[dominio]/[slug-artigo] | [data] |
+| [kwPrimaria] | [titulo] | https://[dominio]/[slug-artigo] | [data] |
 ```
 
 ### 6.3 Atualizar data do último deploy
@@ -349,7 +353,7 @@ ultimo_deploy: [data e hora]
 ✅ Artigo publicado no site.
 
 Título:    [titulo]
-KW:        [palavraChave]
+KW:        [kwPrimaria]
 URL:       https://[dominio]/[slug-artigo]
 Tipo:      [Pilar | Satélite]
 

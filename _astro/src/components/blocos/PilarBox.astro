@@ -1,0 +1,19 @@
+---
+/**
+ * PilarBox — destaque no fim do corpo do artigo com o link para a página
+ * pilar (serviço) que ele apoia. Só renderiza com `pilar` válido
+ * (lib/relacionados.ts resolverPilar).
+ */
+interface Props { pilar?: { titulo: string; href: string } }
+const { pilar } = Astro.props
+if (!pilar) return
+---
+
+<aside class="mt-10 rounded-[var(--radius-card)] border border-line bg-surface-2 p-6" aria-label="Página relacionada">
+  <p class="mb-1 text-xs font-semibold uppercase tracking-wider text-primary">Guia completo</p>
+  <p class="text-base text-secondary leading-snug">
+    Saiba mais sobre
+    <a href={pilar.href} class="font-semibold text-primary no-underline hover:underline">{pilar.titulo}</a>
+    <span aria-hidden="true"> →</span>
+  </p>
+</aside>

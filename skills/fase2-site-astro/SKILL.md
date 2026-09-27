@@ -380,7 +380,7 @@ dado no projeto.md é omitido, nunca inventado.
 ---
 titulo: "[Nome do Serviço] em [Cidade]"
 metaDescription: "[80-165 chars com palavra-chave e cidade]"
-palavraChave: "[serviço] em [cidade]"
+kwPrimaria: "[serviço] em [cidade]"
 ordem: [número sequencial]
 noindex: true
 ---

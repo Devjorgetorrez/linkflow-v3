@@ -14,6 +14,8 @@ import { site }    from '../../config/tema-04.ts'
 import { textoCredencial } from '../../lib/schema.ts'
 import { seoDoPost, faqJsonLd } from '../../lib/post-seo.ts'
 import PostFaq from '../blocos/PostFaq.astro'
+import PilarBox from '../blocos/PilarBox.astro'
+import { escolherRelacionados, resolverPilar } from '../../lib/relacionados.ts'
 import { getCollection, render } from 'astro:content'
 import { ehPublicado } from '../../lib/publicacao.ts'
 import { resolverAutor, nomeAutor } from '../../lib/autores.ts'
@@ -53,14 +55,16 @@ const autorJsonLd = autor
 const categorias = await getCollection('categoriasT4')
 const categoria  = resolverCategoria(entry.data.categoria, categorias, '/tema-04')
 
-const relacionados = (await getCollection('postsT4', ehPublicado))
-  .filter(p => p.id !== entry.id)
-  .sort((a, b) => new Date(b.data.publicadoEm).getTime() - new Date(a.data.publicadoEm).getTime())
+const relacionados = escolherRelacionados(entry, await getCollection('postsT4', ehPublicado))
   .map(p => ({
     titulo: p.data.titulo, publicadoEm: p.data.publicadoEm, categoria: nomeCategoria(p.data.categoria, categorias),
     imagemCapa: p.data.imagemCapa, imagemCapaAlt: p.data.imagemCapaAlt, resumo: p.data.resumo,
     autor: nomeAutor(p.data, autores), href: `/tema-04/${p.id}`,
   }))
+
+// Conteúdo pilar — serviço que o artigo apoia (`pilar:` no frontmatter)
+const pilarServico = resolverPilar(entry, await getCollection('servicosT4'))
+const pilar = pilarServico && { titulo: pilarServico.titulo, href: `/tema-04/${pilarServico.slug}` }
 
 const shareUrl  = encodeURIComponent(canonical)
 const shareText = encodeURIComponent(entry.data.titulo)
@@ -72,7 +76,7 @@ const jsonLd = {
     {
       '@type': 'BlogPosting', '@id': `${canonical}#article`,
       headline: entry.data.titulo, description: seo.metaDescription,
-      datePublished: entry.data.publicadoEm, dateModified: entry.data.publicadoEm,
+      datePublished: entry.data.publicadoEm, dateModified: (entry.data.atualizadoEm || entry.data.publicadoEm),
       inLanguage: 'pt-BR', image: entry.data.imagemCapa, articleSection: categoria?.nome,
       ...(autorJsonLd ? { author: autorJsonLd } : {}),
       publisher: { '@id': `${site.dominio}/#organization` },
@@ -156,6 +160,7 @@ const jsonLd = {
     <div class="container-wide max-w-[760px] py-12">
       <div class="article-body"><Content /></div>
 
+      <PilarBox pilar={pilar} />
       <PostFaq faq={seo.faq} />
 
       <div class="mt-10 border-t border-line pt-8">
