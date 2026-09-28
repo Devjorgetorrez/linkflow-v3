@@ -87,6 +87,15 @@ function gravarEstado(e: EstadoBuild) {
   }
 }
 
+/** Data (fim) do último build que terminou OK — null se nunca houve um. */
+export function ultimoBuildOk(): { inicio: string; fim: string } | null {
+  try {
+    return JSON.parse(fs.readFileSync(path.join(dirDados(), "ultimo-build-ok.json"), "utf-8"));
+  } catch {
+    return null;
+  }
+}
+
 function pidVivo(pid: number): boolean {
   try {
     process.kill(pid, 0);

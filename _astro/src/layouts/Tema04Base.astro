@@ -43,6 +43,8 @@ const ogDescricao = metaDescription || site.descricao
   <link rel="sitemap" href="/sitemap.xml" />
   {noindex && <meta name="robots" content="noindex, follow" />}
   {site.favicon && <link rel="icon" href={site.favicon} />}
+  {site.googleVerificacao && <meta name="google-site-verification" content={site.googleVerificacao} />}
+  {site.bingVerificacao && <meta name="msvalidate.01" content={site.bingVerificacao} />}
 
   <meta property="og:type" content="website" />
   <meta property="og:title" content={titulo} />

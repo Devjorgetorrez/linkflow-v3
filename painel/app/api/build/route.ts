@@ -14,7 +14,7 @@ import fs from "fs";
 import { getSiteSlug } from "@/lib/fs";
 import { exigirPapel, validarSlug } from "@/lib/auth";
 import { MATRIZ } from "@/lib/permissoes";
-import { caminhoLogUltimo, iniciarBuild, lerEstado } from "@/lib/build-estado";
+import { caminhoLogUltimo, iniciarBuild, lerEstado, ultimoBuildOk } from "@/lib/build-estado";
 import { contarPendentes } from "@/lib/pendentes";
 
 export const dynamic = "force-dynamic";
@@ -71,7 +71,7 @@ export async function GET(req: NextRequest) {
       });
     }
     // `pendentes`: alterações de conteúdo ainda fora do site, calculadas no disco (não zeram no F5)
-    return NextResponse.json({ ok: true, estado: lerEstado(), ...contarPendentes() }, { headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json({ ok: true, estado: lerEstado(), ultimoOk: ultimoBuildOk(), ...contarPendentes() }, { headers: { "Cache-Control": "no-store" } });
   } catch (err) {
     console.error("[api/build GET]", err);
     return NextResponse.json({ ok: false, erro: String(err) }, { status: 500 });

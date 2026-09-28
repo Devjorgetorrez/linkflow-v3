@@ -204,6 +204,28 @@ export default function EditorPostPage() {
   const [bibliotecaCapa, setBibliotecaCapa] = useState(false);
   const [avisoSalvar, setAvisoSalvar] = useState<string | null>(null);
 
+  // "Publicado" no arquivo não é o mesmo que publicado no site — só o
+  // build confirma. Achado real (Relatório de Testes 4, erro 37): o post
+  // ficava com badge/link "Ver" ativos mesmo quando o build mais recente
+  // com esse conteúdo nunca rodou (404 na URL real). Comparação por DIA
+  // (o arquivo só grava atualizadoEm como AAAA-MM-DD, sem hora).
+  const [ultimoBuildOkData, setUltimoBuildOkData] = useState<string | null>(null);
+  useEffect(() => {
+    fetch("/api/build")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.ok && data.ultimoOk?.fim) {
+          setUltimoBuildOkData(String(data.ultimoOk.fim).slice(0, 10));
+        }
+      })
+      .catch(() => {});
+  }, []);
+  const publicadoNoAr =
+    post?.status === "publicado" &&
+    !!post.atualizadoEm &&
+    !!ultimoBuildOkData &&
+    post.atualizadoEm <= ultimoBuildOkData;
+
   const [triggers, setTriggers] = useState<Record<string, number>>({});
   const [previewModo, setPreviewModo] = useState<"desktop" | "mobile">("desktop");
   const [abaAtiva, setAbaAtiva] = useState<"seo" | "schema" | "redes">("seo");
@@ -384,9 +406,9 @@ export default function EditorPostPage() {
         <Botao variante="fantasma" onClick={() => router.push("/posts")}>
           <ArrowLeft size={13} /> Posts
         </Botao>
-        <Badge tom={post.status === "publicado" ? "sucesso" : "neutro"}>
+        <Badge tom={publicadoNoAr ? "sucesso" : post.status === "publicado" ? "aviso" : "neutro"}>
           {post.status === "publicado"
-            ? "publicado"
+            ? (publicadoNoAr ? "publicado" : "aguardando atualização do site")
             : post.status === "rascunho"
               ? "rascunho"
               : post.status === "revisao"
@@ -415,9 +437,14 @@ export default function EditorPostPage() {
             </span>
           )}
           {post.status === "publicado" && (
-            <a href={urlVer} target="_blank" rel="noopener noreferrer">
+            <a
+              href={urlVer}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={publicadoNoAr ? undefined : "O conteúdo salvo aqui ainda não foi ao ar — isto abre a última versão publicada (se houver), que pode estar desatualizada."}
+            >
               <Botao variante="secundario">
-                <ExternalLink size={12} /> Ver
+                <ExternalLink size={12} /> {publicadoNoAr ? "Ver" : "Ver (desatualizado)"}
               </Botao>
             </a>
           )}

@@ -61,6 +61,10 @@ export function postParaApi(
     corpo,
     corpoFormato: formato,
     data: txt(fm.publicadoEm ?? fm.date),
+    // Data (AAAA-MM-DD) da última gravação no arquivo — usada pra saber se o
+    // conteúdo atual já passou por um "Atualizar o site" (badge/link "Ver"
+    // no editor). Ver Relatório de Testes 4, erro 37.
+    atualizadoEm: txt(fm.atualizadoEm),
     status: lerStatusPost(fm.status),
     destaque: fm.destaque === true,
     // `kwPrimaria` é o nome oficial; `palavraChave` (skills antigas) é lido como alias.

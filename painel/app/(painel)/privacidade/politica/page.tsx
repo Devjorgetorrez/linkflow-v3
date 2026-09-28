@@ -52,8 +52,8 @@ function Field({ children, className }: { children: React.ReactNode; className?:
 }
 
 function Input({
-  value, onChange, placeholder, disabled, type,
-}: { value: string; onChange?: (v: string) => void; placeholder?: string; disabled?: boolean; type?: "text" | "date" }) {
+  value, onChange, placeholder, disabled, type, invalido,
+}: { value: string; onChange?: (v: string) => void; placeholder?: string; disabled?: boolean; type?: "text" | "date" | "email"; invalido?: boolean }) {
   return (
     <input
       type={type ?? "text"}
@@ -63,13 +63,15 @@ function Input({
       disabled={disabled}
       className="w-full rounded border px-3 py-2 text-sm disabled:opacity-60 disabled:cursor-not-allowed"
       style={{
-        borderColor: "var(--line)",
+        borderColor: invalido ? "var(--danger)" : "var(--line)",
         background: disabled ? "var(--surface)" : "var(--surface-2)",
         color: "var(--ink)",
       }}
     />
   );
 }
+
+const EMAIL_VALIDO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function Select({
   value, onChange, options,
@@ -128,14 +130,21 @@ function Divider() {
 
 /* ─── Live Policy Document ─────────────────────────────────── */
 
+interface IntegracoesAtivas {
+  analiticos: boolean;
+  marketing: boolean;
+}
+
 function PolicyDocument({
   cfg,
   nomeSite,
   formularios,
+  integ,
 }: {
   cfg: PrivacidadeConfig;
   nomeSite: string;
   formularios: { id: string; nome: string; campos: { rotulo: string; tipo: string }[]; ativo: boolean }[];
+  integ: IntegracoesAtivas;
 }) {
   const ativos = formularios.filter((f) => f.ativo);
 
@@ -195,12 +204,16 @@ function PolicyDocument({
         <p className="mt-1">
           <strong>Estritamente necessários:</strong> essenciais ao funcionamento do site (sessão, segurança). Base legal: legítimo interesse.
         </p>
-        <p className="mt-1">
-          <strong>Análise (GA4):</strong> Google Analytics 4 — mede visitas e comportamento de navegação. Base legal: {baseLabelFor(cfg.baseLegalAnaliticos)}.
-        </p>
-        <p className="mt-1">
-          <strong>Marketing:</strong> Meta Pixel e Google Ads — publicidade direcionada. Base legal: {baseLabelFor(cfg.baseLegalMarketing)}.
-        </p>
+        {integ.analiticos && (
+          <p className="mt-1">
+            <strong>Análise (GA4):</strong> Google Analytics 4 — mede visitas e comportamento de navegação. Base legal: {baseLabelFor(cfg.baseLegalAnaliticos)}.
+          </p>
+        )}
+        {integ.marketing && (
+          <p className="mt-1">
+            <strong>Marketing:</strong> Meta Pixel e Google Ads — publicidade direcionada. Base legal: {baseLabelFor(cfg.baseLegalMarketing)}.
+          </p>
+        )}
         <p className="mt-1">
           <strong>Funcionalidade:</strong> incorporações de mapa e vídeo. Base legal: {baseLabelFor("consentimento")}.
         </p>
@@ -221,16 +234,20 @@ function PolicyDocument({
               <td className="border px-2 py-1.5" style={{ borderColor: "var(--line)" }}>{baseLabelFor(cfg.baseLegalFormularios)}</td>
               <td className="border px-2 py-1.5" style={{ borderColor: "var(--line)" }}>{cfg.retencaoFormularios}</td>
             </tr>
-            <tr style={{ background: "var(--surface)" }}>
-              <td className="border px-2 py-1.5" style={{ borderColor: "var(--line)" }}>Cookies analíticos (GA4)</td>
-              <td className="border px-2 py-1.5" style={{ borderColor: "var(--line)" }}>{baseLabelFor(cfg.baseLegalAnaliticos)}</td>
-              <td className="border px-2 py-1.5" style={{ borderColor: "var(--line)" }}>{cfg.retencaoAnaliticos}</td>
-            </tr>
-            <tr>
-              <td className="border px-2 py-1.5" style={{ borderColor: "var(--line)" }}>Cookies de marketing</td>
-              <td className="border px-2 py-1.5" style={{ borderColor: "var(--line)" }}>{baseLabelFor(cfg.baseLegalMarketing)}</td>
-              <td className="border px-2 py-1.5" style={{ borderColor: "var(--line)" }}>{cfg.retencaoMarketing}</td>
-            </tr>
+            {integ.analiticos && (
+              <tr style={{ background: "var(--surface)" }}>
+                <td className="border px-2 py-1.5" style={{ borderColor: "var(--line)" }}>Cookies analíticos (GA4)</td>
+                <td className="border px-2 py-1.5" style={{ borderColor: "var(--line)" }}>{baseLabelFor(cfg.baseLegalAnaliticos)}</td>
+                <td className="border px-2 py-1.5" style={{ borderColor: "var(--line)" }}>{cfg.retencaoAnaliticos}</td>
+              </tr>
+            )}
+            {integ.marketing && (
+              <tr>
+                <td className="border px-2 py-1.5" style={{ borderColor: "var(--line)" }}>Cookies de marketing</td>
+                <td className="border px-2 py-1.5" style={{ borderColor: "var(--line)" }}>{baseLabelFor(cfg.baseLegalMarketing)}</td>
+                <td className="border px-2 py-1.5" style={{ borderColor: "var(--line)" }}>{cfg.retencaoMarketing}</td>
+              </tr>
+            )}
           </tbody>
         </table>
       </Section2>
@@ -238,8 +255,8 @@ function PolicyDocument({
       <Section2 n="4" title="Compartilhamento com terceiros">
         <p>Os dados podem ser compartilhados com:</p>
         <ul className="list-disc ml-5 mt-2 space-y-1">
-          <li><strong>Google LLC</strong> — Analytics e Google Ads (EUA)</li>
-          <li><strong>Meta Platforms Inc.</strong> — Meta Pixel (EUA)</li>
+          {integ.analiticos && <li><strong>Google LLC</strong> — Analytics e Google Ads (EUA)</li>}
+          {integ.marketing && <li><strong>Meta Platforms Inc.</strong> — Meta Pixel (EUA)</li>}
           <li><strong>Resend Inc.</strong> — envio de e-mails dos formulários (EUA)</li>
           <li><strong>Vercel Inc.</strong> — hospedagem do site (EUA)</li>
         </ul>
@@ -378,6 +395,11 @@ export default function PoliticaPage() {
   const [salvando, setSalvando] = useState(false);
   const [salvo, setSalvo] = useState(false);
   const [erroSalvar, setErroSalvar] = useState("");
+  // O que o site REALMENTE tem configurado (googleAnalyticsId/metaPixelId
+  // etc.) — a prévia só pode falar de GA4/Meta Pixel se isso for true.
+  // Achado real (Relatório de Testes 4, erro 59): a prévia mostrava essas
+  // seções sempre, mesmo em site sem nenhum dos dois configurados.
+  const [integ, setInteg] = useState<IntegracoesAtivas>({ analiticos: false, marketing: false });
 
   // Pré-preencher com o que já foi salvo em dados/legal.json (fonte de
   // verdade — ver lib/legal.ts), e o e-mail real do config como reserva.
@@ -387,6 +409,12 @@ export default function PoliticaPage() {
       .then((data) => {
         if (!data.ok || !data.config) return;
         const c = data.config;
+        if (data.config.integracoesAtivas) {
+          setInteg({
+            analiticos: !!data.config.integracoesAtivas.analiticos,
+            marketing: !!data.config.integracoesAtivas.marketing,
+          });
+        }
         const lp: Partial<LegalPainel> = data.config.legalPainel ?? {};
         const patch: Partial<PrivacidadeConfig> = {};
         if (lp.cnpj) patch.cnpj = lp.cnpj;
@@ -518,10 +546,17 @@ export default function PoliticaPage() {
             <Field>
               <Label required>E-mail de contato</Label>
               <Input
+                type="email"
                 value={cfg.emailContato}
                 onChange={set1("emailContato")}
                 placeholder="contato@exemplo.com.br"
+                invalido={!!cfg.emailContato && !EMAIL_VALIDO.test(cfg.emailContato)}
               />
+              {!!cfg.emailContato && !EMAIL_VALIDO.test(cfg.emailContato) && (
+                <p className="text-xs" style={{ color: "var(--danger)" }}>
+                  Não parece um e-mail válido (formato esperado: nome@dominio.com).
+                </p>
+              )}
             </Field>
           </div>
           <Field>
@@ -724,7 +759,7 @@ export default function PoliticaPage() {
               maxHeight: "calc(100vh - 120px)",
             }}
           >
-            <PolicyDocument cfg={cfg} nomeSite={aparencia.nomeSite} formularios={formularios} />
+            <PolicyDocument cfg={cfg} nomeSite={aparencia.nomeSite} formularios={formularios} integ={integ} />
           </div>
         </div>
       </div>

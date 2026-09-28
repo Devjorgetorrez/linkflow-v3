@@ -185,15 +185,22 @@ export function Topo() {
   // "Atualizar o site" leva TUDO o que foi salvo ao site no ar (posts, páginas, configurações).
   // Nada pendente + última atualização ok = nada a fazer: o botão fica desligado, com a explicação.
   const semNadaAFazer = !rodando && !emErro && build?.status === "ok" && pendentes === 0;
+  // Rótulo é sempre a AÇÃO do botão; o ESTADO (falhou, sem nada pendente,
+  // quando terminou) vai em infoBuild, texto separado — achado real
+  // (Relatório de Testes 4, erro 55): "Erro ao atualizar o site" e
+  // "Atualizar o site" cinza sem motivo eram o mesmo rótulo servindo pra
+  // coisas diferentes (estado passado vs. ação de tentar de novo).
   const labelPublicar = rodando
     ? "Atualizando o site…"
     : emErro
-    ? "Erro ao atualizar o site"
+    ? "Tentar de novo"
     : pendentes > 0
     ? `Atualizar o site (${pendentes})`
     : "Atualizar o site";
   const dicaPublicar = !podePublicar
     ? "Sem permissão para o seu papel"
+    : emErro
+    ? "A última tentativa falhou — clique para tentar de novo."
     : semNadaAFazer
     ? "O site já está atualizado: nada mudou desde a última atualização."
     : pendentes > 0
@@ -203,10 +210,14 @@ export function Topo() {
     ? null
     : rodando
     ? `${etapaTxt} · ${decorrido}s (limite ${limiteMin} min)`
+    : emErro
+    ? `Última tentativa falhou às ${hhmm(build?.fim)}`
     : build?.status === "ok"
     ? `Site atualizado às ${hhmm(build.fim)}`
     : build?.status === "nunca"
     ? "O site ainda não foi atualizado"
+    : semNadaAFazer
+    ? "Nada pendente — sem alterações desde a última atualização"
     : null;
 
   return (

@@ -89,6 +89,75 @@ function campoVazio(v: unknown): boolean {
   return false;
 }
 
+// A verificação abaixo (telefone, imagem, referência entre blocos, texto de
+// exemplo) foi adicionada em 28/09/2026 (Relatório de Testes 4, erros 50/51)
+// — antes, "Completo" só conferia 2-3 campos por tipo, sem checar formato,
+// URL absoluta, vínculo entre blocos nem texto de exemplo esquecido. Marcou
+// "Completo" numa página com 11 problemas reais.
+
+/** Google pede telefone em E.164 — com "+" e código do país. */
+function telefoneSemCodigoPais(v: unknown): boolean {
+  return typeof v === "string" && v.trim() !== "" && !v.trim().startsWith("+");
+}
+
+/** Google exige imagem rastreável e indexável — caminho relativo não serve. */
+function imagemNaoAbsoluta(v: unknown): string | null {
+  const url = typeof v === "string" ? v : v && typeof v === "object" && typeof (v as Record<string, unknown>).url === "string" ? (v as Record<string, unknown>).url as string : null;
+  if (!url) return null;
+  return /^https?:\/\//i.test(url) ? null : url;
+}
+
+const MARCADORES_EXEMPLO = [
+  /lorem ipsum/i,
+  /^nome do (negócio|neg[oó]cio|cliente|servi[cç]o|autor)$/i,
+  /^nome da (empresa|clínica|cl[ií]nica)$/i,
+  /texto de exemplo/i,
+  /descri[cç][aã]o (aqui|de exemplo)/i,
+  /\[.*\]/, // placeholder tipo [CAMPO] esquecido dentro do JSON-LD
+];
+
+/** Texto de exemplo/placeholder esquecido dentro do que vai pro Google. */
+function pareceTextoDeExemplo(v: unknown): boolean {
+  return typeof v === "string" && MARCADORES_EXEMPLO.some((rx) => rx.test(v.trim()));
+}
+
+/** Coleta todo @id definido (nós reais, não referências) nos blocos da página inteira. */
+function idsDefinidos(nos: { tipo: string; node: Record<string, unknown> }[]): Set<string> {
+  const ids = new Set<string>();
+  for (const { node } of nos) {
+    const id = node["@id"];
+    if (typeof id === "string" && id.trim()) ids.add(id.trim());
+  }
+  return ids;
+}
+
+/**
+ * Acha toda referência `{"@id": "..."}` dentro do JSON-LD (um objeto cuja
+ * função é só apontar pra outro nó, não descrevê-lo) e devolve as que não
+ * batem com nenhum @id definido na página — vínculo quebrado, o mesmo
+ * padrão do erro 50 original (post apontando pro bloco #webpage errado).
+ */
+function referenciasQuebradas(dado: unknown, existentes: Set<string>, achadas: Set<string> = new Set()): Set<string> {
+  if (Array.isArray(dado)) {
+    for (const item of dado) referenciasQuebradas(item, existentes, achadas);
+    return achadas;
+  }
+  if (!dado || typeof dado !== "object") return achadas;
+  const obj = dado as Record<string, unknown>;
+  const chaves = Object.keys(obj);
+  // Objeto-referência: só tem @id (e nada que descreva a entidade em si).
+  const soReferencia = chaves.length === 1 && chaves[0] === "@id" && typeof obj["@id"] === "string";
+  if (soReferencia) {
+    const alvo = (obj["@id"] as string).trim();
+    if (alvo && !existentes.has(alvo)) achadas.add(alvo);
+  }
+  for (const chave of chaves) {
+    if (chave === "@id") continue;
+    referenciasQuebradas(obj[chave], existentes, achadas);
+  }
+  return achadas;
+}
+
 /** Achata @graph e arrays; devolve cada nó com @type junto do objeto (pra checar campos). */
 function nosComTipo(no: unknown, saida: { tipo: string; node: Record<string, unknown> }[]): void {
   if (Array.isArray(no)) {
@@ -132,12 +201,22 @@ function validarBloco(bloco: JsonldBloco): ProblemaBloco[] {
     } else if (TIPOS_NEGOCIO.has(tipo)) {
       if (campoVazio(node.name)) problemas.push({ nivel: "erro", mensagem: `${tipo}: falta o campo "name".` });
       if (campoVazio(node.address)) problemas.push({ nivel: "erro", mensagem: `${tipo}: falta o campo "address".` });
+      if (telefoneSemCodigoPais(node.telephone)) problemas.push({ nivel: "erro", mensagem: `${tipo}: telefone sem código de país (use o formato +55...).` });
     } else if (tipo === "Person") {
       if (campoVazio(node.name)) problemas.push({ nivel: "erro", mensagem: `Person: falta o campo "name".` });
     } else if (tipo === "FAQPage") {
       if (campoVazio(node.mainEntity)) problemas.push({ nivel: "erro", mensagem: `FAQPage: falta o campo "mainEntity".` });
     } else if (tipo === "Product") {
       if (campoVazio(node.name)) problemas.push({ nivel: "erro", mensagem: `Product: falta o campo "name".` });
+    }
+
+    const imagemRelativa = imagemNaoAbsoluta(node.image);
+    if (imagemRelativa) problemas.push({ nivel: "erro", mensagem: `${tipo}: imagem sem URL absoluta ("${imagemRelativa}") — o Google precisa de um endereço completo (https://...).` });
+
+    for (const campo of ["name", "headline", "description"] as const) {
+      if (pareceTextoDeExemplo(node[campo])) {
+        problemas.push({ nivel: "erro", mensagem: `${tipo}: o campo "${campo}" parece texto de exemplo ("${String(node[campo])}"), não conteúdo real.` });
+      }
     }
   }
   return problemas;
@@ -159,6 +238,19 @@ function montarItem(
     };
   }
   const problemas = blocos.flatMap(validarBloco);
+
+  // Referência entre blocos (ex.: post apontando pro #webpage errado) só dá
+  // pra checar olhando TODOS os blocos válidos da página juntos.
+  const nosValidos: { tipo: string; node: Record<string, unknown> }[] = [];
+  for (const b of blocos) if (b.valido) nosComTipo(b.dado, nosValidos);
+  const ids = idsDefinidos(nosValidos);
+  for (const b of blocos) {
+    if (!b.valido) continue;
+    for (const alvo of referenciasQuebradas(b.dado, ids)) {
+      problemas.push({ nivel: "erro", mensagem: `Referência quebrada: aponta para "${alvo}", que não existe em nenhum bloco desta página.` });
+    }
+  }
+
   const tipos = [...new Set(blocos.flatMap((b) => b.tipos))];
   const status: StatusItem = problemas.some((p) => p.nivel === "erro") ? "incompleto" : "completo";
   return { ...base, origem, blocos, tipos, status, problemas };

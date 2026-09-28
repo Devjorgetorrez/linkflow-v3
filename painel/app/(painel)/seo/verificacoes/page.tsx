@@ -86,46 +86,59 @@ function NotaTexto({ children }: { children: React.ReactNode }) {
 /* Cards                                                               */
 /* ------------------------------------------------------------------ */
 
-const GSC_TOKEN = "qT7xR2mB9k";
-
 function CardGSC() {
+  const [token, setToken] = useState("");
+  const [salvo, setSalvo] = useState(false);
+  const [erroSalvar, setErroSalvar] = useState("");
+
+  useEffect(() => {
+    fetch("/api/config").then(r => r.json()).then(data => {
+      if (data.ok && data.config?.googleVerificacao) setToken(data.config.googleVerificacao);
+    }).catch(console.error);
+  }, []);
+
+  async function salvar() {
+    setErroSalvar("");
+    const r = await enviarConfig({ googleVerificacao: token });
+    if (!r.ok) {
+      setErroSalvar(r.erros["googleVerificacao"] || r.erro || "Não foi possível salvar.");
+      return;
+    }
+    setSalvo(true);
+    setTimeout(() => setSalvo(false), 1500);
+  }
+
   return (
-    <CardShell titulo="Google Search Console" estado="verificado">
-      {/* DNS TXT */}
+    <CardShell titulo="Google Search Console" estado={token ? "configurado" : "nao-configurado"}>
       <div className="mb-4">
-        <div className="mb-1.5 flex items-center gap-2">
-          <p className="text-[12px] font-medium text-ink">DNS TXT</p>
-          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
-            Recomendado
-          </span>
-        </div>
+        <label className="mb-1 block text-[11.5px] font-medium text-ink">
+          Código de verificação
+        </label>
         <p className="mb-2 text-[12px] text-ink-muted">
-          Adicione um registro TXT na zona DNS do domínio:
+          No Search Console, escolha o método "Tag HTML" e cole aqui só o valor do atributo{" "}
+          <code className="font-mono text-[11px]">content</code> (sem o resto da tag).
         </p>
-        <MonoBox valor={`google-site-verification=${GSC_TOKEN}`} />
-        <NotaTexto>
-          Sobrevive a migrações e cobre todos os subdomínios. Processado em até 24h.
-        </NotaTexto>
-      </div>
-
-      {/* Meta tag */}
-      <div className="border-t border-line pt-4">
-        <p className="mb-1.5 text-[12px] font-medium text-ink">Meta tag no &lt;head&gt;</p>
-        <p className="mb-2 text-[12px] text-ink-muted">
-          Ou adicione esta tag no &lt;head&gt; de todas as páginas:
-        </p>
-        <MonoBox
-          valor={`<meta name="google-site-verification" content="${GSC_TOKEN}" />`}
+        <Entrada
+          value={token}
+          onChange={(e) => setToken(e.target.value)}
+          placeholder="ex.: qT7xR2mB9k..."
         />
-        <NotaTexto>
-          Mais rápido de verificar, mas falha se o &lt;head&gt; for alterado.
-        </NotaTexto>
+        <Botao variante="primario" tamanho="sm" onClick={salvar} className="mt-2">
+          {salvo ? "Salvo!" : "Salvar"}
+        </Botao>
+        {erroSalvar && <p className="mt-1.5 text-[11.5px] text-danger">{erroSalvar}</p>}
       </div>
 
-      <p className="mt-4 text-[11px] text-ink-muted">
-        Após adicionar, clique em Verificar no Search Console. A verificação é feita pelo
-        próprio Google.
-      </p>
+      {token && (
+        <div className="border-t border-line pt-4">
+          <p className="mb-1.5 text-[12px] font-medium text-ink">Tag inserida no site</p>
+          <MonoBox valor={`<meta name="google-site-verification" content="${token}" />`} />
+          <NotaTexto>
+            Já sai no &lt;head&gt; de todas as páginas no próximo build. Confirme clicando em
+            Verificar no Search Console.
+          </NotaTexto>
+        </div>
+      )}
     </CardShell>
   );
 }
@@ -153,7 +166,7 @@ function CardBing() {
   }
 
   return (
-    <CardShell titulo="Bing Webmaster Tools" estado="nao-configurado">
+    <CardShell titulo="Bing Webmaster Tools" estado={token ? "configurado" : "nao-configurado"}>
       <div className="space-y-3">
         <div>
           <label className="mb-1 block text-[11.5px] font-medium text-ink">
@@ -291,7 +304,7 @@ function CardGA4() {
   }
 
   return (
-    <CardShell titulo="Google Analytics 4" estado="verificado">
+    <CardShell titulo="Google Analytics 4" estado={id ? "configurado" : "nao-configurado"}>
       <div className="space-y-3">
         <div>
           <label className="mb-1 block text-[11.5px] font-medium text-ink">
@@ -336,7 +349,7 @@ function CardGTM() {
   }
 
   return (
-    <CardShell titulo="Google Tag Manager" estado="configurado">
+    <CardShell titulo="Google Tag Manager" estado={id ? "configurado" : "nao-configurado"}>
       <div className="space-y-3">
         <div>
           <label className="mb-1 block text-[11.5px] font-medium text-ink">
@@ -384,7 +397,7 @@ function CardMetaPixel() {
   }
 
   return (
-    <CardShell titulo="Meta Pixel" estado="nao-configurado">
+    <CardShell titulo="Meta Pixel" estado={id ? "configurado" : "nao-configurado"}>
       <div className="space-y-3">
         <div>
           <label className="mb-1 block text-[11.5px] font-medium text-ink">Pixel ID</label>

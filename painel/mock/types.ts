@@ -71,6 +71,8 @@ export interface Post {
   autorId: string;
   categoriaId: string;
   data: string;
+  /** Data (AAAA-MM-DD) da última gravação no arquivo — ver Relatório de Testes 4, erro 37. */
+  atualizadoEm?: string;
   status: StatusPost;
   destaque: boolean;
   seoTitle: string;

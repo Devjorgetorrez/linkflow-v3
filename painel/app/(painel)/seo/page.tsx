@@ -7,7 +7,6 @@ import {
   ArrowRight,
   ChevronDown,
   ExternalLink,
-  Gauge,
   Info,
 } from "lucide-react";
 import Link from "next/link";
@@ -244,75 +243,36 @@ function BlocoSeveridade({
 }
 
 /* ------------------------------------------------------------------ */
-
-function CartaoCWV() {
-  const metricas = [
-    { sigla: "LCP", limite: "≤ 2,5 s", descricao: "Larger Contentful Paint" },
-    { sigla: "INP", limite: "≤ 200 ms", descricao: "Interaction to Next Paint" },
-    { sigla: "CLS", limite: "≤ 0,1", descricao: "Cumulative Layout Shift" },
-  ];
-
-  return (
-    <div className="overflow-hidden rounded-[var(--radius)] border border-[var(--line)]">
-      <div className="flex items-center gap-2.5 border-b border-[var(--line)] bg-[var(--surface-2)] px-4 py-3">
-        <Gauge size={15} className="text-[var(--ink-muted)]" />
-        <span className="text-sm font-semibold text-[var(--ink)]">Core Web Vitals</span>
-        <span className="ml-1 rounded px-1.5 py-0.5 text-[9.5px] font-medium uppercase tracking-wide bg-[#f59e0b]/10 text-[#b45309]">
-          GSC
-        </span>
-        <a
-          href="https://search.google.com/search-console"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="ml-auto flex items-center gap-1 text-xs text-[var(--primary)] hover:underline"
-        >
-          Abrir no GSC <ExternalLink size={10} />
-        </a>
-      </div>
-
-      <div className="p-4">
-        <div className="mb-4 flex items-start gap-2 rounded-[var(--radius)] bg-[var(--surface-2)] px-3 py-2.5 text-xs text-[var(--ink-muted)]">
-          <Info size={13} className="mt-0.5 shrink-0" />
-          <span>
-            Dados de campo (CrUX) exigem volume mínimo de sessões reais. Sites novos ou com baixo
-            tráfego ficam sem medição até atingir o limiar do Google. As métricas abaixo são
-            referência de meta — não há dados coletados ainda.
-          </span>
-        </div>
-
-        <div className="grid grid-cols-3 gap-3">
-          {metricas.map((m) => (
-            <div
-              key={m.sigla}
-              className="rounded-[var(--radius)] border border-[var(--line)] p-3 text-center"
-            >
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--ink-muted)]">
-                {m.sigla}
-              </p>
-              <p className="mt-1.5 text-lg font-bold text-[var(--ink-muted)]">—</p>
-              <p className="mt-1 text-[10px] text-[var(--ink-muted)]">sem dados de campo</p>
-              <p className="mt-2 border-t border-[var(--line)] pt-2 text-[10px] text-[var(--ink-muted)]">
-                Meta: {m.limite}
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
+// Core Web Vitals removido em 28/09/2026 (Relatório de Testes 4, erro 47):
+// era uma tela inteiramente fixa — traços, texto e metas escritos no
+// código, sem nenhuma ligação com Search Console, PageSpeed ou CrUX.
+// Volta quando houver integração real (PageSpeed Insights é o caminho
+// mais simples).
 
 /* ------------------------------------------------------------------ */
 
 /* ------------------------------------------------------------------ */
 
-/** Integrações: estado neutro. "Não configurado" não é falha nem sucesso. */
+/**
+ * Integrações: estado neutro. "Não configurado" não é falha nem sucesso.
+ *
+ * O selo "configurado" reflete só a config real (googleAnalyticsId/
+ * googleTagManagerId/metaPixelId) — nunca mais um "ou" com o que o HTML
+ * parece carregar. Achado real (Relatório de Testes 4, erro 46): o painel
+ * dava "configurado" mesmo sem nenhum ID cadastrado sempre que o HTML
+ * "parecia" carregar um rastreador, e havia risco de falso positivo por
+ * causa do próprio script de consentimento de cookies (presente em todo
+ * site do LinkFlow). `rastreadoresNoHtml` continua útil, mas só como um
+ * aviso à parte — script no ar sem registro na config é uma discrepância
+ * a investigar, não motivo pra marcar como "configurado".
+ */
 function CartaoIntegracoes({ r }: { r: ResultadoAuditoria }) {
   const i = r.integracoes;
   const analiticoNoHtml = r.rastreadoresNoHtml.filter((n) => !/pixel/i.test(n));
-  const linhas: { nome: string; ativo: boolean }[] = [
-    { nome: "Google Analytics / Tag Manager", ativo: !!i?.analiticos || analiticoNoHtml.length > 0 },
-    { nome: "Meta Pixel", ativo: !!i?.marketing || r.rastreadoresNoHtml.some((n) => /pixel/i.test(n)) },
+  const pixelNoHtml = r.rastreadoresNoHtml.some((n) => /pixel/i.test(n));
+  const linhas: { nome: string; ativo: boolean; noHtmlSemConfig: boolean }[] = [
+    { nome: "Google Analytics / Tag Manager", ativo: !!i?.analiticos, noHtmlSemConfig: !i?.analiticos && analiticoNoHtml.length > 0 },
+    { nome: "Meta Pixel", ativo: !!i?.marketing, noHtmlSemConfig: !i?.marketing && pixelNoHtml },
   ];
   return (
     <div className="overflow-hidden rounded-[var(--radius)] border border-[var(--line)]">
@@ -328,11 +288,19 @@ function CartaoIntegracoes({ r }: { r: ResultadoAuditoria }) {
           </p>
         ) : (
           linhas.map((l) => (
-            <div key={l.nome} className="flex items-center justify-between gap-3 px-4 py-2.5">
-              <span className="text-sm text-[var(--ink)]">{l.nome}</span>
-              <span className="rounded bg-[var(--surface-2)] px-2 py-0.5 text-[11px] font-medium text-[var(--ink-muted)]">
-                {l.ativo ? "configurado" : "não configurado"}
-              </span>
+            <div key={l.nome} className="px-4 py-2.5">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm text-[var(--ink)]">{l.nome}</span>
+                <span className="rounded bg-[var(--surface-2)] px-2 py-0.5 text-[11px] font-medium text-[var(--ink-muted)]">
+                  {l.ativo ? "configurado" : "não configurado"}
+                </span>
+              </div>
+              {l.noHtmlSemConfig && (
+                <p className="mt-1 text-[11px] text-[var(--accent)]">
+                  Algo parecido com este rastreador aparece no HTML publicado, mas não há ID
+                  cadastrado na configuração — vale conferir se é um script residual.
+                </p>
+              )}
             </div>
           ))
         )}
@@ -470,8 +438,6 @@ export default function SeoVisaoGeral() {
         />
 
         <CartaoIntegracoes r={resultado} />
-
-        <CartaoCWV />
         </>)}
 
         <p className="pb-2 text-center text-xs text-[var(--ink-muted)]">

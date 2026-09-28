@@ -38,6 +38,8 @@ const ogImagem    = urlAbsoluta(site, site.ogImagem)
   <link rel="sitemap" href="/sitemap.xml" />
   {noindex && <meta name="robots" content="noindex, follow" />}
   {site.favicon && <link rel="icon" href={site.favicon} />}
+  {site.googleVerificacao && <meta name="google-site-verification" content={site.googleVerificacao} />}
+  {site.bingVerificacao && <meta name="msvalidate.01" content={site.bingVerificacao} />}
 
   {/* Open Graph / Twitter */}
   <meta property="og:type" content="website" />

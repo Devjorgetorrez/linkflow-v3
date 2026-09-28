@@ -480,6 +480,18 @@ export function ListaPosts() {
     void recarregarPosts();
   }, [recarregarPosts]);
 
+  // "Publicado" no arquivo não é o mesmo que no ar — mesma checagem do
+  // editor (Relatório de Testes 4, erro 37): só conta como no ar se o
+  // último build OK for depois da última gravação do post.
+  const [ultimoBuildOkData, setUltimoBuildOkData] = useState<string | null>(null);
+  useEffect(() => {
+    fetch("/api/build").then((r) => r.json()).then((data) => {
+      if (data.ok && data.ultimoOk?.fim) setUltimoBuildOkData(String(data.ultimoOk.fim).slice(0, 10));
+    }).catch(() => {});
+  }, []);
+  const noAr = (post: Post) =>
+    post.status === "publicado" && !!post.atualizadoEm && !!ultimoBuildOkData && post.atualizadoEm <= ultimoBuildOkData;
+
   /* Posts do store (dados reais do servidor) com o que a tabela mostra já resolvido */
   const posts: Post[] = useMemo(() => {
     // Nome do autor: nunca o código. Vem do servidor (slug/id → nome) ou da lista de autores; senão "—".
@@ -1235,9 +1247,10 @@ export function ListaPosts() {
                                     href={`${baseSite}${urlPost(post.slug)}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
+                                    title={noAr(post) ? undefined : "Ainda não confirmado no ar — pode estar desatualizado."}
                                     className="text-[11.5px] text-ink-muted hover:text-ink hover:underline"
                                   >
-                                    Ver
+                                    {noAr(post) ? "Ver" : "Ver (desatualizado)"}
                                   </a>
                                 )}
                                 <button
