@@ -65,6 +65,17 @@ export function Topo() {
     if (podePublicar) consultar();
   }, [podePublicar, consultar]);
 
+  // Card de erro não pode ficar preso na falha antiga depois de uma correção
+  // feita fora do painel (achado real: corrigiu a categoria quebrada no
+  // servidor, o card continuou mostrando a falha de minutos atrás porque só
+  // reconsultava enquanto "rodando"). Relê ao voltar pra aba.
+  useEffect(() => {
+    if (!podePublicar) return;
+    const ao = () => { if (document.visibilityState === "visible") consultar(); };
+    document.addEventListener("visibilitychange", ao);
+    return () => document.removeEventListener("visibilitychange", ao);
+  }, [podePublicar, consultar]);
+
   // Enquanto roda: consulta a cada 2s e atualiza o relógio
   const rodando = build?.status === "rodando";
   useEffect(() => {
@@ -116,6 +127,27 @@ export function Topo() {
       setAviso(data.erro ?? `Não foi possível iniciar a atualização do site (${res.status}).`);
     } catch (err) {
       setAviso(`Não foi possível falar com o servidor: ${String(err)}`);
+    }
+  }
+
+  // Vínculo de categoria quebrado (post aponta pra categoria que não existe
+  // mais no disco) bloqueava a publicação inteira sem caminho de saída no
+  // painel — só o agente via SSH desfazia. Detecta esse erro específico na
+  // lista (campo "categoria") e oferece remover o vínculo direto daqui.
+  const [removendoCategoria, setRemovendoCategoria] = useState<string | null>(null);
+  const [categoriaRemovidaDe, setCategoriaRemovidaDe] = useState<Set<string>>(new Set());
+  async function removerCategoriaDoPost(arquivo: string) {
+    const slug = arquivo.replace(/^posts\//, "").replace(/\.md$/, "");
+    setRemovendoCategoria(arquivo);
+    try {
+      const res = await fetch(`/api/posts/${encodeURIComponent(slug)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ categoriaId: "" }),
+      });
+      if (res.ok) setCategoriaRemovidaDe((s) => new Set(s).add(arquivo));
+    } finally {
+      setRemovendoCategoria(null);
     }
   }
 
@@ -323,6 +355,20 @@ export function Topo() {
                   <span className="font-mono text-[10.5px] text-ink-muted">{e.arquivo}</span>
                   {" · "}
                   <b>{e.campo}</b>: {e.mensagem}
+                  {e.campo === "categoria" && (
+                    categoriaRemovidaDe.has(e.arquivo) ? (
+                      <span className="ml-1.5 text-success">Removido — clique em "Atualizar o site" de novo.</span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => removerCategoriaDoPost(e.arquivo)}
+                        disabled={removendoCategoria === e.arquivo}
+                        className="ml-1.5 text-primary underline disabled:opacity-50"
+                      >
+                        {removendoCategoria === e.arquivo ? "Removendo…" : "Remover a categoria deste post"}
+                      </button>
+                    )
+                  )}
                 </li>
               ))}
             </ul>

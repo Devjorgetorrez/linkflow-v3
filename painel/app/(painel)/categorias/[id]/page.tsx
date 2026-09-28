@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { SeletorMidia } from "@/components/SeletorMidia";
 import {
@@ -30,7 +30,7 @@ import { useStore } from "@/lib/store";
 import { useDominio } from "@/lib/useDominio";
 import { cn, slugify } from "@/lib/utils";
 import { urlCategoria } from "@/lib/urls-publicas";
-import type { Intencao } from "@/mock/types";
+import type { Categoria, Intencao } from "@/mock/types";
 
 /* ------------------------------------------------------------------ */
 /* Constantes                                                            */
@@ -114,7 +114,7 @@ export default function EditorCategoriaPage() {
   const dominio = useDominio();
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { categorias, paginas, midia, criarCategoria, atualizarCategoria } = useStore();
+  const { categorias, paginas, midia, criarCategoria, atualizarCategoria, atualizarCategoriaLocal } = useStore();
 
   const cat = categorias.find((c) => c.id === id);
 
@@ -122,6 +122,11 @@ export default function EditorCategoriaPage() {
   const [cor, setCor] = useState("#0b5cff");
   const [bibliotecaImagem, setBibliotecaImagem] = useState(false);
   const [salvo, setSalvo] = useState(false);
+  const [salvando, setSalvando] = useState(false);
+  const [erroSalvar, setErroSalvar] = useState("");
+  const [erroCriar, setErroCriar] = useState("");
+  // Acumula o que mudou desde o último Salvar — só isso vai pro PATCH.
+  const patchPendente = useRef<Partial<Categoria>>({});
 
   /* Clusters já existentes no site — para sugestões no datalist */
   const clustersExistentes = useMemo(
@@ -138,11 +143,9 @@ export default function EditorCategoriaPage() {
   const NOVO = id === "novo";
 
   useEffect(() => {
-    if (NOVO && !cat) {
-      const novoId = `c${Date.now()}`;
+    if (NOVO && !cat && !erroCriar) {
       const maxOrdem = categorias.reduce((max, c) => Math.max(max, c.ordem), 0);
       criarCategoria({
-        id: novoId,
         nome: "",
         slug: "",
         descricao: "",
@@ -154,12 +157,30 @@ export default function EditorCategoriaPage() {
         cluster: "",
         intencao: "",
         origemLinkFlow: false,
+      }).then((r) => {
+        if (r.ok) router.replace(`/categorias/${r.categoria.id}`);
+        else setErroCriar(r.erro);
       });
-      router.replace(`/categorias/${novoId}`);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!cat) {
+    if (erroCriar) {
+      return (
+        <Painel>
+          <Vazio
+            icone={<AlertTriangle size={18} />}
+            titulo="Não foi possível criar a categoria"
+            descricao={erroCriar}
+            acao={
+              <Link href="/categorias">
+                <Botao tamanho="sm">Voltar para categorias</Botao>
+              </Link>
+            }
+          />
+        </Painel>
+      );
+    }
     if (NOVO) {
       return (
         <div className="flex h-full items-center justify-center p-8">
@@ -192,12 +213,29 @@ export default function EditorCategoriaPage() {
     : "";
   const slugAlterado = !!slugOriginal && cat.slug !== slugOriginal;
 
-  const editar = (patch: Parameters<typeof atualizarCategoria>[1]) => {
-    atualizarCategoria(cat.id, patch);
+  const editar = (patch: Partial<Categoria>) => {
+    patchPendente.current = { ...patchPendente.current, ...patch };
+    atualizarCategoriaLocal(cat.id, patch);
     setSalvo(false);
+    setErroSalvar("");
   };
 
-  const salvar = () => {
+  const salvar = async () => {
+    const patch = patchPendente.current;
+    if (Object.keys(patch).length === 0) {
+      setSalvo(true);
+      setTimeout(() => setSalvo(false), 2200);
+      return;
+    }
+    setSalvando(true);
+    setErroSalvar("");
+    const ok = await atualizarCategoria(cat.id, patch);
+    setSalvando(false);
+    if (!ok) {
+      setErroSalvar("Não foi possível salvar. Tente de novo.");
+      return;
+    }
+    patchPendente.current = {};
     setSalvo(true);
     setTimeout(() => setSalvo(false), 2200);
   };
@@ -215,7 +253,8 @@ export default function EditorCategoriaPage() {
           {urlPublica || "Defina o slug para gerar a URL"}
         </span>
         <div className="ml-auto flex items-center gap-1.5">
-          {salvo && <span className="text-[11px] text-success">Alterações aplicadas</span>}
+          {salvo && <span className="text-[11px] text-success">Alterações salvas</span>}
+          {erroSalvar && <span className="text-[11px] text-danger">{erroSalvar}</span>}
           {urlPublica && (
             <a href={urlPublica} target="_blank" rel="noopener noreferrer">
               <Botao variante="secundario">
@@ -223,8 +262,8 @@ export default function EditorCategoriaPage() {
               </Botao>
             </a>
           )}
-          <Botao variante="primario" onClick={salvar}>
-            <Save size={12} /> Salvar
+          <Botao variante="primario" onClick={() => void salvar()} disabled={salvando}>
+            <Save size={12} /> {salvando ? "Salvando…" : "Salvar"}
           </Botao>
         </div>
       </div>

@@ -355,9 +355,12 @@ export function ListaCategorias() {
       return next;
     });
 
-  const simularSalvar = async (id: string, dados: Partial<Categoria>) => {
-    await new Promise((res) => setTimeout(res, 600));
-    atualizarCategoria(id, dados);
+  const salvarEdicaoRapida = async (id: string, dados: Partial<Categoria>) => {
+    const ok = await atualizarCategoria(id, dados);
+    if (!ok) {
+      mostrarToast("Não foi possível salvar — tente de novo.");
+      return;
+    }
     setEdicaoRapida(null);
     mostrarToast("Categoria atualizada.");
   };
@@ -369,9 +372,13 @@ export function ListaCategorias() {
     setAcaoEmMassa("");
   };
 
-  const confirmarEExcluir = () => {
+  const confirmarEExcluir = async () => {
     if (!confirmarExclusao) return;
-    deletarCategoria(confirmarExclusao.id);
+    const ok = await deletarCategoria(confirmarExclusao.id);
+    if (!ok) {
+      mostrarToast("Não foi possível excluir — tente de novo.");
+      return;
+    }
     setSelecionados((prev) => {
       const next = new Set(prev);
       next.delete(confirmarExclusao.id);
@@ -662,7 +669,7 @@ export function ListaCategorias() {
                       <EdicaoRapida
                         cat={cat}
                         colspan={TOTAL_COLS}
-                        onSalvar={simularSalvar}
+                        onSalvar={salvarEdicaoRapida}
                         onCancelar={() => setEdicaoRapida(null)}
                       />
                     )}

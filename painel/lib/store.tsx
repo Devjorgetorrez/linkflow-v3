@@ -452,9 +452,14 @@ interface Estado {
   usuarios: Usuario[];
   criarUsuario: (u: Usuario) => void;
   atualizarUsuario: (id: string, patch: Partial<Usuario>) => void;
-  criarCategoria: (cat: Categoria) => void;
-  deletarCategoria: (id: string) => void;
-  atualizarCategoria: (id: string, patch: Partial<Categoria>) => void;
+  /** Cria a categoria no servidor. Devolve a categoria real (com o id gerado lá) ou o erro. */
+  criarCategoria: (cat: Partial<Categoria>) => Promise<{ ok: true; categoria: Categoria } | { ok: false; erro: string }>;
+  /** Remove no servidor. true = confirmado. */
+  deletarCategoria: (id: string) => Promise<boolean>;
+  /** Grava no servidor (o que muda na tela some se o servidor recusar). true = confirmado. */
+  atualizarCategoria: (id: string, patch: Partial<Categoria>) => Promise<boolean>;
+  /** Só a tela, sem rede — pro editor acumular digitação antes do botão Salvar. */
+  atualizarCategoriaLocal: (id: string, patch: Partial<Categoria>) => void;
   atualizarPagina: (id: string, patch: Partial<Pagina>) => void;
   atualizarMidia: (id: string, patch: Partial<Midia>) => void;
   /** Relê a biblioteca real (após um envio). Devolve a lista nova, ou null se a API falhou. */
@@ -1302,17 +1307,40 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setUsuarios((lista) => lista.map((u) => (u.id === id ? { ...u, ...patch } : u)));
         marcarPendente();
       },
-      criarCategoria: (cat) => {
-        setCategorias((lista) => [...lista, cat]);
+      criarCategoria: async (cat) => {
+        const r = await pedirAoServidor("/api/categorias", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(cat),
+        });
+        if (!r.ok || !r.dados.categoria) {
+          return { ok: false, erro: r.erro || "Não foi possível criar a categoria." };
+        }
+        const categoria = r.dados.categoria as Categoria;
+        setCategorias((lista) => [...lista, categoria]);
         marcarPendente();
+        return { ok: true, categoria };
       },
-      deletarCategoria: (id) => {
+      deletarCategoria: async (id) => {
+        const r = await pedirAoServidor(`/api/categorias/${id}`, { method: "DELETE" });
+        if (!r.ok) return false;
         setCategorias((lista) => lista.filter((c) => c.id !== id));
         marcarPendente();
+        return true;
       },
-      atualizarCategoria: (id, patch) => {
+      atualizarCategoria: async (id, patch) => {
+        const r = await pedirAoServidor(`/api/categorias/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(patch),
+        });
+        if (!r.ok) return false;
         setCategorias((lista) => lista.map((c) => (c.id === id ? { ...c, ...patch } : c)));
         marcarPendente();
+        return true;
+      },
+      atualizarCategoriaLocal: (id, patch) => {
+        setCategorias((lista) => lista.map((c) => (c.id === id ? { ...c, ...patch } : c)));
       },
       atualizarPagina: (id, patch) => {
         setPaginas((lista) => lista.map((p) => (p.id === id ? { ...p, ...patch } : p)));

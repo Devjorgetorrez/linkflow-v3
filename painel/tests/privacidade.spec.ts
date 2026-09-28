@@ -19,7 +19,7 @@ test.describe("Privacidade — Cookies", () => {
 
   test("botão fica desabilitado enquanto a Política de Privacidade não está completa", async ({ page, request }) => {
     const apiKey = process.env.PLAYWRIGHT_API_KEY ?? process.env.PAINEL_API_KEY ?? "";
-    const headers = apiKey ? { "x-api-key": apiKey } : {};
+    const headers: Record<string, string> = apiKey ? { "x-api-key": apiKey } : {};
     const antes = await (await request.get("/api/config", { headers })).json();
     const original = antes.config?.legalPainel ?? {};
     test.skip(
@@ -42,7 +42,7 @@ test.describe("Privacidade — Cookies", () => {
   // anterior se auto-pula quando já está assim.
   test("completar a Política de Privacidade libera o botão Salvar configuração", async ({ page, request }) => {
     const apiKey = process.env.PLAYWRIGHT_API_KEY ?? process.env.PAINEL_API_KEY ?? "";
-    const headers = apiKey ? { "x-api-key": apiKey } : {};
+    const headers: Record<string, string> = apiKey ? { "x-api-key": apiKey } : {};
 
     await request.patch("/api/config", {
       headers,
