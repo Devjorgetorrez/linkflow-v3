@@ -323,17 +323,18 @@ contagens de página conferidas), `tsc --noEmit` + `npm run build` do
 painel, e testes de integração por curl/Node contra `next start` — nunca só
 "compilou sem erro". Uma cópia de teste local descartável foi usada ao
 longo de toda a sessão (`D:\LFSoft\Mentoria\_teste-fase1`, fora do repo,
-painel em `localhost:3210` + site em `localhost:4321`, admin
-`[EMAIL-REMOVIDO]` / `[SENHA-REMOVIDA]`); **pode não existir mais** numa sessão
-nova — recriar copiando `_astro/` + promovendo um tema + `npm run dev` nos
-dois lados, se precisar retomar teste manual.
+painel em `localhost:3210` + site em `localhost:4321`, credenciais em
+`credenciais/vps-teste.md`, fora do git); **pode não existir mais** numa
+sessão nova — recriar copiando `_astro/` + promovendo um tema + `npm run
+dev` nos dois lados, se precisar retomar teste manual.
 
 ---
 
 ## R5 — teste de ponta a ponta no VPS (27/09/2026) — CONCLUÍDO
 
 Feito com autorização explícita do Lucas, na mesma sessão que fechou a Fase 6.
-VPS `[IP-REMOVIDO]`. Achados de campo, todos corrigidos e commitados:
+VPS de teste (IP/porta em `credenciais/vps-teste.md`, fora do git). Achados
+de campo, todos corrigidos e commitados:
 
 **Estado do servidor, diferente do documentado.** Existia uma instalação
 antiga de um único cliente (`/opt/linkflow-teste`, modelo pré-multicliente,
@@ -363,8 +364,8 @@ quase nada das Fases 0–6.
    dois, só com avisos esperados (sem post, sem prova social — pendências
    reais de um site que ainda não passou pela Fase 3).
 6. Build real do Astro no servidor, deploy para `/var/www/torrez-desentupidora`.
-7. Primeiro admin do painel criado (`[EMAIL-REMOVIDO]`), login por sessão
-   testado de verdade.
+7. Primeiro admin do painel criado (credenciais em `credenciais/vps-teste.md`),
+   login por sessão testado de verdade.
 8. **Formulário do site publicado → lead real no painel**, ponta a ponta
    (POST em `/api/submissao` com a origem do domínio real, LGPD exigida,
    lead apareceu em `/api/leads`).
@@ -509,10 +510,14 @@ nenhum momento.
     legível por outros usuários locais no servidor.
 11. **`/api/auth/verificar-senha`** não tem limite de tentativas (exige
     sessão, mas dá para forçar a própria senha).
-12. **`scripts/criar-admin.mjs`** é legado, incompatível com o painel
-    atual (algoritmo de hash diferente, caminho de gravação diferente) —
-    o admin que ele cria provavelmente não consegue logar. Considerar
-    remover ou reescrever.
+12. ~~`scripts/criar-admin.mjs` legado, incompatível~~ — **removido em
+    28/09/2026** (Relatório de Testes 4, erro 34): não gravava usuário
+    nenhum (`hashSenha()` nunca era chamada; `main()` só imprimia um
+    `curl` pro operador colar) e, mesmo gravando, usava hash incompatível
+    com o painel real (scrypt vs. bcryptjs). O caminho real de criar o
+    1º admin sem SSH já existe — `app/api/usuarios/route.ts` aceita
+    `x-api-key` quando `usuarios.json` está vazio (ver Fase 8 do
+    `relatorios/Plano-Correcao-Testes-4.md`).
 12. Limites conhecidos de antes do plano de QA, ainda sem correção:
     `hashtags`/`buscasFrequentes` dos configs apontam direto para slugs de
     post/serviço (link morto se o post virar rascunho); `public/tema-0X.json`
@@ -554,9 +559,10 @@ principalmente depois de editar um arquivo que muda imports/hooks
 
 ## VPS de teste
 
-`[IP-REMOVIDO]`, porta `22022`. **Pedir autorização ao Lucas antes de
-qualquer ação no VPS** — vale para qualquer mudança nova, mesmo depois do
-R5.
+IP/porta em `credenciais/vps-teste.md` (fora do git — nunca citar o valor
+real aqui, este arquivo é distribuído). **Pedir autorização ao responsável
+antes de qualquer ação no VPS** — leitura conta (testar conexão SSH,
+listar clientes hospedados), não só alteração — vale mesmo depois do R5.
 
 **Estado atual (27/09/2026), depois do R5:**
 - `/opt/linkflow` — instalação multicliente atual, motor de referência e
@@ -565,8 +571,8 @@ R5.
 - `/opt/linkflow/clientes/torrez-desentupidora` — `LINKFLOW_SLUG:
   torrez-desentupidora`, criado do zero no R5, site em
   `teste.turboblog.com.br`, painel em `painel.teste.turboblog.com.br`
-  (admin: `[EMAIL-REMOVIDO]`, senha `[SENHA-REMOVIDA]` — trocar antes de
-  qualquer uso real). **Layout: `tema-06`** (trocado de `tema-04` no mesmo
+  (credenciais em `credenciais/vps-teste.md` — trocar antes de qualquer uso
+  real). **Layout: `tema-06`** (trocado de `tema-04` no mesmo
   dia — o Lucas achou que combinava mais com uma desentupidora; `tema-06` já
   cita "desentupidora" na própria descrição do nicho e tem "Desentupimento"
   como um dos serviços de demonstração). Conteúdo é o real do `projeto.md`

@@ -81,10 +81,29 @@ def verificar(slug, arquivo):
         if re.search(r'telefone.*a coletar|telephone.*placeholder|\[TELEFONE\]', projeto, re.IGNORECASE):
             erros.append("Telefone real no texto mas projeto.md tem placeholder — dado nao confirmado pelo cliente (C1-C5)")
 
-    # 10. Placeholders visiveis — aviso (correto, nao e erro)
+    # 10. Placeholders visiveis — aviso (correto, nao e erro). So campo
+    # simples tipo [TELEFONE] — todo maiusculo, sem instrucao de redacao.
     placeholders = re.findall(r'\[[A-Z][A-Z\s_/]+\]', texto)
     if placeholders:
         avisos.append(f"{len(placeholders)} placeholder(s) a preencher antes de publicar: {', '.join(sorted(set(placeholders)))}")
+
+    # 10b. Placeholder DE PRODUCAO ou instrucao de redacao no corpo — BLOQUEANTE.
+    # Achado real (Relatorio-Testes-4, erro 41): a pagina "Protocolo Dentario"
+    # foi ao ar com "[TEXTO EM PRODUCAO — conteudo completo escrito na Fase 3.]"
+    # e blocos tipo "[2-3 paragrafos. Tom de voz do projeto.md...]" — instrucao
+    # de redacao embutida no arquivo .md que virou o HTML publicado. O check
+    # 10 acima (so maiusculas) nao pega esse padrao porque tem minuscula e
+    # pontuacao. Este aqui pega especificamente marcador de producao e bloco
+    # de instrucao (digito + paragrafo(s), ou mencao a "tom de voz").
+    instrucoes_redacao = re.findall(
+        r'\[[^\]]*(?:TEXTO EM PRODU[CÇ][AÃ]O|\d+[\s-]*(?:a[\s-]*\d+)?\s*par[aá]grafo|[Tt]om de voz)[^\]]*\]',
+        texto,
+    )
+    if instrucoes_redacao:
+        erros.append(
+            f"Placeholder de PRODUCAO ou instrucao de redacao ainda no corpo do texto "
+            f"(nunca pode ir ao build): {'; '.join(sorted(set(instrucoes_redacao)))}"
+        )
 
     # 11. Palavras proibidas
     texto_lower = texto.lower()

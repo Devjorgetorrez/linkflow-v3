@@ -134,6 +134,18 @@ Usar apenas durante a sessão atual.
 
 ---
 
+## Regra: autorização cobre leitura, não só alteração
+
+"Pedir autorização antes de qualquer ação no VPS" (`HANDOFF.md`) inclui
+**testar a conexão SSH e listar o que já está no servidor** — não é
+exceção por ser só leitura. Achado real (Relatório de Testes 4, erro 33):
+o agente testou SSH e listou os clientes hospedados antes de pedir
+autorização, interpretando que só alteração exigia. Errado: se as
+credenciais do PASSO 0 vieram de um pedido anterior nesta sessão (ex.: já
+foram coletadas numa etapa passada, o fluxo retomando de onde parou),
+confirme explicitamente "posso me conectar no servidor agora?" antes do
+PASSO 1 — não assuma que ter a senha em mãos já é a autorização.
+
 ## PASSO 1 — Testar conexão SSH
 
 Antes de qualquer coisa, verificar que o SSH está funcionando:

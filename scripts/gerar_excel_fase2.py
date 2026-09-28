@@ -1,8 +1,37 @@
 """
 gerar_excel_fase2.py - Gera analise-tecnica-<slug>.xlsx com 7 abas (Fase 1 + 2)
-Uso: python scripts/gerar_excel_fase2.py --slug <slug>
+
+Uso: python scripts/gerar_excel_fase2.py --slug <slug> --dados <json>
+
+O JSON de --dados tem as linhas REAIS de cada aba (nunca dado de exemplo
+embutido aqui — erro 29 do Relatorio-Testes-4: um escritorio de advocacia
+de Campinas ficou hardcoded neste arquivo e vazou pra planilha de qualquer
+cliente novo). O agente monta esse JSON a partir de:
+  - clusters.json (saida de skills/arquiteto-seo/scripts/clusterizar.py) —
+    Inventario_Concorrente, Paginas_Concorrentes
+  - projeto.md do cliente + pesquisa de concorrentes — Arquitetura_Sugerida,
+    Plano_Construcao, Handoff_Fase3
+  - raio-X tecnico da Fase 2 (o lider real, verificado) — RaioX_Tecnico,
+    Schema_Concorrentes
+
+Formato esperado (todas as 7 chaves obrigatorias, cada uma uma lista de
+listas com os valores na ordem das colunas do cabecalho):
+
+{
+  "inventario_concorrente": [[dominio, url, trafego_mes, backlinks, ref_dominios, tipo, origem], ...],
+  "paginas_concorrentes":   [[concorrente, url, kw_provavel, trafego_mes, backlinks, tipo, money_page_candidata], ...],
+  "arquitetura_sugerida":   [[nivel, slug_sugerido, tipo, kw_principal, referencia_concorrente, observacao], ...],
+  "plano_construcao":       [[prioridade, slug, kw_principal, volume_mes, sd, status, schema], ...],
+  "raiox_tecnico":          [[sinal, status, detalhe, recomendacao], ...],
+  "schema_concorrentes":    [[concorrente, pagina, schemas_detectados, json_ld, acao_recomendada], ...],
+  "handoff_fase3":          [[pagina, kw_principal, volume_mes, estrutura_conteudo, schema, tom, status], ...]
+}
+
+Campo obrigatorio ausente ou aba vazia = falha com erro claro. Nunca cai em
+valor padrao nem gera arquivo parcial.
 """
 import argparse
+import json
 import os
 import sys
 from pathlib import Path
@@ -16,6 +45,24 @@ try:
 except ImportError:
     print("FAIL: openpyxl nao instalado. Rode: pip install openpyxl")
     sys.exit(1)
+
+
+ABAS = [
+    ("inventario_concorrente", "Inventario_Concorrente",
+     ["Dominio", "URL", "Trafego/mes", "Backlinks", "Ref. Dominios", "Tipo", "Origem"]),
+    ("paginas_concorrentes", "Paginas_Concorrentes",
+     ["Concorrente", "URL", "KW Provavel", "Trafego/mes", "Backlinks", "Tipo", "Money Page candidata?"]),
+    ("arquitetura_sugerida", "Arquitetura_Sugerida",
+     ["Nivel", "Slug sugerido", "Tipo", "KW principal", "Referencia concorrente", "Observacao"]),
+    ("plano_construcao", "Plano_Construcao",
+     ["Prioridade", "Slug", "KW principal", "Volume/mes", "SD", "Status", "Schema"]),
+    ("raiox_tecnico", "RaioX_Tecnico",
+     ["Sinal", "Status", "Detalhe", "Recomendacao para o cliente"]),
+    ("schema_concorrentes", "Schema_Concorrentes",
+     ["Concorrente", "Pagina", "Schemas detectados", "JSON-LD?", "Acao recomendada"]),
+    ("handoff_fase3", "Handoff_Fase3",
+     ["Pagina", "KW principal", "Volume/mes", "Estrutura de conteudo", "Schema", "Tom (OAB)", "Status"]),
+]
 
 
 def header_font():
@@ -76,145 +123,54 @@ def auto_width(ws, min_w=12, max_w=55):
         ws.column_dimensions[get_column_letter(col[0].column)].width = w
 
 
-def gerar(slug):
+def carregar_dados(caminho):
+    p = Path(caminho)
+    if not p.exists():
+        print(f"FAIL: arquivo de dados nao encontrado: {caminho}")
+        print("Monte o JSON com as linhas reais de cada aba antes de rodar este script "
+              "(ver docstring deste arquivo) — nunca rode sem --dados.")
+        sys.exit(1)
+    dados = json.loads(p.read_text(encoding="utf-8"))
+    faltando = []
+    vazias = []
+    for chave, _, _ in ABAS:
+        if chave not in dados:
+            faltando.append(chave)
+        elif not dados[chave]:
+            vazias.append(chave)
+    if faltando:
+        print(f"FAIL: chaves ausentes no JSON de dados: {', '.join(faltando)}")
+        sys.exit(1)
+    if vazias:
+        print(f"FAIL: abas sem nenhuma linha (vazias nao sao permitidas): {', '.join(vazias)}")
+        sys.exit(1)
+    return dados
+
+
+def gerar(slug, caminho_dados):
+    dados = carregar_dados(caminho_dados)
+
     pasta = _PROJECT_DIR / f"projetos/{slug}"
     saida = pasta / f"analise-tecnica-{slug}.xlsx"
 
     wb = openpyxl.Workbook()
+    primeira = True
+    for chave, titulo, cols in ABAS:
+        ws = wb.active if primeira else wb.create_sheet(titulo)
+        if primeira:
+            ws.title = titulo
+            primeira = False
+        ws.freeze_panes = "A2"
+        write_header(ws, cols)
+        for i, row in enumerate(dados[chave]):
+            if len(row) != len(cols):
+                print(f"FAIL: aba {titulo}, linha {i + 1} tem {len(row)} valores, "
+                      f"esperado {len(cols)} ({', '.join(cols)})")
+                sys.exit(1)
+            write_data(ws, list(row), alt=(i % 2 == 1))
+        auto_width(ws)
 
-    # --- ABA 1: Inventario_Concorrente ---
-    ws1 = wb.active
-    ws1.title = "Inventario_Concorrente"
-    ws1.freeze_panes = "A2"
-    write_header(ws1, ["Dominio", "URL", "Trafego/mes", "Backlinks", "Ref. Dominios", "Tipo", "Origem"])
-    rows1 = [
-        ("msadvogado.com.br", "/advogado-trabalhista-especializado/", 425, 13, 8, "Transacional", "domain_top_pages locId 2076"),
-        ("msadvogado.com.br", "/trabalhista/", 340, 18, 6, "Transacional", "domain_top_pages locId 2076"),
-        ("msadvogado.com.br", "/desconto-do-dsr-como-calcular-faltas/", 273, 5, 2, "Blog", "domain_top_pages locId 2076"),
-        ("msadvogado.com.br", "/", 194, 42, 32, "Institucional", "domain_top_pages locId 2076"),
-        ("msadvogado.com.br", "/6-direitos-dos-auxiliares-de-servicos-gerais/", 64, 0, 0, "Blog", "domain_top_pages locId 2076"),
-        ("msadvogado.com.br", "/acidente-2/", 26, 0, 0, "Transacional", "domain_top_pages locId 2076"),
-        ("msadvogado.com.br", "/advogado-trabalhista-online/", 7, 29, 5, "Transacional", "domain_top_pages locId 2076"),
-        ("msadvogado.com.br", "/rescisao-indireta/", 2, 7, 3, "Transacional", "domain_top_pages locId 2076"),
-        ("advocaciagodoy.com.br", "/advogado-trabalhista-piracicaba-sp", 62, 1901, 224, "Transacional (outra cidade)", "domain_top_pages locId 2076"),
-        ("advocaciagodoy.com.br", "/advogado-trabalhista-campinas-sp", 50, 0, 0, "Transacional", "domain_top_pages locId 2076"),
-        ("advocaciagodoy.com.br", "/calcular-rescisao", 25, 0, 0, "Transacional (ferramenta)", "domain_top_pages locId 2076"),
-        ("advocaciagodoy.com.br", "/advogado-trabalhista-americana-sp", 24, 0, 0, "Transacional (regiao)", "domain_top_pages locId 2076"),
-        ("advocaciagodoy.com.br", "/advogado-trabalhista-de-graca", 11, 0, 0, "Transacional", "domain_top_pages locId 2076"),
-        ("advlaboral.com.br", "/direito-do-trabalho/advogado-trabalhista-em-campinas-sp/", 40, 0, 0, "Transacional", "domain_top_pages locId 2076"),
-        ("advlaboral.com.br", "/direito-do-trabalho/advogado-trabalhista-em-manaus/", 42, 0, 0, "Transacional (outra cidade)", "domain_top_pages locId 2076"),
-    ]
-    for i, row in enumerate(rows1):
-        write_data(ws1, list(row), alt=(i % 2 == 1))
-    auto_width(ws1)
-
-    # --- ABA 2: Paginas_Concorrentes ---
-    ws2 = wb.create_sheet("Paginas_Concorrentes")
-    ws2.freeze_panes = "A2"
-    write_header(ws2, ["Concorrente", "URL", "KW Provavel", "Trafego/mes", "Backlinks", "Tipo", "Money Page candidata?"])
-    rows2 = [
-        ("msadvogado.com.br", "/advogado-trabalhista-especializado/", "advogado trabalhista especializado", 425, 13, "Transacional", "SIM"),
-        ("msadvogado.com.br", "/trabalhista/", "advogado trabalhista campinas", 340, 18, "Transacional", "SIM"),
-        ("msadvogado.com.br", "/acidente-2/", "auxilio acidente trabalho", 26, 0, "Transacional", "SIM - gap"),
-        ("msadvogado.com.br", "/rescisao-indireta/", "rescisao indireta", 2, 7, "Transacional", "SIM - gap"),
-        ("msadvogado.com.br", "/advogado-trabalhista-online/", "advogado trabalhista online", 7, 29, "Transacional", "AVALIAR"),
-        ("msadvogado.com.br", "/desconto-do-dsr-como-calcular-faltas/", "calcular desconto DSR", 273, 5, "Blog", "NAO - blog"),
-        ("advocaciagodoy.com.br", "/advogado-trabalhista-campinas-sp", "advogado trabalhista campinas", 50, 0, "Transacional", "SIM"),
-        ("advocaciagodoy.com.br", "/calcular-rescisao", "calculadora rescisao trabalhista", 25, 0, "Transacional (ferramenta)", "SIM - gap"),
-        ("advocaciagodoy.com.br", "/advogado-trabalhista-de-graca", "advogado trabalhista gratuito", 11, 0, "Transacional", "AVALIAR - OAB"),
-        ("advocaciagodoy.com.br", "/post/como-funciona-o-aviso-previo/", "como funciona aviso previo", 0, 0, "Blog", "NAO - informacional"),
-        ("advlaboral.com.br", "/direito-do-trabalho/advogado-trabalhista-em-campinas-sp/", "advogado trabalhista campinas", 40, 0, "Transacional", "SIM"),
-    ]
-    for i, row in enumerate(rows2):
-        write_data(ws2, list(row), alt=(i % 2 == 1))
-    auto_width(ws2)
-
-    # --- ABA 3: Arquitetura_Sugerida ---
-    ws3 = wb.create_sheet("Arquitetura_Sugerida")
-    ws3.freeze_panes = "A2"
-    write_header(ws3, ["Nivel", "Slug sugerido", "Tipo", "KW principal", "Referencia concorrente", "Observacao"])
-    rows3 = [
-        (0, "/", "Home (Money Page principal)", "advogado trabalhista campinas", "msadvogado.com.br /", "KW principal 720/mes"),
-        (1, "/rescisao-trabalhista-campinas/", "Money Page - Servico", "rescisao trabalhista campinas", "msadvogado.com.br /rescisao/", "Servico #1 do cliente"),
-        (1, "/assedio-moral-campinas/", "Money Page - Servico", "advogado assedio moral campinas", "msadvogado.com.br /danos-morais/", "Servico #3 do cliente"),
-        (1, "/calculo-rescisao-trabalhista/", "Money Page - Ferramenta", "calculadora rescisao trabalhista", "advocaciagodoy.com.br /calcular-rescisao", "Gap competitivo - 25 vis/mes no concorrente"),
-        (1, "/acidente-trabalho-campinas/", "Money Page - Servico (gap)", "advogado acidente trabalho campinas", "msadvogado.com.br /acidente-de-trabalho/", "Gap - concorrente tem 26 vis/mes"),
-        (1, "/rescisao-indireta-campinas/", "Money Page - Servico (gap)", "rescisao indireta campinas", "msadvogado.com.br /rescisao-indireta/", "Gap competitivo"),
-        (1, "/blog/", "Silo de conteudo", "-", "-", "Fase 3 - artigos informativos"),
-    ]
-    for i, row in enumerate(rows3):
-        write_data(ws3, list(row), alt=(i % 2 == 1))
-    auto_width(ws3)
-
-    # --- ABA 4: Plano_Construcao ---
-    ws4 = wb.create_sheet("Plano_Construcao")
-    ws4.freeze_panes = "A2"
-    write_header(ws4, ["Prioridade", "Slug", "KW principal", "Volume/mes", "SD", "Status", "Schema"])
-    rows4 = [
-        (1, "/", "advogado trabalhista campinas", 720, 40, "blueprint", "LegalService"),
-        (2, "/rescisao-trabalhista-campinas/", "rescisao trabalhista campinas", 0, 12, "blueprint", "LegalService + Service"),
-        (3, "/assedio-moral-campinas/", "advogado assedio moral campinas", 0, 4, "blueprint", "LegalService + Service"),
-        (4, "/calculo-rescisao-trabalhista/", "calculadora rescisao trabalhista", "-", "-", "blueprint", "WebPage"),
-        (5, "/acidente-trabalho-campinas/", "advogado acidente trabalho campinas", "-", "-", "blueprint (gap)", "LegalService + Service"),
-        (6, "/rescisao-indireta-campinas/", "rescisao indireta campinas", "-", "-", "blueprint (gap)", "LegalService + Service"),
-    ]
-    for i, row in enumerate(rows4):
-        write_data(ws4, list(row), alt=(i % 2 == 1))
-    auto_width(ws4)
-
-    # --- ABA 5: RaioX_Tecnico ---
-    ws5 = wb.create_sheet("RaioX_Tecnico")
-    ws5.freeze_panes = "A2"
-    write_header(ws5, ["Sinal", "Status", "Detalhe", "Recomendacao para o cliente"])
-    rows5 = [
-        ("URL limpa", "SIM", "Slugs legiveis, sem parametros", "Manter padrao /<slug>/ no WP"),
-        ("Renderizacao", "SSR", "Conteudo no HTML bruto (WordPress)", "WordPress = SSR nativo"),
-        ("HTTPS", "SIM", "Site acessivel em https://", "Configurar SSL no host"),
-        ("robots.txt", "OK", "Disallow: vazio; Sitemap: apontado", "Yoast gera automaticamente"),
-        ("CMS", "WordPress + Yoast", "Confirmado pelo sitemap_index.xml", "Padrao do nicho"),
-        ("Canonical", "NAO VERIFICADO", "Tag nao encontrada no HTML via WebFetch", "Yoast gera canonical automaticamente"),
-        ("Meta viewport", "NAO VERIFICADO", "Tag nao encontrada no HTML via WebFetch", "WordPress/Yoast gera automaticamente"),
-        ("Breadcrumbs", "NAO DETECTADO", "Sem BreadcrumbList no HTML", "Ativar em Yoast > Search Appearance > Breadcrumbs"),
-        ("IndexNow", "NAO DETECTADO", "Sem referencia no HTML", "Plugin IndexNow para Bing/Yandex"),
-        ("Schema JSON-LD", "AUSENTE (lider)", "Nenhum concorrente real usa schema", "OPORTUNIDADE: implementar LegalService via WPCode"),
-    ]
-    for i, row in enumerate(rows5):
-        write_data(ws5, list(row), alt=(i % 2 == 1))
-    auto_width(ws5)
-
-    # --- ABA 6: Schema_Concorrentes ---
-    ws6 = wb.create_sheet("Schema_Concorrentes")
-    ws6.freeze_panes = "A2"
-    write_header(ws6, ["Concorrente", "Pagina", "Schemas detectados", "JSON-LD?", "Acao recomendada"])
-    rows6 = [
-        ("msadvogado.com.br", "/ (home)", "Nenhum", "NAO", "OPORTUNIDADE: LegalService + Organization"),
-        ("msadvogado.com.br", "/trabalhista/", "Nenhum", "NAO", "OPORTUNIDADE: LegalService + Service"),
-        ("advocaciagodoy.com.br", "/ (home)", "Nao verificado via WebFetch", "-", "Verificar manualmente se necessario"),
-        ("jusbrasil.com.br", "/advogados/direito-do-trabalho-sp-campinas/", "Provavelmente tem (DA 91)", "-", "Diretorio - nao aplicavel ao cliente"),
-        ("[NOME DO ESCRITORIO]", "/ (blueprint)", "LegalService gerado (ver analise-tecnica.md)", "SIM - JSON-LD pronto", "Injetar via WPCode gratuito"),
-        ("[NOME DO ESCRITORIO]", "/rescisao-trabalhista-campinas/", "LegalService + Service gerado", "SIM - JSON-LD pronto", "WPCode > Specific Pages"),
-        ("[NOME DO ESCRITORIO]", "/calculo-rescisao-trabalhista/", "WebPage", "SIM - JSON-LD pronto", "NAO usar Service - e ferramenta/WebPage"),
-    ]
-    for i, row in enumerate(rows6):
-        write_data(ws6, list(row), alt=(i % 2 == 1))
-    auto_width(ws6)
-
-    # --- ABA 7: Handoff_Fase3 ---
-    ws7 = wb.create_sheet("Handoff_Fase3")
-    ws7.freeze_panes = "A2"
-    write_header(ws7, ["Pagina", "KW principal", "Volume/mes", "Estrutura de conteudo", "Schema", "Tom (OAB)", "Status"])
-    rows7 = [
-        ("/", "advogado trabalhista campinas", 720, "H1 direto + problema solucao + areas + CTA WhatsApp", "LegalService", "Perfil 1 - acolhedor; sem prometer resultado", "blueprint"),
-        ("/rescisao-trabalhista-campinas/", "rescisao trabalhista campinas", 0, "H1 + o que e + quando acionar + como funciona + CTA", "LegalService + Service", "Perfil 1; nunca garante rescisao", "blueprint"),
-        ("/assedio-moral-campinas/", "advogado assedio moral campinas", 0, "H1 + o que e + evidencias + como agir + CTA", "LegalService + Service", "Perfil 1; acolher quem sofre", "blueprint"),
-        ("/calculo-rescisao-trabalhista/", "calculadora rescisao trabalhista", "-", "H1 + ferramenta + campos explicados + CTA consulta", "WebPage", "Perfil 2 - educativo; orientar sobre direitos", "blueprint"),
-        ("/acidente-trabalho-campinas/", "advogado acidente trabalho campinas", "-", "H1 + tipos + direitos + como agir + CTA", "LegalService + Service", "Perfil 1 - quem esta em estado grave", "blueprint (gap)"),
-        ("/rescisao-indireta-campinas/", "rescisao indireta campinas", "-", "H1 + o que e + exemplos + como provar + CTA", "LegalService + Service", "Perfil 1 - trabalhador prejudicado", "blueprint (gap)"),
-    ]
-    for i, row in enumerate(rows7):
-        write_data(ws7, list(row), alt=(i % 2 == 1))
-    auto_width(ws7)
-
+    pasta.mkdir(parents=True, exist_ok=True)
     wb.save(str(saida))
     print(f"PASS - Excel gerado: {saida} ({wb.sheetnames})")
     return 0
@@ -223,5 +179,7 @@ def gerar(slug):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--slug", required=True)
+    parser.add_argument("--dados", required=True,
+                         help="JSON com as linhas reais das 7 abas (ver docstring deste arquivo)")
     args = parser.parse_args()
-    sys.exit(gerar(args.slug))
+    sys.exit(gerar(args.slug, args.dados))

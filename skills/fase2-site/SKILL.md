@@ -80,7 +80,7 @@ Após filtro:
 ## ETAPA 3 - Consolidar e gerar entregaveis (via bash)
 - Preencher '### Handoff para Fase 3' no projeto.md: por pagina -> KW principal (F1) + estrutura + schema recomendado
 - Gerar Markdown: projetos/[slug]/analise-tecnica-[slug].md (raio-X narrado completo; se COM_SITE + diagnostico e veredito)
-- Gerar Excel: projetos/[slug]/analise-tecnica-[slug].xlsx — ÚNICO Excel do cliente, consolidando Fase 1 + Fase 2. Abas obrigatórias:
+- Gerar Excel: projetos/[slug]/analise-tecnica-[slug].xlsx — ÚNICO Excel do cliente, consolidando Fase 1 + Fase 2, com `scripts/gerar_excel_fase2.py`. Abas obrigatórias:
   - Inventario_Concorrente: páginas do crawl (origem: Fase 1 clusters.json)
   - Paginas_Concorrentes: páginas transacionais mapeadas (origem: Fase 1)
   - Arquitetura_Sugerida: árvore proposta para o site do cliente (NÃO "Arvore_Meu_Site" — cliente pode não ter site)
@@ -88,6 +88,20 @@ Após filtro:
   - RaioX_Tecnico: sinais técnicos do líder (origem: Fase 2)
   - Schema_Concorrentes: status de schema + JSON-LD do cliente
   - Handoff_Fase3: money pages finais com KW, schema, template, ação Yoast
+
+  **O script não tem dado de exemplo nenhum embutido** (corrigido depois do
+  erro 29 do Relatório de Testes 4 — um escritório de advocacia de Campinas
+  ficou hardcoded e vazou pra planilha de outro cliente). Ele exige
+  `--dados <json>` com as 7 abas preenchidas de verdade, e falha alto se
+  faltar uma aba ou vier vazia — nunca completa com valor padrão. Antes de
+  chamar o script: montar esse JSON a partir do `clusters.json` real da
+  Fase 1 (Inventario_Concorrente, Paginas_Concorrentes), da pesquisa de
+  concorrentes + `projeto.md` (Arquitetura_Sugerida, Plano_Construcao,
+  Handoff_Fase3) e do raio-X técnico desta Fase 2 (RaioX_Tecnico,
+  Schema_Concorrentes) — nunca do exemplo de nenhuma sessão anterior.
+  Formato exato do JSON: ver a docstring de `scripts/gerar_excel_fase2.py`.
+  Comando: `python scripts/gerar_excel_fase2.py --slug [slug] --dados
+  projetos/[slug]/_fase2-dados-planilha.json`.
 Ambos via bash, agente executa sozinho.
 
 REGRA DE TAMANHO: detalhamento completo (arvore inteira, todas URLs) vai para o Markdown/Excel. No projeto.md, manter so RESUMO das secoes + Handoff para Fase 3. Evita projeto.md gigante.
