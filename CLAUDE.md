@@ -21,6 +21,13 @@ Desenvolvido por **Link Flow** · Criado por **Jorge Torrez**
 
 3. **Idioma:** sempre português brasileiro.
 4. **Nunca publique sem aprovação humana** do calendário ou dos gates.
+5. **Contradição entre orquestrador e skill → parar e reportar, nunca
+   escolher.** Achado real (Relatório de Testes 4, erro 65/66): duas
+   fontes de verdade discordavam sobre quem escreve a Fase 3, e o agente
+   seguiu a mais curta em vez de sinalizar o conflito. Diante de
+   instruções incompatíveis entre este arquivo e uma `SKILL.md`, ou entre
+   duas skills, o agente para e avisa qual é o conflito — nunca decide
+   sozinho qual das duas vale.
 
 ---
 
@@ -241,7 +248,11 @@ segunda só publica artigos novos.
 ## Reuso (não reconstruir)
 
 - **Fase 1:** `arquiteto-seo` (+ `crawl.py`, `clusterizar.py`), `local-keyword-research`, `local-competitor-analysis`, `ranqueado-configurar` (ICP).
-- **Fase 3:** `ranqueado` (escrever) + `ranqueado-analisar` (GATE de qualidade).
+- **Fase 3:** `fase3-conteudo` (escrever) + `guardiao_fase3.py` (GATE de qualidade).
+  `ranqueado`/`ranqueado-analisar` foi **descontinuado como caminho da Fase 3** em
+  28/09/2026 (decisão do Jorge, Relatório de Testes 4, erro 65/66 — duas
+  fontes de verdade discordando sobre quem escreve). `ranqueado-configurar`
+  (Fase 1, ICP) é uso diferente e continua valendo.
 - **Fase 5:** agente GBP (PRONTO — só conectar).
 - **Publicação:** receita Novamira (`scripts/novamira_publish`).
 
@@ -410,6 +421,26 @@ o onboarding do `icp-gmb` e não eram mais usadas no fluxo real. Os
 arquivos originais estão preservados em `skills-arquivadas/` (não em
 `skills/`, então o agente não os carrega). Se o usuário digitar `/marca`
 ou `/proposta`, informe que esses comandos estão desativados no momento.
+
+---
+
+## `ranqueado` e `ranqueado-analisar` — arquivadas
+
+Descontinuadas como caminho da Fase 3 em 28/09/2026 (decisão do Jorge,
+Relatório de Testes 4, erro 65/66) — `CLAUDE.md` e `skills/orquestrador/
+SKILL.md` chegaram a apontar para as duas ao mesmo tempo (uma na tabela de
+roteamento, outra na seção Reuso), e o agente seguiu a mais curta sem
+avisar do conflito. A Fase 3 usa só `fase3-conteudo` + `guardiao_fase3.py`
+— ver "Reuso" acima. Arquivos originais preservados em
+`skills-arquivadas/` (fora de `skills/`, o agente não os carrega). Se o
+usuário digitar `/ranqueado escrever` ou `/ranqueado analisar`, informe
+que foram descontinuados e que a Fase 3 usa `fase3-conteudo`.
+**`ranqueado-configurar`** (Fase 1, ICP) é uso diferente — não foi tocado,
+continua ativo. Os demais irmãos (`ranqueado-atualizar`, `-brief`,
+`-calendario`, `-cluster`, `-reescrever`) também não foram tocados nesta
+rodada; `blog-publicar/SKILL.md` já proíbe explicitamente `/ranqueado
+escrever` em favor de `/blog write` — vale investigar numa sessão futura
+se são redundantes com a suíte `blog-*` e podem ser arquivados também.
 
 ---
 

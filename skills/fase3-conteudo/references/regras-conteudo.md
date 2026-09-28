@@ -176,5 +176,5 @@ Qualidade acima de quantidade. Um backlink ruim prejudica mais do que ajuda.
 Carregar quando: `/ranqueado escrever`, `/ranqueado reescrever`, `/ranqueado planejamento`, `/ranqueado cluster`, `/ranqueado auditoria`
 
 ```
-Arquivo: skills/ranqueado/references/regras-conteudo.md
+Arquivo: skills/fase3-conteudo/references/regras-conteudo.md
 ```

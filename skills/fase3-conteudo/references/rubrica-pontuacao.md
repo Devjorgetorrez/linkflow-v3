@@ -139,5 +139,5 @@ Recomendação: [ação específica para próxima iteração]
 Carregar quando: `/ranqueado analisar`, `/ranqueado escrever` (gate 4), `/ranqueado reescrever` (gate 4)
 
 ```
-Arquivo: skills/ranqueado/references/rubrica-pontuacao.md
+Arquivo: skills/fase3-conteudo/references/rubrica-pontuacao.md
 ```

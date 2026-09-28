@@ -131,5 +131,5 @@ Para ser citado por IAs generativas, o conteúdo deve demonstrar:
 Carregar quando: `/ranqueado escrever`, `/ranqueado reescrever`, `/ranqueado analisar`, `/ranqueado geo`, `/ranqueado planejamento`
 
 ```
-Arquivo: skills/ranqueado/references/regras-geo.md
+Arquivo: skills/fase3-conteudo/references/regras-geo.md
 ```

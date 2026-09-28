@@ -163,7 +163,9 @@ consolida no `projeto.md` ao fim da fase.
 ## Reuso (nao reconstruir)
 - Fase 1: `arquiteto-seo` (+ `crawl.py`, `clusterizar.py`), `local-keyword-research`,
   `local-competitor-analysis`, `ranqueado-configurar` (ICP).
-- Fase 3: `ranqueado` (escrever) + `ranqueado-analisar` (GATE de qualidade).
+- Fase 3: `fase3-conteudo` (escrever) + `guardiao_fase3.py` (GATE de qualidade).
+  `ranqueado`/`ranqueado-analisar` descontinuado como caminho da Fase 3 em
+  28/09/2026 — ver `CLAUDE.md › Reuso`.
 - Fase 5: agente GBP (PRONTO — so conectar).
 - Publicacao: receita Novamira (`scripts/novamira_publish`).
 

@@ -249,5 +249,5 @@ Antes de escrever, identificar obrigatoriamente:
 Carregar quando: `/ranqueado escrever`, `/ranqueado reescrever`, `/ranqueado analisar`, `/ranqueado seo`, `/ranqueado planejamento`
 
 ```
-Arquivo: skills/ranqueado/references/regras-seo.md
+Arquivo: skills/fase3-conteudo/references/regras-seo.md
 ```

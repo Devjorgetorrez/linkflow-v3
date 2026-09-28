@@ -145,5 +145,5 @@ Estas regras nunca são flexibilizadas, independentemente do contexto:
 Carregar quando: gate 4 de qualquer comando da suite
 
 ```
-Arquivo: skills/ranqueado/references/regras-qualidade.md
+Arquivo: skills/fase3-conteudo/references/regras-qualidade.md
 ```
