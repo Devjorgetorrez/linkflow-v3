@@ -117,7 +117,6 @@ const GRUPOS: NavGroup[] = [
           { href: "/seo/dados-estruturados", label: "Dados estruturados" },
           { href: "/seo/robots", label: "robots.txt" },
           { href: "/seo/llms", label: "llms.txt" },
-          { href: "/seo/redirects", label: "Redirects" },
           { href: "/seo/verificacoes", label: "Verificações" },
         ],
       },

@@ -119,6 +119,10 @@ export default function EditorCategoriaPage() {
   const cat = categorias.find((c) => c.id === id);
 
   const [slugOriginal] = useState(() => cat?.slug ?? "");
+  // Slug segue o nome até o usuário editar o campo à mão — mesmo padrão
+  // que os posts já têm (erro 43: hoje o campo nascia vazio e só
+  // preenchia clicando em "Regerar").
+  const [slugAuto, setSlugAuto] = useState(() => !cat?.slug);
   const [cor, setCor] = useState("#0b5cff");
   const [bibliotecaImagem, setBibliotecaImagem] = useState(false);
   const [salvo, setSalvo] = useState(false);
@@ -289,7 +293,10 @@ export default function EditorCategoriaPage() {
               <Campo label="Nome" dica="É como aparece no site">
                 <Entrada
                   value={cat.nome}
-                  onChange={(e) => editar({ nome: e.target.value })}
+                  onChange={(e) => {
+                    const nome = e.target.value;
+                    editar(slugAuto ? { nome, slug: slugify(nome) } : { nome });
+                  }}
                   placeholder="Nome da categoria"
                   autoFocus={!cat.nome}
                 />
@@ -300,11 +307,21 @@ export default function EditorCategoriaPage() {
                   <span className="shrink-0 font-mono text-[11px] text-ink-muted">{dominio || "seudominio.com.br"}/</span>
                   <Entrada
                     value={cat.slug}
-                    onChange={(e) => editar({ slug: slugify(e.target.value) })}
+                    onChange={(e) => {
+                      setSlugAuto(false);
+                      editar({ slug: slugify(e.target.value) });
+                    }}
                     placeholder="slug-da-categoria"
                     className="font-mono text-[12px]"
                   />
-                  <Botao tamanho="sm" variante="fantasma" onClick={() => editar({ slug: slugify(cat.nome) })}>
+                  <Botao
+                    tamanho="sm"
+                    variante="fantasma"
+                    onClick={() => {
+                      setSlugAuto(true);
+                      editar({ slug: slugify(cat.nome) });
+                    }}
+                  >
                     <Link2 size={11} /> Regerar
                   </Botao>
                 </div>

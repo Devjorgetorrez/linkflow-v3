@@ -18,7 +18,6 @@ const REGRAS_PAGINAS: ReadonlyArray<{ prefixo: string; chave: ChaveMatriz }> = [
   { prefixo: "/paginas/menus", chave: "menus:GET" },
   { prefixo: "/seo/robots", chave: "robots:GET" },
   { prefixo: "/seo/llms", chave: "llms:GET" },
-  { prefixo: "/seo/redirects", chave: "redirects:GET" },
   { prefixo: "/formularios", chave: "formularios:GET" },
   { prefixo: "/leads", chave: "leads:GET" },
   { prefixo: "/tarefas", chave: "tarefas:GET" },

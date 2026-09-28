@@ -408,12 +408,15 @@ acesso fica a critério de quem está montando o negócio. É um pedido só:
 você: forte, sem caracteres ambíguos, exibida **uma única vez** na resposta final
 e nunca gravada em arquivo.
 
-Se o PASSO 3 ou 4 já imprimiu a API Key no final (fica registrada ali),
-usar essa mesma chave. Senão, ler do arquivo do cliente:
-
-```bash
-ssh -p [porta] root@[IP] "grep PAINEL_API_KEY /opt/linkflow/clientes/[SLUG]/.env"
-```
+O PASSO 3 (bootstrap) e o PASSO 4 (novo cliente) sempre imprimem a API Key
+no resumo final (`novo-cliente.sh`, linha do "Resumo" — roda incondicional,
+com ou sem `--sem-ssl`) — é a ÚNICA fonte. Usar essa mesma chave, já
+registrada mais acima nesta conversa. **Nunca** cair em SSH pra ler o
+`.env` do cliente como alternativa (achado real, Relatório de Testes 4,
+erro 35 — a criação do admin já é 100% via API/HTTP; um fallback por SSH
+aqui contradiz a promessa de instalação sem terminal). Se por algum
+motivo a chave não estiver mais visível na conversa, rodar `novo-cliente.sh`
+de novo é mais simples e seguro do que abrir uma sessão SSH só pra isso.
 
 Criar o primeiro admin via API (o painel já está no ar, não precisa
 rebuildar nem reiniciar nada):

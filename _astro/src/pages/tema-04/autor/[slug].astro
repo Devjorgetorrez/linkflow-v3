@@ -40,6 +40,14 @@ const card = (p: (typeof posts)[number]) => ({
   href:          `/tema-04/${p.id}`,
 })
 
+// Autor genérico (nome padrão de sistema, tipo "Administrador") ou sem
+// biografia real (mesmo limiar de 50 chars já usado abaixo pra meta
+// description) vira página vazia indexável — noindex (erro 49).
+const NOMES_GENERICOS = ['administrador', 'admin', 'usuário', 'usuario']
+const autorGenerico =
+  NOMES_GENERICOS.includes(d.nome.trim().toLowerCase()) ||
+  !(d.bioCurta && d.bioCurta.length >= 50)
+
 const caminho   = hrefAutor(autor.id)
 const canonical = `${site.dominio}${caminho}`
 const credencial = credencialDoAutor(d)
@@ -95,7 +103,7 @@ const wa = `https://wa.me/${site.nap.whatsapp}`
   canonical={canonical}
   jsonLd={jsonLd}
   nodeId="autor"
-  noindex={total === 0}
+  noindex={total === 0 || autorGenerico}
 >
   <Header logoSrc={site.logo?.src} logoAlt={site.logo?.alt} variante="padrao" nomeSite={site.nome} telefone={site.nap.telefone}
           whatsapp={site.nap.whatsapp} nav={site.nav}

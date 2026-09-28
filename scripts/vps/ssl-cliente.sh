@@ -56,7 +56,12 @@ else
   ARGS+=(--register-unsafely-without-email)
 fi
 
-if certbot --nginx "${ARGS[@]}" --non-interactive --agree-tos --redirect; then
+# --expand: sem isso, a 2a execucao falha sempre que precisa incluir um
+# dominio novo (ex.: www ou o painel, quando o DNS deles so aponta depois
+# da 1a chamada) num certificado que ja existe pro dominio principal —
+# achado real, quinta ocorrencia no mesmo componente (Relatorio de Testes
+# 4, erro 36; historico former no erro 25 do Relatorio 3).
+if certbot --nginx "${ARGS[@]}" --non-interactive --agree-tos --redirect --expand; then
   if [ ${#PENDENTES[@]} -eq 0 ]; then
     echo "SSL_STATUS=ok"
   else

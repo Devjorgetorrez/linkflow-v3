@@ -35,6 +35,24 @@ O usuário escolhe **só entre os layouts que o LinkFlow entrega** (catálogo em
 `_astro/src/config/catalogo-layouts.json`, também exibido na tela Layout do
 painel). Não existe "faça igual a este site": referência externa não é opção.
 
+## Regra de flexibilização de template
+
+Registrado por escrito depois de o agente ter feito isso corretamente por
+iniciativa própria numa sessão real (Relatório de Testes 4, item 30 —
+"nada errado, mas por iniciativa, não por regra"):
+
+- **Padrão: seguir os templates.** É o que mantém o site editável pelo
+  painel e reaproveitável entre clientes.
+- **Exceção sob pedido:** quando o usuário pedir, flexibilizar em direção
+  à referência que ele trouxe — layout, tipografia, espaçamento, blocos
+  novos.
+- **Limite inegociável:** a hierarquia definida no planejamento. Árvore de
+  páginas, URLs, silos, pilar e link interno vêm da Fase 1 e da análise da
+  Fase 2. A referência muda como a página *parece*, nunca como o site
+  *está organizado*.
+- **Consequência sempre declarada:** layout sob medida custa a edição pelo
+  painel — avisar isso ao usuário antes de flexibilizar, não depois.
+
 ---
 
 ## As três regras de conversa (valem em todos os marcos)

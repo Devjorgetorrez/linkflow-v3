@@ -116,7 +116,7 @@ const anoAtual = new Date().getFullYear()
                  target="_blank" rel="noopener noreferrer"
                  class="flex h-9 w-9 items-center justify-center rounded-[var(--radius-btn)] border border-line bg-surface text-ink-muted transition-colors hover:border-primary hover:text-primary no-underline"
                  aria-label={rede.nome}>
-                <span class="text-[10px] font-bold">{rede.nome.slice(0,2).toUpperCase()}</span>
+                <span class="[&_svg]:w-4 [&_svg]:h-4" set:html={redesIcons[rede.nome] ?? `<span class="text-[10px] font-bold">${rede.nome.slice(0,2).toUpperCase()}</span>`} />
               </a>
             ))}
           </div>
@@ -230,7 +230,7 @@ const anoAtual = new Date().getFullYear()
                    target="_blank" rel="noopener noreferrer"
                    class="flex h-8 w-8 items-center justify-center rounded-[var(--radius-btn)] border border-line bg-surface text-ink-muted transition-colors hover:border-primary hover:text-primary no-underline"
                    aria-label={rede.nome}>
-                  <span class="text-[9px] font-bold">{rede.nome.slice(0,2).toUpperCase()}</span>
+                  <span class="[&_svg]:w-3.5 [&_svg]:h-3.5" set:html={redesIcons[rede.nome] ?? `<span class="text-[9px] font-bold">${rede.nome.slice(0,2).toUpperCase()}</span>`} />
                 </a>
               ))}
             </div>

@@ -25,7 +25,6 @@ const ROTAS = [
   "/seo/dados-estruturados",
   "/seo/robots",
   "/seo/llms",
-  "/seo/redirects",
   "/seo/verificacoes",
   "/privacidade/cookies",
   "/privacidade/politica",

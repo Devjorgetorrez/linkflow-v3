@@ -180,6 +180,44 @@ export const EditorCorpo = forwardRef<
     sincronizar();
   }, [sincronizar]);
 
+  // URL_SOLTA: texto colado como "https://..." em vez de virar link —
+  // prejudica leitura e SEO (erro 39). Só olha nós de TEXTO fora de <a>,
+  // nunca mexe em href de link já existente.
+  const converterUrlSoltaEmLink = useCallback(() => {
+    const raiz = area.current;
+    if (!raiz) return;
+    const URL_RX = /(https?:\/\/[^\s<>"']+)/g;
+    const walker = document.createTreeWalker(raiz, NodeFilter.SHOW_TEXT, {
+      acceptNode: (n) =>
+        n.parentElement && n.parentElement.closest("a")
+          ? NodeFilter.FILTER_REJECT
+          : NodeFilter.FILTER_ACCEPT,
+    });
+    const alvos: Text[] = [];
+    let atual: Node | null;
+    while ((atual = walker.nextNode())) {
+      if (atual.nodeValue && URL_RX.test(atual.nodeValue)) alvos.push(atual as Text);
+      URL_RX.lastIndex = 0;
+    }
+    for (const textNode of alvos) {
+      const partes = (textNode.nodeValue ?? "").split(URL_RX);
+      const frag = document.createDocumentFragment();
+      partes.forEach((parte, i) => {
+        if (i % 2 === 1) {
+          const a = document.createElement("a");
+          a.href = parte;
+          a.textContent = parte;
+          frag.appendChild(a);
+        } else if (parte) {
+          frag.appendChild(document.createTextNode(parte));
+        }
+      });
+      textNode.replaceWith(frag);
+    }
+    if (alvos.length > 0) sincronizar();
+  }, [sincronizar]);
+
+
   const rotuloPedido =
     pedido === "link"
       ? "URL do link para o texto selecionado"
@@ -188,6 +226,10 @@ export const EditorCorpo = forwardRef<
         : "Nome da âncora";
 
   const temH1NoCorpo = /<h1[\s>]/i.test(valor);
+  // URL como texto: aparece logo depois de um ">" de fechamento de tag —
+  // é conteúdo de texto, não valor de atributo (href/src) — mesmo
+  // tratamento do H1 (erro 39).
+  const temUrlSolta = />[^<]*\bhttps?:\/\/[^\s<]+/i.test(valor);
 
   return (
     <div className="rounded-[var(--radius)] border border-line bg-surface-2">
@@ -302,6 +344,27 @@ export const EditorCorpo = forwardRef<
         </div>
       )}
 
+      {/* Aviso: URL colada como texto solto */}
+      {temUrlSolta && (
+        <div className="flex items-start gap-2 border-b border-line bg-[#f59e0b]/8 px-4 py-2.5">
+          <AlertTriangle size={13} className="mt-0.5 shrink-0 text-[#d97706]" />
+          <p className="flex-1 text-[12px] text-ink">
+            <span className="font-medium">Endereço colado como texto solto.</span>{" "}
+            Prejudica a leitura e o SEO — transforme em link com um texto âncora.
+          </p>
+          <button
+            type="button"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              converterUrlSoltaEmLink();
+            }}
+            className="shrink-0 rounded-[var(--radius)] border border-[#f59e0b]/40 bg-[#f59e0b]/10 px-2.5 py-1 text-[11px] font-medium text-[#b45309] transition-colors hover:bg-[#f59e0b]/20"
+          >
+            Converter em link
+          </button>
+        </div>
+      )}
+
       {pedido && (
         <div className="flex items-center gap-2 border-b border-line bg-surface px-2 py-1.5">
           <span className="shrink-0 text-[11px] text-ink-muted">{rotuloPedido}</span>
@@ -340,6 +403,18 @@ export const EditorCorpo = forwardRef<
         }}
         onKeyUp={guardarSelecao}
         onMouseUp={guardarSelecao}
+        onPaste={() => {
+          // Bloquear H1 na origem (erro 38): conteúdo colado (Word, outra
+          // página) pode trazer <h1> embutido. Deixa o navegador colar
+          // (mantém formatação) e baixa qualquer H1 pra H2 logo em seguida —
+          // o aviso manual "Converter em H2" continua existindo como rede
+          // de segurança, mas o caminho comum nem chega a precisar dele.
+          setTimeout(() => {
+            if (area.current && /<h1[\s>]/i.test(area.current.innerHTML)) {
+              converterH1paraH2();
+            }
+          }, 0);
+        }}
         onKeyDown={(e) => {
           if (e.key === "Backspace" && aoRetornarParaTitulo) {
             const el = area.current;
