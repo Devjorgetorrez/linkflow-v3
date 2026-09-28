@@ -29,7 +29,7 @@ const depoimentos = (await getCollection('depoimentosT3'))
     corpo:   d.body.trim(),
   }))
 
-const canonical = `${site.dominio}/contato`
+const canonical = `${site.dominio}/contato/`
 
 const jsonLd = {
   '@context': 'https://schema.org',

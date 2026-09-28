@@ -10,7 +10,7 @@ import Faq         from '../../../components/blocos/Faq.astro'
 import Cta         from '../../../components/blocos/Cta.astro'
 import Footer      from '../../../components/blocos/Footer.astro'
 import { site }    from '../../../config/tema-05.ts'
-import { textoCredencial } from '../../../lib/schema.ts'
+import { textoCredencial, rotuloNav } from '../../../lib/schema.ts'
 import { getCollection } from 'astro:content'
 
 const servicos = (await getCollection('servicosT5'))
@@ -21,7 +21,7 @@ const servicos = (await getCollection('servicosT5'))
     href: `/tema-05/${s.id}`, categoria: s.data.categoria,
   }))
 
-const canonical = `${site.dominio}/servicos`
+const canonical = `${site.dominio}/servicos/`
 
 const jsonLd = {
   '@context': 'https://schema.org',
@@ -31,7 +31,7 @@ const jsonLd = {
     { '@type': 'BreadcrumbList', '@id': `${canonical}#breadcrumb`,
       itemListElement: [
         { '@type': 'ListItem', position: 1, name: 'Home',    item: `${site.dominio}/` },
-        { '@type': 'ListItem', position: 2, name: 'Atuação', item: canonical },
+        { '@type': 'ListItem', position: 2, name: rotuloNav(site, '/servicos', 'Atuação'), item: canonical },
       ] },
   ],
 }
@@ -50,7 +50,7 @@ const jsonLd = {
 
   <PageHero
     variante="destaque"
-    eyebrow="Atuação"
+    eyebrow={rotuloNav(site, '/servicos', 'Atuação')}
     titulo="Direito previdenciário, e só ele"
     descricao="Seis frentes que cobrem os benefícios do INSS e o regime próprio de previdência. Fora dessa área, indicamos um colega em vez de aceitar o caso."
   />

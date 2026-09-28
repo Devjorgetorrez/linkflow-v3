@@ -22,7 +22,7 @@ const itens = todosServicos
     categoria: s.data.categoria,
   }))
 
-const canonical = `${site.dominio}/servicos`
+const canonical = `${site.dominio}/servicos/`
 const metaServicos = itens.length > 0
   ? `${itens.slice(0, 5).map(i => i.titulo).join(', ')}. Conheça todos os serviços da ${site.nome}.`
   : `Conheça todos os serviços da ${site.nome}.`

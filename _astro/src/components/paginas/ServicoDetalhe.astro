@@ -12,7 +12,7 @@ interface Props {
 
 const { entry } = Astro.props
 const { Content } = await render(entry)
-const canonical = `${site.dominio}/${entry.id}`
+const canonical = `${site.dominio}/${entry.id}/`
 
 /* Depoimentos */
 const todosDepoimentos = await getCollection('depoimentos')

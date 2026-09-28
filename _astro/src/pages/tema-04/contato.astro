@@ -18,7 +18,7 @@ const depoimentos = (await getCollection('depoimentosT4'))
   .map(d => ({ nome: d.data.nome, cidade: d.data.cidade, servico: d.data.servico, corpo: d.body.trim() }))
 
 const wa        = `https://wa.me/${site.nap.whatsapp}`
-const canonical = `${site.dominio}/contato`
+const canonical = `${site.dominio}/contato/`
 
 const jsonLd = {
   '@context': 'https://schema.org',

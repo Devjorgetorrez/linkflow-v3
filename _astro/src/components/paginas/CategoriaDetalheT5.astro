@@ -11,7 +11,7 @@ import Header    from '../../components/blocos/Header.astro'
 import PageHero  from '../../components/blocos/PageHero.astro'
 import PostLista from '../../components/blocos/PostLista.astro'
 import { site }  from '../../config/tema-05.ts'
-import { textoCredencial } from '../../lib/schema.ts'
+import { textoCredencial, rotuloNav } from '../../lib/schema.ts'
 import { getCollection } from 'astro:content'
 import { ehPublicado } from '../../lib/publicacao.ts'
 import { nomeAutor } from '../../lib/autores.ts'
@@ -23,7 +23,7 @@ interface Props {
 
 const { entry } = Astro.props
 const d = entry.data
-const canonical = `${site.dominio}/${entry.id}`
+const canonical = `${site.dominio}/${entry.id}/`
 
 const categorias = await getCollection('categoriasT5')
 const autores = await getCollection('autoresT5')
@@ -70,7 +70,7 @@ const jsonLd = {
       '@id': `${canonical}#breadcrumb`,
       itemListElement: [
         { '@type': 'ListItem', position: 1, name: 'Home', item: `${site.dominio}/` },
-        { '@type': 'ListItem', position: 2, name: 'Publicações', item: `${site.dominio}/tema-05/blog` },
+        { '@type': 'ListItem', position: 2, name: rotuloNav(site, '/blog', 'Publicações'), item: `${site.dominio}/tema-05/blog` },
         { '@type': 'ListItem', position: 3, name: d.nome, item: canonical },
       ],
     },

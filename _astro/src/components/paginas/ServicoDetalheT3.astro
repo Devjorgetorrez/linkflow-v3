@@ -22,7 +22,7 @@ interface Props {
 
 const { entry }   = Astro.props
 const { Content } = await render(entry)
-const canonical   = `${site.dominio}/${entry.id}`
+const canonical   = `${site.dominio}/${entry.id}/`
 
 const outros = (await getCollection('servicosT3'))
   .filter(s => s.id !== entry.id)

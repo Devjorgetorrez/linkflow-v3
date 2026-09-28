@@ -28,7 +28,7 @@ interface Props {
 
 const { entry }   = Astro.props
 const { Content } = await render(entry)
-const canonical   = `${site.dominio}/${entry.id}`
+const canonical   = `${site.dominio}/${entry.id}/`
 const seo         = seoDoPost(entry.data, site.nome, canonical)
 const faqNode     = faqJsonLd(seo.faq, canonical)
 const wa          = `https://wa.me/${site.nap.whatsapp}`

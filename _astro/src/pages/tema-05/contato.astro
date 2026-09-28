@@ -17,7 +17,7 @@ const depoimentos = (await getCollection('depoimentosT5'))
   .sort((a, b) => a.data.ordem - b.data.ordem)
   .map(d => ({ nome: d.data.nome, cidade: d.data.cidade, servico: d.data.servico, corpo: d.body.trim() }))
 
-const canonical = `${site.dominio}/contato`
+const canonical = `${site.dominio}/contato/`
 
 const jsonLd = {
   '@context': 'https://schema.org',

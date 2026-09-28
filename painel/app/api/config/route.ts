@@ -188,6 +188,18 @@ export async function PATCH(req: NextRequest) {
     let raw = original;
     const body = await req.json();
 
+    // CNPJ existe em dois campos independentes do site.ts (raiz, usado no
+    // rodapé; legal.controlador, usado no texto da Política) — editados por
+    // telas diferentes do painel, sem sincronia nenhuma até aqui. Achado
+    // real (Relatório de Testes 4, erro 58): editar um deixava o outro pra
+    // trás, e a mesma página publicada mostrava dois CNPJs diferentes.
+    // Grava os dois juntos sempre que qualquer um dos dois chega no PATCH.
+    if (typeof body.cnpj === "string" && body.cnpj.trim() && body.legalPainel?.cnpj === undefined) {
+      body.legalPainel = { ...(body.legalPainel ?? {}), cnpj: body.cnpj };
+    } else if (typeof body.legalPainel?.cnpj === "string" && body.legalPainel.cnpj.trim() && body.cnpj === undefined) {
+      body.cnpj = body.legalPainel.cnpj;
+    }
+
     // Campos do site.ts: validação, inserção de chave ausente e proteção contra
     // apagar o que a tela não carregou ficam em lib/site-config.ts.
     const { patch, naoSuportados } = patchDeBody(body ?? {});

@@ -20,7 +20,7 @@ interface Props {
 const { entry } = Astro.props
 const { Content } = await render(entry)
 const faq = faqDoPost(entry.data)
-const canonical = `${site.dominio}/${entry.id}`
+const canonical = `${site.dominio}/${entry.id}/`
 
 const dataFormatada = new Intl.DateTimeFormat('pt-BR', {
   day: 'numeric', month: 'long', year: 'numeric'

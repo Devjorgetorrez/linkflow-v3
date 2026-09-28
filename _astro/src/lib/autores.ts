@@ -71,7 +71,7 @@ const normalizar = (s: string) =>
  *  demonstração ('/tema-03'); o promover_tema.py troca por '/' na
  *  promoção, e a junção abaixo evita '//autor/...'. */
 export function hrefAutor(slug: string, prefixo = ''): string {
-  return `${prefixo.replace(/\/+$/, '')}/autor/${slug}`
+  return `${prefixo.replace(/\/+$/, '')}/autor/${slug}/`
 }
 
 /** "CRM-SP 154.320". O painel grava "Nenhum" quando não há conselho profissional: isso não é credencial. */

@@ -23,7 +23,7 @@ interface Props {
 
 const { entry } = Astro.props
 const d = entry.data
-const canonical = `${site.dominio}/${entry.id}`
+const canonical = `${site.dominio}/${entry.id}/`
 
 const categorias = await getCollection('categoriasT3')
 const autores = await getCollection('autoresT3')

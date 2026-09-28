@@ -79,6 +79,22 @@ export function tiposSchema(site: Site, padrao: string[]): string[] {
   return Array.isArray(site.schemaTipo) && site.schemaTipo.length ? site.schemaTipo : padrao
 }
 
+/**
+ * Rótulo real do menu pra um caminho (ex.: '/servicos', '/blog') — lido de
+ * `site.nav` (o mesmo campo que o cliente já customiza no painel), com um
+ * padrão só se o item não existir no nav. Existe porque o tema-05 (e só
+ * ele) tinha "Atuação"/"Publicações" (rótulos do template de referência,
+ * um escritório de advocacia) escritos direto em 6 arquivos — resíduo que
+ * vazava pro breadcrumb e pros dados estruturados mesmo quando o cliente
+ * customizava o menu visível pra outro nicho (achado real, Relatório de
+ * Testes 4, erro 51).
+ */
+export function rotuloNav(site: Site, caminho: string, padrao: string): string {
+  const nav = Array.isArray(site.nav) ? site.nav : []
+  const item = nav.find((i: { href?: string }) => i?.href === caminho)
+  return item?.label || padrao
+}
+
 export function textoCredencial(site: Site): string | undefined {
   const c = site.credencial
   if (!c) return undefined

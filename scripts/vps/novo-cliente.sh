@@ -224,16 +224,40 @@ pm2 start "$CLIENTE_DIR/painel/node_modules/.bin/next" \
 pm2 save
 
 # ─── Nginx — site do cliente ─────────────────────────────────────────────────
+# www e sem-www são hosts DIFERENTES para o Nginx — um bloco único
+# respondendo pelos dois com o mesmo root serve o mesmo conteúdo duas
+# vezes (mesmo robots.txt em dois hosts, nenhum redirecionamento entre
+# eles). Achado real (Relatório de Testes 4, erro 53): o Google via dois
+# sites duplicados em vez de um canônico com o outro redirecionando.
+# www vira só um redirect 301 pro host sem-www, que é o único servido de
+# verdade.
 echo "  Configurando Nginx..."
 cat > /etc/nginx/sites-available/site-$SLUG << EOF
 server {
     listen 80;
-    server_name $DOMINIO_SITE www.$DOMINIO_SITE;
+    server_name www.$DOMINIO_SITE;
+    # \$scheme (não "https" fixo): o SSL só existe depois que ssl-cliente.sh
+    # roda, mais adiante neste fluxo — um redirect pra https aqui quebraria
+    # o site na janela entre este passo e o certificado. Uma vez com SSL, o
+    # certbot --redirect (rodado com este mesmo host na lista de domínios)
+    # cuida de http->https; este bloco só cuida de www->sem-www.
+    return 301 \$scheme://$DOMINIO_SITE\$request_uri;
+}
+
+server {
+    listen 80;
+    server_name $DOMINIO_SITE;
     root $SITES_DIR/$SLUG;
     index index.html;
 
     location / {
         try_files \$uri \$uri/ \$uri.html =404;
+        # HTML é regerado a cada build — sem Cache-Control, navegador e
+        # proxy intermediário ficavam livres pra guardar a versão antiga
+        # por tempo indefinido (achado real, erro 61: "editei e não
+        # mudou"). no-cache = sempre revalida com o servidor antes de
+        # reusar (ainda usa cache condicional via ETag, não é no-store).
+        add_header Cache-Control "no-cache" always;
     }
 
     # Mídia enviada pelo painel (fora do root do site: o deploy do site nunca a apaga).

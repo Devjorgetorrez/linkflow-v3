@@ -25,7 +25,7 @@ const depoimentos = (await getCollection('depoimentosT5'))
   .map(d => ({ nome: d.data.nome, cidade: d.data.cidade, servico: d.data.servico, corpo: d.body.trim() }))
 
 const anos      = site.anoFundacao ? new Date().getFullYear() - site.anoFundacao : null
-const canonical = `${site.dominio}/sobre`
+const canonical = `${site.dominio}/sobre/`
 
 const jsonLd = {
   '@context': 'https://schema.org',

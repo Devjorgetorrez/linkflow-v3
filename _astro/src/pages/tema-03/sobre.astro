@@ -35,7 +35,7 @@ const depoimentos = (await getCollection('depoimentosT3'))
   }))
 
 const anos      = site.anoFundacao ? new Date().getFullYear() - site.anoFundacao : null
-const canonical = `${site.dominio}/sobre`
+const canonical = `${site.dominio}/sobre/`
 
 const jsonLd = {
   '@context': 'https://schema.org',
