@@ -182,7 +182,7 @@ desta rodada: Clínica Sorriso Serra do Japi (Jundiaí) — primeira vez com sit
 de verdade no ar e painel em uso real (não só build/API isolados). **Todas as
 10 fases concluídas, os 38 erros corrigidos**, commits abaixo.
 
-### Fase 0 — Contenção de exposição e vazamento (commit `1062d02`)
+### Fase 0 — Contenção de exposição e vazamento (commit `6710878`)
 Senha literal exposta no `HANDOFF.md` e IP/porta SSH reais
 movidos para fora do documento distribuído (era a **terceira** ocorrência do
 mesmo tema — Rel. 2, erros 4 e 8); `robots.txt`/`noindex` próprios do painel
@@ -195,7 +195,7 @@ real já existe via `x-api-key` (ver Fase 8); autorização explícita antes de
 placeholder de produção (`[TEXTO EM PRODUÇÃO`) vira gate real no
 `guardiao_fase3.py`, não só regra procedural.
 
-### Fase 1 — Causa estrutural: quem escreve a Fase 3 (commit `744abd3`)
+### Fase 1 — Causa estrutural: quem escreve a Fase 3 (commit `1444a89`)
 **Decisão do Jorge**: Fase 3 usa só `fase3-conteudo`. `ranqueado`/
 `ranqueado-analisar` descontinuados como caminho da Fase 3 e arquivados em
 `skills-arquivadas/` (fora de `skills/`, o agente não carrega) —
@@ -208,7 +208,7 @@ parar e reportar, nunca decidir sozinho qual vale. A entrevista guiada que o
 `ranqueado` tinha não foi portada para `fase3-conteudo` — fica registrada como
 lacuna conhecida, não como pendência desta fase.
 
-### Fase 2 — Categorias: ligar o painel ao servidor de verdade (commit `4562eeb`)
+### Fase 2 — Categorias: ligar o painel ao servidor de verdade (commit `99e897c`)
 `lib/store.tsx` (`criarCategoria`/`atualizarCategoria`/`deletarCategoria`) só
 fazia `setState` — nunca chamava a API que já existia e funcionava. Corrigido
 com o mesmo padrão que os posts já usavam; id gerado pelo servidor, não mais
@@ -217,7 +217,7 @@ card de erro de build agora nomeia o post/categoria quebrados com botão de
 desvínculo direto, sem SSH; card de build refaz o fetch ao voltar pra tela
 (antes mostrava erro antigo mesmo já corrigido).
 
-### Fase 3 — Painel: plugar 6 telas com estado desconectado da fonte real (commit `71e9446`)
+### Fase 3 — Painel: plugar 6 telas com estado desconectado da fonte real (commit `918f666`)
 **Bug novo encontrado, fora do escopo do relatório, registrado como
 pendência**: `posts/[id]/page.tsx` lança "Rendered more hooks than during the
 previous render" quando um post tem `status: publicado` — confirmado
@@ -233,7 +233,7 @@ Política de Privacidade condiciona seções de Análise/Marketing por
 o último build OK de verdade; tela Core Web Vitals removida (100% decorativa,
 sem integração real — volta quando tiver PageSpeed Insights de verdade).
 
-### Fase 4 e 5 — Normalização de URL + resíduo de template (commit `fe6049e`)
+### Fase 4 e 5 — Normalização de URL + resíduo de template (commit `3c759dc`)
 Escopo real bem maior que o previsto: padronizar canonical/sitemap/links
 **com barra no fim** (alinhando ao Nginx, que já força isso via `try_files`)
 exigiu tocar **51 arquivos** — cada tema (03-07) tem cópia própria de
@@ -258,7 +258,7 @@ rodar o script de promoção de novo, nunca copiar à mão.
 regerado depois (ver seção seguinte); `clinica-sorriso-vivo-jundiai`
 continua pendente, não tocado.
 
-### Fase 6, 8 e 9 — Identidade visual, instalador de VPS, menores (commit `d02c4dd`)
+### Fase 6, 8 e 9 — Identidade visual, instalador de VPS, menores (commit `0cf3e0f`)
 - **Identidade**: favicon do site (não do painel — isso veio depois, ver
   próxima seção) e mapa de ícone de rede social no `Footer.astro` estendido
   pra cobrir mais que Facebook/Instagram, com as 3 variantes de rodapé
@@ -279,7 +279,7 @@ continua pendente, não tocado.
   desta leva** (ver Fase 9 separada abaixo — foi corrigido depois, numa
   rodada seguinte).
 
-### Fase 7 — Banner de cookies obrigatório, LGPD (commit `8e18d2a`)
+### Fase 7 — Banner de cookies obrigatório, LGPD (commit `52e1fb8`)
 Banner deixou de ser condicional. `bannerNecessario()` sempre `true`; nova
 `pedeConsentimento()` decide o TIPO: consentimento real
 (Aceitar/Rejeitar/Personalizar) quando há cookie não-essencial ou rastreador
@@ -300,10 +300,10 @@ de 3-5 anos usada por CMPs pra auditoria retroativa) e que os 180 dias de
 validade do consentimento (`VALIDADE_DIAS` em `consentimento-carregar.ts`,
 banner reaparece nesse prazo) batem com a faixa de 6-12 meses recomendada
 pela CNIL — comentário no código e texto da tela atualizados pra citar essa
-base (commit `cd67cca`), mantendo a ressalva de que não substitui confirmação
+base (commit `19407c2`), mantendo a ressalva de que não substitui confirmação
 de um advogado.
 
-### Fase 9 (erro 56) — `llms.txt` real em vez de stub (commit `065f127`)
+### Fase 9 (erro 56) — `llms.txt` real em vez de stub (commit `ac5baf6`)
 O fallback gerado no build (`_astro/integracoes/sitemap-canonico.mjs`, hook
 `astro:build:done`, usado sempre que o cliente ainda não salvou um pelo
 painel) só escrevia `# domínio` + uma linha de `Sitemap:` — fora do formato
@@ -352,7 +352,7 @@ Reportado pelo Lucas: favicon continuava genérico mesmo com
 cache do navegador): o matcher de `painel/middleware.ts` protege **todas**
 as rotas por autenticação e esquecia de excluir `icon.png` — sem sessão, a
 requisição caía num redirect 307 pro login e o navegador nunca recebia a
-imagem. Corrigido (commit `8aa505b`), confirmado com `curl` antes/depois
+imagem. Corrigido (commit `82950f7`), confirmado com `curl` antes/depois
 (307→200). Também gerado `app/favicon.ico` (16-64px, a partir do mesmo
 `icon.png`) pro pedido implícito que alguns navegadores fazem direto em
 `/favicon.ico`. Numa rodada seguinte, o Lucas trouxe um pacote gerado no
@@ -361,7 +361,7 @@ favicon.io (mesma marca) e pediu pra usar os arquivos de lá em vez dos meus
 pro ícone da Apple), `app/manifest.webmanifest` (nome "SiteFlow — Painel",
 preenchido — vinha vazio no pacote) e `public/android-chrome-{192,512}.png`
 que o manifest referencia; cada rota nova também precisou entrar na exceção
-do middleware (commit `f1daced`).
+do middleware (commit `78eba5c`).
 
 ### Instalador completo (antes só verificava, não instalava nada)
 Pergunta do Lucas ("o install.bat ainda serve pra instalação atualizada do
@@ -369,7 +369,7 @@ agente?") expôs que `install.ps1`/`install.sh` nunca fizeram mais que
 conferir se os arquivos existiam — nenhum `npm install`, nenhuma dependência
 Python, nenhum `.env`. Um aluno baixando o zip e rodando o instalador tinha
 `/link-flow` funcionando (só texto + Python do sistema), mas `painel/` e
-`_astro/` quebravam na primeira tentativa. Corrigido (commit `1e88016`):
+`_astro/` quebravam na primeira tentativa. Corrigido (commit `16b64fe`):
 confere Node.js/npm/Python além do Claude Code; roda `npm install` em
 `painel/` e `_astro/`; roda `pip install -r scripts/requirements.txt`
 (arquivo novo — só `openpyxl` e `requests`, os dois únicos pacotes de
@@ -388,7 +388,7 @@ o script no codepage do Windows, não UTF-8, corrompe o caractere acentuado e
 quebra o parser no meio de uma string. Reescrito em ASCII puro; testado
 rodando de verdade com `powershell.exe` legado (não só verificação de
 sintaxe), não só `pwsh`.
-**Segunda rodada** (commit `6f0bd38`): `NEXTAUTH_URL` no `.env.example` era
+**Segunda rodada** (commit `1764e0c`): `NEXTAUTH_URL` no `.env.example` era
 `https://painel.seudominio.com.br` (domínio de exemplo, não existe) e o
 instalador não tocava nesse campo — resultado: primeiro `npm run dev` local,
 o NextAuth tenta buscar a sessão nesse domínio inexistente e o navegador
@@ -415,12 +415,12 @@ sobrescrita via JS em `lib/store.tsx` direto no `documentElement`, com
 prioridade maior que qualquer classe CSS. Sobrescrever esse token faria a
 marca do painel mudar de fonte junto com a fonte que o cliente escolhe pro
 próprio site — criada variável própria, `--font-marca`, exclusiva da marca
-do painel (commit `c984326`). Depois, mesmo bug encontrado no **login**
+do painel (commit `ab061e9`). Depois, mesmo bug encontrado no **login**
 (`app/login/page.tsx` também usava `Marca.tsx`, nunca tinha sido corrigido) —
 peso da fonte também ajustado de semibold pra **bold** (padrão real da DM
 Sans é mais forte). Extraído `components/LogoPainel.tsx` (ícone real + DM
 Sans bold), usado nos dois lugares; `Marca.tsx` ficou sem consumidor e foi
-removido (commit `3b9ac1f`). Validado com Playwright de verdade (login real
+removido (commit `6d79934`). Validado com Playwright de verdade (login real
 + depois de autenticado): fonte computada `'DM Sans'` peso `700` nos dois
 pontos, `--font-display` continua intocado (confirmado refletindo a fonte
 "Fraunces" do cliente de teste, sem vazamento).
@@ -910,9 +910,9 @@ listar clientes hospedados), não só alteração — vale mesmo depois do R5.
 
 **Estado atual (29/09/2026), depois do Relatório de Testes 4:**
 - `/opt/linkflow` — instalação multicliente atual, motor de referência e
-  scripts sincronizados com o repositório **até o commit `0ce3b93`
+  scripts sincronizados com o repositório **até o commit `021f157`
   (27/09/2026)**. As correções do Relatório de Testes 4 (commits
-  `1062d02` em diante) **não foram sincronizadas com o motor de
+  `6710878` em diante) **não foram sincronizadas com o motor de
   referência do VPS** — só os 5 arquivos da Fase 7/erro 56 foram levados
   manualmente pro cliente `torrez-desentupidora` (ver seção "Depois do
   Relatório de Testes 4" acima). Se for criar um cliente novo com
