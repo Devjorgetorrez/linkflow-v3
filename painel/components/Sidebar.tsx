@@ -18,7 +18,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
 import { AvatarUsuario } from "@/components/AvatarUsuario";
-import { Marca } from "@/components/Marca";
 import { useSession, signOut } from "next-auth/react";
 import { paginaPermitida } from "@/lib/permissoes-paginas";
 import { useStore } from "@/lib/store";
@@ -374,11 +373,25 @@ export function Sidebar() {
   /* ── Render ── */
   return (
     <aside className="fixed inset-y-0 left-0 z-30 flex w-[224px] flex-col bg-sidebar">
-      {/* Cabeçalho */}
+      {/* Cabeçalho — ícone real do sistema (app/icon.png), não uma aproximação em SVG */}
       <div
-        className="flex h-16 shrink-0 items-center border-b border-[var(--sidebar-header-border)] bg-sidebar-header-bg px-4"
+        className="flex h-16 shrink-0 items-center gap-2.5 border-b border-[var(--sidebar-header-border)] bg-sidebar-header-bg px-4"
       >
-        <Marca tamanho={30} variante="completa" apenasSVG />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/icon.png"
+          alt="SiteFlow"
+          width={30}
+          height={30}
+          className="shrink-0 select-none"
+          draggable={false}
+        />
+        <span
+          className="font-semibold tracking-tight text-ink"
+          style={{ fontFamily: "var(--font-marca)", fontSize: 30 * 0.72, lineHeight: 1 }}
+        >
+          SiteFlow
+        </span>
       </div>
 
       {/* Navegação */}

@@ -42,9 +42,19 @@
   --sidebar-header-bg: #ffffff;
   --sidebar-header-border: rgba(255,255,255,0.10);
 
+  /* --font-display/--font-body: tipografia do SITE DO CLIENTE (preview de
+     conteúdo em [contenteditable], tela Aparência > Personalizar) — sobrescritos
+     via JS em lib/store.tsx a partir da escolha do cliente. Nunca usar para
+     UI/marca do próprio painel: use --font-marca. */
   --font-display: ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
   --font-body: ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
   --font-mono: ui-monospace, "Cascadia Mono", "Consolas", monospace;
+
+  /* --font-marca: tipografia da marca do PAINEL (wordmark "SiteFlow" na
+     sidebar) — DM Sans, injetada por next/font em app/layout.tsx. O valor
+     abaixo só entra em uso se, por algum motivo, a classe do layout não
+     for aplicada. */
+  --font-marca: "DM Sans", ui-sans-serif, system-ui, sans-serif;
 }
 
 [data-theme="dark"] {
