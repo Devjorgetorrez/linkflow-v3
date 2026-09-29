@@ -346,63 +346,91 @@ export default function MenusPage() {
       .catch(console.error);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Salvamento não podia ser "fire-and-forget": um reload/navegação logo após
+  // editar (achado real rodando Playwright de verdade contra esta tela — o
+  // PATCH ainda estava em voo quando o teste recarregava a página) perdia a
+  // mudança em silêncio, sem nenhum aviso. Rastreado + aguardado explicitamente.
+  const [salvandoMenu, setSalvandoMenu] = useState(false);
+  const [erroSalvarMenu, setErroSalvarMenu] = useState<string | null>(null);
+
+  // Aguardar o PATCH resolve a corrida dentro do React, mas não impede o
+  // navegador de recarregar/fechar a aba no meio do voo — só o beforeunload
+  // faz isso de verdade.
+  useEffect(() => {
+    if (!salvandoMenu) return;
+    const aviso = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", aviso);
+    return () => window.removeEventListener("beforeunload", aviso);
+  }, [salvandoMenu]);
+
+  async function salvarNoServidor(body: Record<string, unknown>) {
+    setSalvandoMenu(true);
+    setErroSalvarMenu(null);
+    try {
+      const r = await fetch("/api/menus", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const dados = await r.json().catch(() => ({ ok: false }));
+      if (!r.ok || !dados.ok) throw new Error(dados.erro ?? "Não consegui salvar.");
+    } catch (err) {
+      setErroSalvarMenu(err instanceof Error ? err.message : "Não consegui salvar.");
+    } finally {
+      setSalvandoMenu(false);
+    }
+  }
+
   // Persistir mudanças no config ao atualizar menu
-  function atualizarMenuReal(menuId: string, patch: Partial<typeof menus[0]>) {
+  async function atualizarMenuReal(menuId: string, patch: Partial<typeof menus[0]>) {
     atualizarMenu(menuId, patch);
     setMenus((prev) => prev.map((m) => (m.id === menuId ? { ...m, ...patch } : m)));
     // Salvar nav principal no config
     const menuAtualizado = menus.find((m) => m.id === menuId);
     if (menuId === "principal" && (patch.itens ?? menuAtualizado?.itens)) {
       const itens = patch.itens ?? menuAtualizado?.itens ?? [];
-      fetch("/api/menus", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          nav: itens.map((i) => ({
-            label: i.label,
-            href: i.url,
-            // Preservar filhos — sem editor próprio ainda nesta tela, mas
-            // sem isso qualquer salvamento aqui apagaria o dropdown gerado
-            // pelo agente (fase2-site-astro, ETAPA 4.2).
-            ...(i.filhos && i.filhos.length > 0
-              ? { filhos: i.filhos.map((f) => ({ label: f.label, href: f.url })) }
-              : {}),
-          })),
-        }),
-      }).catch(console.error);
+      await salvarNoServidor({
+        nav: itens.map((i) => ({
+          label: i.label,
+          href: i.url,
+          // Preservar filhos — sem editor próprio ainda nesta tela, mas
+          // sem isso qualquer salvamento aqui apagaria o dropdown gerado
+          // pelo agente (fase2-site-astro, ETAPA 4.2).
+          ...(i.filhos && i.filhos.length > 0
+            ? { filhos: i.filhos.map((f) => ({ label: f.label, href: f.url })) }
+            : {}),
+        })),
+      });
     }
   }
 
   // Persistir uma coluna do rodapé — sempre envia TODAS as colunas (a API
   // substitui o array inteiro), nunca só a que mudou, senão apagaria as
   // outras colunas no config.
-  function atualizarColunaFooter(colIdx: number, novosItens: ItemMenu[]) {
-    setFooterColunas((prev) => {
-      const next = prev.map((c, i) => (i === colIdx ? { ...c, itens: novosItens } : c));
-      fetch("/api/menus", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          navFooter: next.map((c) => ({
-            titulo: c.titulo,
-            itens: c.itens.map(itemMenuParaNavApi),
-          })),
-        }),
-      }).catch(console.error);
-      return next;
+  async function atualizarColunaFooter(colIdx: number, novosItens: ItemMenu[]) {
+    const next = footerColunas.map((c, i) => (i === colIdx ? { ...c, itens: novosItens } : c));
+    setFooterColunas(next);
+    await salvarNoServidor({
+      navFooter: next.map((c) => ({
+        titulo: c.titulo,
+        itens: c.itens.map(itemMenuParaNavApi),
+      })),
     });
   }
 
   function removerItemFooter(colIdx: number, itemId: string) {
     const coluna = footerColunas[colIdx];
     if (!coluna) return;
-    atualizarColunaFooter(colIdx, coluna.itens.filter((i) => i.id !== itemId));
+    void atualizarColunaFooter(colIdx, coluna.itens.filter((i) => i.id !== itemId));
   }
 
   function adicionarItemFooter(colIdx: number, item: ItemMenu) {
     const coluna = footerColunas[colIdx];
     if (!coluna) return;
-    atualizarColunaFooter(colIdx, [...coluna.itens, item]);
+    void atualizarColunaFooter(colIdx, [...coluna.itens, item]);
   }
 
   function toggleVisivel(itemId: string) {
@@ -416,7 +444,7 @@ export default function MenusPage() {
   function removerItem(menuId: string, itemId: string) {
     const menu = menus.find((m) => m.id === menuId);
     if (!menu) return;
-    atualizarMenuReal(menuId, { itens: menu.itens.filter((i) => i.id !== itemId) });
+    void atualizarMenuReal(menuId, { itens: menu.itens.filter((i) => i.id !== itemId) });
   }
 
   function adicionarItem(menuId: string, item: ItemMenu) {
@@ -425,9 +453,9 @@ export default function MenusPage() {
     // if item already exists (filho removal hack), replace; otherwise append
     const existe = menu.itens.find((i) => i.id === item.id);
     if (existe) {
-      atualizarMenuReal(menuId, { itens: menu.itens.map((i) => (i.id === item.id ? item : i)) });
+      void atualizarMenuReal(menuId, { itens: menu.itens.map((i) => (i.id === item.id ? item : i)) });
     } else {
-      atualizarMenuReal(menuId, { itens: [...menu.itens, item] });
+      void atualizarMenuReal(menuId, { itens: [...menu.itens, item] });
     }
   }
 
@@ -443,11 +471,24 @@ export default function MenusPage() {
     <div className="flex flex-col gap-0">
       {/* cabeçalho */}
       <div className="border-b border-line px-6 py-4">
-        <h1 className="font-display text-[18px] font-semibold tracking-tight text-ink">Menus</h1>
-        <p className="mt-0.5 text-[11.5px] text-ink-muted">Header e rodapé do site</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="font-display text-[18px] font-semibold tracking-tight text-ink">Menus</h1>
+            <p className="mt-0.5 text-[11.5px] text-ink-muted">Header e rodapé do site</p>
+          </div>
+          {salvandoMenu && <span className="text-[11.5px] text-ink-muted">Salvando…</span>}
+        </div>
       </div>
 
       <div className="p-6 space-y-5">
+        {erroSalvarMenu && (
+          <div className="flex items-start gap-2.5 rounded-[var(--radius)] border border-danger/30 bg-danger/10 px-3.5 py-2.5 text-[12px] text-danger">
+            <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+            {erroSalvarMenu} — a mudança pode não ter sido salva. Recarregue a página para
+            conferir antes de continuar editando.
+          </div>
+        )}
+
         {/* aviso páginas sem menu */}
         {paginasSemMenu.length > 0 && (
           <div className="flex items-start gap-2.5 rounded-[var(--radius)] border border-amber-300 bg-amber-50 px-3.5 py-2.5 text-[12px] text-amber-800 dark:border-amber-700/50 dark:bg-amber-950/30 dark:text-amber-400">

@@ -8,8 +8,15 @@ test.describe("Posts", () => {
   });
 
   test("criar nasce rascunho, editar título muda slug/URL, salva e vai pra lixeira/restaura", async ({ page }) => {
-    // ── Criar: /posts/novo cria no servidor e já redireciona pro editor ──
+    // ── Criar: /posts/novo pede o título ANTES de criar o arquivo no
+    // servidor (erro 81, Relatório de Testes 5 — antes criava um rascunho
+    // vazio só de abrir a tela). Confirma esse gate e só depois redireciona.
     await page.goto("/posts/novo");
+    const campoTituloInicial = page.getByPlaceholder("Título do artigo");
+    await expect(campoTituloInicial).toBeVisible();
+    await campoTituloInicial.fill("Rascunho de teste");
+    await page.getByRole("button", { name: "Criar artigo" }).click();
+
     // (?!novo$): "/posts/novo" também bate no padrão — sem excluir, o
     // waitForURL resolveria na hora, sem esperar o redirect de verdade.
     await page.waitForURL(/\/posts\/(?!novo$)[^/]+$/, { timeout: 30_000 });
@@ -67,5 +74,19 @@ test.describe("Posts", () => {
     await linhaLixeira.hover();
     await linhaLixeira.getByRole("button", { name: "Restaurar" }).click();
     await expect(page.getByText(/voltou para os posts/)).toBeVisible();
+  });
+
+  test("abrir /posts/novo e sair sem confirmar não cria rascunho (erro 81)", async ({ page }) => {
+    await page.goto("/posts");
+    const antes = await page.getByRole("row").count();
+
+    await page.goto("/posts/novo");
+    await expect(page.getByPlaceholder("Título do artigo")).toBeVisible();
+    // Sai sem preencher nem clicar em "Criar artigo".
+    await page.goto("/posts");
+
+    const depois = await page.getByRole("row").count();
+    expect(depois).toBe(antes);
+    await expect(page.getByText(/Novo post \(sem título\)/)).toHaveCount(0);
   });
 });
