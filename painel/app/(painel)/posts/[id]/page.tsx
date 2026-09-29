@@ -160,7 +160,7 @@ function SignalHeader({
 export default function EditorPostPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { posts, autores, categorias, midia, atualizarPost, salvarPost, resolverIdPost, salvamento, postsCarregados, recarregarPosts } = useStore();
+  const { posts, autores, categorias, midia, atualizarPost, salvarPost, resolverIdPost, salvamento, postsCarregados, recarregarPosts, ultimoBuildOkData } = useStore();
   const { data: sessao } = useSession();
   const papel = (sessao?.user as { papel?: string } | undefined)?.papel;
   const ehAutor = papel === "autor";
@@ -209,17 +209,12 @@ export default function EditorPostPage() {
   // ficava com badge/link "Ver" ativos mesmo quando o build mais recente
   // com esse conteúdo nunca rodou (404 na URL real). Comparação por DIA
   // (o arquivo só grava atualizadoEm como AAAA-MM-DD, sem hora).
-  const [ultimoBuildOkData, setUltimoBuildOkData] = useState<string | null>(null);
-  useEffect(() => {
-    fetch("/api/build")
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.ok && data.ultimoOk?.fim) {
-          setUltimoBuildOkData(String(data.ultimoOk.fim).slice(0, 10));
-        }
-      })
-      .catch(() => {});
-  }, []);
+  // ultimoBuildOkData vem do store (lib/store.tsx), não de uma busca
+  // isolada aqui — uma busca só-no-mount ficava presa no valor de antes do
+  // build sempre que a pessoa clicava em "Atualizar o site" (Topo.tsx) sem
+  // sair desta tela: o build terminava de verdade, mas o editor continuava
+  // preso avisando "aguardando atualização do site" (achado real testando
+  // o painel publicado, 29/09/2026).
   const publicadoNoAr =
     post?.status === "publicado" &&
     !!post.atualizadoEm &&

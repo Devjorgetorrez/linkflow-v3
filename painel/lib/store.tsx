@@ -473,6 +473,17 @@ interface Estado {
   /** true = o site nunca foi publicado */
   nuncaPublicado: boolean;
   recarregarPendentes: () => Promise<void>;
+  /**
+   * Dia (AAAA-MM-DD) do último build com sucesso — fonte única para o badge
+   * "publicado no ar" (editor de post e lista). Antes cada tela fazia sua
+   * própria consulta a /api/build só ao montar, sem nunca reler: clicar em
+   * "Atualizar o site" sem sair da tela do editor terminava o build de
+   * verdade, mas o editor continuava com o dado velho e não desligava o
+   * aviso "aguardando atualização do site" (achado real testando o painel
+   * publicado). Centralizado aqui porque recarregarPendentes() já é chamado
+   * exatamente quando o build termina (Topo.tsx → publicarAlteracoes()).
+   */
+  ultimoBuildOkData: string | null;
 }
 
 export interface TermosConfig {
@@ -714,6 +725,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [configContato, setConfigContatoState] = useState<ConfigContato>(CONFIG_CONTATO_INICIAL);
   const [configRedes, setConfigRedesState] = useState<ConfigRedes>(CONFIG_REDES_INICIAL);
   const [pendentes, setPendentes] = useState(0);
+  const [ultimoBuildOkData, setUltimoBuildOkData] = useState<string | null>(null);
   const [nuncaPublicado, setNuncaPublicado] = useState(false);
 
   const tokensAtivos = tema === "escuro" ? aparencia.tokensEscuro : aparencia.tokensClaro;
@@ -829,6 +841,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (d.ok && typeof d.pendentes === "number") {
         setPendentes(d.pendentes);
         setNuncaPublicado(d.nuncaPublicado === true);
+      }
+      if (d.ok && d.ultimoOk?.fim) {
+        setUltimoBuildOkData(String(d.ultimoOk.fim).slice(0, 10));
       }
     } catch {
       /* mantém o último valor */
@@ -1374,6 +1389,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       pendentes,
       nuncaPublicado,
       recarregarPendentes,
+      ultimoBuildOkData,
     }),
     [
       autenticado,
@@ -1402,6 +1418,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       robots,
       llms,
       pendentes,
+      ultimoBuildOkData,
       marcarPendente,
       privacidadeConfig,
       termosConfig,

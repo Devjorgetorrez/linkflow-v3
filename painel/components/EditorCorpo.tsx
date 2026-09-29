@@ -96,6 +96,7 @@ export const EditorCorpo = forwardRef<
   const [pedido, setPedido] = useState<Pedido>(null);
   const [entradaPedido, setEntradaPedido] = useState("");
   const [bibliotecaAberta, setBiblioteca] = useState(false);
+  const [linkExistente, setLinkExistente] = useState(false);
   const selecao = useRef<Range | null>(null);
 
   /* o HTML só é escrito no DOM na montagem: reescrever a cada tecla move o cursor */
@@ -146,10 +147,40 @@ export const EditorCorpo = forwardRef<
     [restaurarSelecao, sincronizar],
   );
 
+  /** <a> mais próximo envolvendo a seleção atual, ou null se não há link. */
+  function linkNaSelecao(): HTMLAnchorElement | null {
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0 || !area.current) return null;
+    let no: Node | null = sel.getRangeAt(0).commonAncestorContainer;
+    while (no && no !== area.current) {
+      if (no instanceof HTMLAnchorElement) return no;
+      no = no.parentNode;
+    }
+    return null;
+  }
+
   function abrirPedido(tipo: Exclude<Pedido, null>) {
     guardarSelecao();
-    setEntradaPedido("");
+    if (tipo === "link") {
+      // Selecionar um texto que já é link e clicar em "Link" de novo: pré-preenche
+      // a URL atual (pra editar) e libera o botão "Remover link" — antes não
+      // existia nenhuma forma de desfazer um link já aplicado (achado real
+      // testando o editor, 29/09/2026).
+      const linkAtual = linkNaSelecao();
+      setLinkExistente(!!linkAtual);
+      setEntradaPedido(linkAtual?.getAttribute("href") ?? "");
+    } else {
+      setLinkExistente(false);
+      setEntradaPedido("");
+    }
     setPedido(tipo);
+  }
+
+  function removerLink() {
+    restaurarSelecao();
+    document.execCommand("unlink");
+    sincronizar();
+    setPedido(null);
   }
 
   function confirmarPedido() {
@@ -385,6 +416,11 @@ export const EditorCorpo = forwardRef<
           <Botao tamanho="sm" variante="primario" onClick={confirmarPedido}>
             Inserir
           </Botao>
+          {pedido === "link" && linkExistente && (
+            <Botao tamanho="sm" onClick={removerLink}>
+              Remover link
+            </Botao>
+          )}
           <Botao tamanho="sm" onClick={() => setPedido(null)}>
             Cancelar
           </Botao>

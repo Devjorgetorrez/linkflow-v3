@@ -471,6 +471,7 @@ export function ListaPosts() {
     excluirDefinitivo,
     esvaziarLixeira,
     recarregarPosts,
+    ultimoBuildOkData,
   } = useStore();
   const router = useRouter();
   const { data: sessao } = useSession();
@@ -488,13 +489,9 @@ export function ListaPosts() {
 
   // "Publicado" no arquivo não é o mesmo que no ar — mesma checagem do
   // editor (Relatório de Testes 4, erro 37): só conta como no ar se o
-  // último build OK for depois da última gravação do post.
-  const [ultimoBuildOkData, setUltimoBuildOkData] = useState<string | null>(null);
-  useEffect(() => {
-    fetch("/api/build").then((r) => r.json()).then((data) => {
-      if (data.ok && data.ultimoOk?.fim) setUltimoBuildOkData(String(data.ultimoOk.fim).slice(0, 10));
-    }).catch(() => {});
-  }, []);
+  // último build OK for depois da última gravação do post. Vem do store
+  // (lib/store.tsx) — uma busca isolada aqui ficava presa no valor de
+  // antes do build mais recente (achado real, 29/09/2026).
   const noAr = (post: Post) =>
     post.status === "publicado" && !!post.atualizadoEm && !!ultimoBuildOkData && post.atualizadoEm <= ultimoBuildOkData;
 
