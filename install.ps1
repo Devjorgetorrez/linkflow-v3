@@ -162,9 +162,16 @@ if (Test-Path $envLocal) {
     $conteudo = Get-Content $envExample -Raw
     $conteudo = $conteudo -replace "NEXTAUTH_SECRET=troque-por-um-secret-seguro", "NEXTAUTH_SECRET=$nextAuthSecret"
     $conteudo = $conteudo -replace "PAINEL_API_KEY=troque-por-uma-chave-segura", "PAINEL_API_KEY=$painelApiKey"
+    # NEXTAUTH_URL=https://painel.seudominio.com.br (valor do .env.example) so serve
+    # pra producao no VPS - la quem grava o valor real e novo-cliente.sh/migrar-para-
+    # multicliente.sh, nunca este instalador. Localmente esse dominio nao existe, e o
+    # NextAuth tenta buscar a sessao nele: da erro "Failed to fetch" (CLIENT_FETCH_ERROR)
+    # assim que o painel abre. Usar localhost aqui evita esse erro no primeiro npm run dev.
+    $conteudo = $conteudo -replace "NEXTAUTH_URL=https://painel.seudominio.com.br", "NEXTAUTH_URL=http://localhost:3210"
     Set-Content -Path $envLocal -Value $conteudo -NoNewline
 
     Write-Ok ".env.local criado com NEXTAUTH_SECRET e PAINEL_API_KEY gerados automaticamente"
+    $warnings += "NEXTAUTH_URL em painel\.env.local foi ajustado para http://localhost:3210 (uso local). Ao publicar o site de um cliente de verdade no VPS, o proprio vps-setup grava o valor correto para o dominio dele - nao precisa editar isso na mao."
     $warnings += "LINKFLOW_DIR e LINKFLOW_SLUG em painel\.env.local ficam com o valor de exemplo. Cada skill (fase2-site-astro, vps-setup, site-atualizar) os define na hora de abrir o painel de um cliente especifico; nao e um valor fixo do instalador."
 } else {
     $warnings += "painel\.env.example nao encontrado - .env.local nao foi criado. Configure manualmente antes de usar /painel."
