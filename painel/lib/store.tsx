@@ -49,6 +49,12 @@ function postDaApi(p: Record<string, unknown>): Post {
     autorReconhecido: p.autorReconhecido !== false,
     categoriaId: txt(p.categoriaId ?? p.categoria),
     data: txt(p.data ?? p.publicadoEm).slice(0, 10),
+    // Sem isto, publicadoNoAr (badge "publicado"/"aguardando atualização do
+    // site", link "Ver"/"Ver (desatualizado)") ficava sempre false — o campo
+    // nunca chegava ao cliente pra comparar com o último build OK, mesmo
+    // com o artigo genuinamente no ar (achado real testando o painel
+    // publicado, 29/09/2026).
+    atualizadoEm: txt(p.atualizadoEm) || undefined,
     status: lerStatusPost(p.status),
     destaque: p.destaque === true,
     seoTitle: txt(p.seoTitle), // vazio = o site usa o título
