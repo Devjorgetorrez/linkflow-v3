@@ -125,6 +125,7 @@ const GRUPOS: NavGroup[] = [
         icone: Shield,
         subitens: [
           { href: "/privacidade/cookies", label: "Banner de cookies" },
+          { href: "/privacidade/consentimentos", label: "Consentimentos" },
           { href: "/privacidade/politica", label: "Política de privacidade" },
           { href: "/privacidade/termos", label: "Termos de uso" },
         ],

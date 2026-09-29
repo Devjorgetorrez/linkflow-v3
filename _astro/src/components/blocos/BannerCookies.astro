@@ -4,12 +4,16 @@
  * a leitura da página), em todas as páginas. Renderizado pelos layouts, igual
  * ao BotaoWhatsApp — decide sozinho se aparece.
  *
- * Só aparece se houver algo para consentir: uma categoria de cookie NÃO
- * essencial cadastrada em `site.legal.cookies` (Analíticos/Marketing/
- * Funcionais) OU um rastreador configurado (GA4/GTM/Meta Pixel). Site só com
- * cookie "Necessários"/"Essenciais" e nenhuma integração = banner ausente
- * (nada para consentir) — corrige o defeito A61 do QA sem inventar consentimento
- * onde não há nada a consentir.
+ * SEMPRE aparece (Relatório de Testes 4, erro 45 — "sem nada pra consentir,
+ * sem banner" era falso em produção: todo cliente real cedo ou tarde tem
+ * Analytics/Pixel, e o formulário de contato já coleta dado pessoal mesmo
+ * sem cookie nenhum). O que muda é o TIPO:
+ *   - há categoria de cookie NÃO essencial (`site.legal.cookies`) ou
+ *     rastreador configurado (GA4/GTM/Meta Pixel) → banner pede
+ *     consentimento de verdade (Aceitar/Rejeitar/Personalizar).
+ *   - só cookie estritamente necessário → aviso informativo, sem pedir
+ *     nada (a ANPD não considera consentimento real possível aqui), só o
+ *     botão "Entendi".
  *
  * Aceitar/Rejeitar têm o mesmo peso visual (mesma classe base, mesmo tamanho).
  * Personalizar é secundário e abre um painel com as categorias reais do site.
@@ -18,16 +22,21 @@
  *
  * z-index 50: acima do botão flutuante de WhatsApp (z-40, ver BotaoWhatsApp.astro).
  */
-import { bannerNecessario, cookiesNaoEssenciais, integracoesAtivas, type SiteComoConfig } from '../../lib/consentimento.ts'
+import { bannerNecessario, cookiesNaoEssenciais, integracoesAtivas, pedeConsentimento, type SiteComoConfig } from '../../lib/consentimento.ts'
 
 interface Props {
   site: SiteComoConfig
 }
 const { site } = Astro.props
 
+// Banner é sempre obrigatório (erro 45) — só o TIPO muda: pede
+// consentimento de verdade, ou é só um aviso informativo (site com
+// apenas cookie estritamente necessário).
 const precisa = bannerNecessario(site)
+const consentimentoReal = pedeConsentimento(site)
 const categorias = cookiesNaoEssenciais(site)
 const integ = integracoesAtivas(site)
+const versaoPolitica = site.legal?.versaoPolitica ?? ''
 
 // Painel "Personalizar" só mostra categoria que exista de fato no site.
 const temAnaliticos = integ.analiticos || categorias.some((c) => c.bucket === 'analiticos')
@@ -56,58 +65,78 @@ const registroConsentimento = cfg.registroConsentimento === true
        data-ga={site.googleAnalyticsId || ''} data-gtm={site.googleTagManagerId || ''} data-pixel={site.metaPixelId || ''}
        data-posh={posicaoH} data-posv={posicaoV} data-card={emCartao ? '1' : '0'}
        data-registro={registroConsentimento ? '1' : '0'}
+       data-consentimento={consentimentoReal ? '1' : '0'}
+       data-versao-politica={versaoPolitica}
        hidden>
-    <div class="lf-cookies__faixa">
-      {titulo && <p class="lf-cookies__titulo">{titulo}</p>}
-      <p class="lf-cookies__texto">
-        {descricao}
-        {' '}Veja nossa <a href="/politica-de-privacidade">Política de Privacidade</a>.
-      </p>
-      <div class="lf-cookies__acoes">
-        <button type="button" data-lf-personalizar class="lf-cookies__link">Personalizar</button>
-        <button type="button" data-lf-rejeitar class="lf-cookies__btn lf-cookies__btn--rejeitar">Rejeitar</button>
-        <button type="button" data-lf-aceitar class="lf-cookies__btn lf-cookies__btn--aceitar">Aceitar</button>
+    {consentimentoReal ? (
+      <div class="lf-cookies__faixa">
+        {titulo && <p class="lf-cookies__titulo">{titulo}</p>}
+        <p class="lf-cookies__texto">
+          {descricao}
+          {' '}Veja nossa <a href="/politica-de-privacidade">Política de Privacidade</a>.
+        </p>
+        <div class="lf-cookies__acoes">
+          <button type="button" data-lf-personalizar class="lf-cookies__link">Personalizar</button>
+          <button type="button" data-lf-rejeitar class="lf-cookies__btn lf-cookies__btn--rejeitar">Rejeitar</button>
+          <button type="button" data-lf-aceitar class="lf-cookies__btn lf-cookies__btn--aceitar">Aceitar</button>
+        </div>
       </div>
-    </div>
+    ) : (
+      // Só cookie estritamente necessário: nada pra "aceitar" ou "rejeitar"
+      // de verdade — a ANPD não considera essa a base legal apropriada
+      // quando não há escolha real. Fica só o dever de informar.
+      <div class="lf-cookies__faixa">
+        {titulo && <p class="lf-cookies__titulo">{titulo}</p>}
+        <p class="lf-cookies__texto">
+          Este site usa apenas cookies estritamente necessários ao seu funcionamento (sessão, segurança).
+          {' '}Veja nossa <a href="/politica-de-privacidade">Política de Privacidade</a>.
+        </p>
+        <div class="lf-cookies__acoes">
+          <button type="button" data-lf-informado class="lf-cookies__btn lf-cookies__btn--aceitar">Entendi</button>
+        </div>
+      </div>
+    )}
 
-    <div data-lf-painel class="lf-cookies__painel" hidden>
-      <p class="lf-cookies__painel-intro">{modalDescricao}</p>
-      <ul class="lf-cookies__categorias">
-        <li class="lf-cookies__categoria">
-          <label>
-            <input type="checkbox" checked disabled />
-            <span>Necessários — sempre ativos</span>
-          </label>
-        </li>
-        {temAnaliticos && (
+    {consentimentoReal && (
+      <div data-lf-painel class="lf-cookies__painel" hidden>
+        <p class="lf-cookies__painel-intro">{modalDescricao}</p>
+        <ul class="lf-cookies__categorias">
           <li class="lf-cookies__categoria">
             <label>
-              <input type="checkbox" data-cat="analiticos" />
-              <span>Analíticos — medir visitas e páginas mais acessadas</span>
+              <input type="checkbox" checked disabled />
+              <span>Necessários — sempre ativos</span>
             </label>
           </li>
-        )}
-        {temMarketing && (
-          <li class="lf-cookies__categoria">
-            <label>
-              <input type="checkbox" data-cat="marketing" />
-              <span>Marketing — medir resultado de anúncios</span>
-            </label>
-          </li>
-        )}
-        {temFuncionais && (
-          <li class="lf-cookies__categoria">
-            <label>
-              <input type="checkbox" data-cat="funcionais" />
-              <span>Funcionais — lembrar preferências de navegação</span>
-            </label>
-          </li>
-        )}
-      </ul>
-      <div class="lf-cookies__painel-acoes">
-        <button type="button" data-lf-salvar-preferencias class="lf-cookies__btn lf-cookies__btn--aceitar">Salvar preferências</button>
+          {temAnaliticos && (
+            <li class="lf-cookies__categoria">
+              <label>
+                <input type="checkbox" data-cat="analiticos" />
+                <span>Analíticos — medir visitas e páginas mais acessadas</span>
+              </label>
+            </li>
+          )}
+          {temMarketing && (
+            <li class="lf-cookies__categoria">
+              <label>
+                <input type="checkbox" data-cat="marketing" />
+                <span>Marketing — medir resultado de anúncios</span>
+              </label>
+            </li>
+          )}
+          {temFuncionais && (
+            <li class="lf-cookies__categoria">
+              <label>
+                <input type="checkbox" data-cat="funcionais" />
+                <span>Funcionais — lembrar preferências de navegação</span>
+              </label>
+            </li>
+          )}
+        </ul>
+        <div class="lf-cookies__painel-acoes">
+          <button type="button" data-lf-salvar-preferencias class="lf-cookies__btn lf-cookies__btn--aceitar">Salvar preferências</button>
+        </div>
       </div>
-    </div>
+    )}
   </div>
 )}
 

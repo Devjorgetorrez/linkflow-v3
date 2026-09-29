@@ -8,7 +8,7 @@
  * nada para consentir), os links de reabrir preferências do rodapé ficam
  * ocultos: não faz sentido oferecer uma preferência que não existe.
  */
-import { carregarSeConsentido, lerConsentimento, salvarConsentimento, type CategoriasConsentimento, type IdsIntegracoes } from './consentimento-carregar.ts'
+import { carregarSeConsentido, lerConsentimento, lerInformado, obterVisitanteId, salvarConsentimento, salvarInformado, type CategoriasConsentimento, type IdsIntegracoes } from './consentimento-carregar.ts'
 
 const SELETOR_REABRIR = '[data-lf-reabrir-cookies]'
 
@@ -20,7 +20,7 @@ function painelUrl(): string {
   return (m?.getAttribute('content') || '').trim().replace(/\/+$/, '')
 }
 
-type EscolhaConsentimento = 'aceito' | 'rejeitado' | 'personalizado'
+type EscolhaConsentimento = 'aceito' | 'rejeitado' | 'personalizado' | 'informado'
 
 /**
  * Registro do consentimento no servidor — só quando `site.cookieBanner.registroConsentimento`
@@ -33,7 +33,12 @@ function registrarConsentimento(raiz: HTMLElement, escolha: EscolhaConsentimento
   if (raiz.dataset.registro !== '1') return
   const base = painelUrl()
   if (!base) return
-  const payload: Record<string, unknown> = { escolha, paginaOrigem: location.pathname }
+  const payload: Record<string, unknown> = {
+    escolha,
+    paginaOrigem: location.pathname,
+    visitanteId: obterVisitanteId(),
+    versaoPolitica: raiz.dataset.versaoPolitica || undefined,
+  }
   if (categorias) payload.categorias = categorias
   fetch(base + '/api/consentimentos', {
     method: 'POST',
@@ -65,6 +70,8 @@ if (!raiz) {
   const btnRejeitar = raiz.querySelector<HTMLButtonElement>('[data-lf-rejeitar]')
   const btnPersonalizar = raiz.querySelector<HTMLButtonElement>('[data-lf-personalizar]')
   const btnSalvarPreferencias = raiz.querySelector<HTMLButtonElement>('[data-lf-salvar-preferencias]')
+  const btnInformado = raiz.querySelector<HTMLButtonElement>('[data-lf-informado]')
+  const consentimentoReal = raiz.dataset.consentimento === '1'
 
   const idsIntegracoes: IdsIntegracoes = {
     ga: raiz.dataset.ga || undefined,
@@ -103,9 +110,16 @@ if (!raiz) {
   // Escolha já dada (mesmo em visita anterior) carrega direto, sem esperar clique.
   carregarSeConsentido(idsIntegracoes)
 
-  if (!lerConsentimento()) {
+  const jaResolvido = consentimentoReal ? !!lerConsentimento() : lerInformado()
+  if (!jaResolvido) {
     raiz.hidden = false
   }
+
+  btnInformado?.addEventListener('click', () => {
+    salvarInformado()
+    registrarConsentimento(raiz, 'informado')
+    esconderBanner()
+  })
 
   btnAceitar?.addEventListener('click', () => {
     aplicarEFechar({ analiticos: true, marketing: true, funcionais: true })

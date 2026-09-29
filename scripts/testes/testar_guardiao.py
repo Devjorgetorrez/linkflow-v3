@@ -33,7 +33,7 @@ ok
 """
 
 
-def montar(tmp, tema="tema-07", extra="", pilar="/planos", nav_pilar=True, painel=None):
+def montar(tmp, tema="tema-07", extra="", pilar="/planos", nav_pilar=True, painel=None, banner=True, registro=False, rastreador=False):
     proj = tmp / "proj"
     lf = tmp / "lf"
     sites = tmp / "sites"
@@ -43,8 +43,9 @@ def montar(tmp, tema="tema-07", extra="", pilar="/planos", nav_pilar=True, paine
     cfg.mkdir(parents=True)
     rota = f"  rotaPilar: '{pilar}',\n" if pilar != "/servicos" else ""
     nav = f"[{{ label: 'Planos', href: '{pilar}', filhos: [] }}]" if nav_pilar else "[{ label: 'Home', href: '/' }]"
+    ga = "  googleAnalyticsId: 'G-TESTE123',\n" if rastreador else ""
     (cfg / "site.ts").write_text(
-        "export const site = {\n  dominio: '',\n" + (f"  painelUrl: '{painel}',\n" if painel is not None else "") + rota +
+        "export const site = {\n  dominio: '',\n" + (f"  painelUrl: '{painel}',\n" if painel is not None else "") + rota + ga +
         "  nap: { telefone: '11999990000' },\n  redes: [],\n  nav: " + nav + ",\n"
         "  navFooterColunas: [\n    { titulo: 'Planos', links: [] },\n  ],\n}\n", encoding="utf-8")
     cont = lf / "_astro" / "src" / "content"
@@ -54,7 +55,12 @@ def montar(tmp, tema="tema-07", extra="", pilar="/planos", nav_pilar=True, paine
     (cont / "servicos" / "plano-b.md").write_text("---\ntitulo: B\n---\ncorpo real", encoding="utf-8")
     dist = lf / "_astro" / "dist"
     dist.mkdir(parents=True)
-    (dist / "index.html").write_text("<html>home</html>", encoding="utf-8")
+    if banner:
+        marcador_registro = ' data-registro="1"' if registro else ' data-registro="0"'
+        home_html = f'<html><body><div id="lf-banner-cookies"{marcador_registro}></div></body></html>'
+    else:
+        home_html = "<html>home</html>"
+    (dist / "index.html").write_text(home_html, encoding="utf-8")
     (dist / "sitemap.xml").write_text("<urlset><url><loc>https://dominio-provisorio.local/</loc></url></urlset>", encoding="utf-8")
     (dist / "robots.txt").write_text("User-agent: *\nSitemap: https://dominio-provisorio.local/sitemap.xml\n", encoding="utf-8")
     (dist / "llms.txt").write_text("# x", encoding="utf-8")
@@ -122,6 +128,17 @@ try:
     shutil.rmtree(l / "_astro" / "dist")
     rc, out = rodar("previa", p, l, s)
     checar("previa sem dist BLOQUEIA", rc == 1 and "dist/index.html" in out, out)
+
+    # 4b. banner de cookies obrigatorio (erro 45)
+    p, l, s = montar(tmp / "h2", banner=False)
+    rc, out = rodar("previa", p, l, s)
+    checar("previa sem banner de cookies BLOQUEIA", rc == 1 and "Banner de cookies" in out, out)
+    p, l, s = montar(tmp / "h3", rastreador=True, registro=False)
+    rc, out = rodar("previa", p, l, s)
+    checar("previa com rastreador e registro desligado BLOQUEIA", rc == 1 and "registro de consentimento" in out.lower(), out)
+    p, l, s = montar(tmp / "h4", rastreador=True, registro=True)
+    rc, out = rodar("previa", p, l, s)
+    checar("previa com rastreador e registro ligado PASSA", rc == 0, out)
 
     # 5. saida (pos-deploy) continua exigindo dominio real e site publicado
     p, l, s = montar(tmp / "i", extra="visual_aprovado: sim\ndominio: veredaseguros.com.br\nemail_institucional: a@b.com")

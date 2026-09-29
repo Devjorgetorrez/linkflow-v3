@@ -702,6 +702,37 @@ def verificar_saida(slug, fase="saida"):
     if not llms.exists():
         avisos.append(f"llms.txt nao encontrado {onde} — recomendado para visibilidade em IAs")
 
+    # ── Banner de cookies: obrigatorio, sempre (erro 45) ──────────────────────
+    # Confere a HOME publicada de verdade, nao so o codigo-fonte: o banner
+    # pode existir no componente e nao aparecer se algum layout esquecer de
+    # importa-lo. Se ha rastreador configurado, o registro de consentimento
+    # tambem precisa estar ligado — sem isso a prova de consentimento (LGPD,
+    # art. 38, onus do controlador) nunca e gravada.
+    home = site_dir_seo / "index.html"
+    if home.exists():
+        home_html = home.read_text(encoding="utf-8", errors="ignore")
+        if 'id="lf-banner-cookies"' not in home_html:
+            erros.append(
+                f"Banner de cookies nao encontrado na home publicada {onde} — "
+                "obrigatorio em todo site (Relatorio de Testes 4, erro 45). "
+                "Confirme que o layout do tema importa BannerCookies.astro."
+            )
+        elif config_file.exists():
+            tem_rastreador = bool(
+                re.search(r"googleAnalyticsId:\s*['\"][^'\"]+['\"]", config_conteudo)
+                or re.search(r"googleTagManagerId:\s*['\"][^'\"]+['\"]", config_conteudo)
+                or re.search(r"metaPixelId:\s*['\"][^'\"]+['\"]", config_conteudo)
+            )
+            if tem_rastreador and 'data-registro="1"' not in home_html:
+                erros.append(
+                    "Ha rastreador configurado (GA4/GTM/Meta Pixel) mas o registro de "
+                    "consentimento do banner esta desligado — ative "
+                    "'Registro de consentimento' em Privacidade > Banner de cookies "
+                    "antes de publicar. Sem isso nao ha prova de consentimento gravada."
+                )
+    elif not previa:
+        avisos.append(f"index.html nao encontrado {onde} — nao foi possivel confirmar o banner de cookies")
+
     # sitemap — gerado no dist/ após o build
     match_dominio = re.search(r"dominio[^:\n]*:[ \t]*(.+)", conteudo, re.IGNORECASE)
     if previa:

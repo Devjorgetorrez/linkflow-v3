@@ -12,6 +12,49 @@
 export const CHAVE_CONSENTIMENTO = 'lf-consentimento'
 const VALIDADE_DIAS = 180
 
+// Aviso informativo (site só com cookie necessário — nada pra aceitar ou
+// rejeitar, só o dever de informar). Mesma validade do consentimento real,
+// chave própria porque não tem categoria nenhuma pra guardar.
+const CHAVE_INFORMADO = 'lf-informado'
+
+export function lerInformado(): boolean {
+  try {
+    const bruto = localStorage.getItem(CHAVE_INFORMADO)
+    if (!bruto) return false
+    const dias = (Date.now() - new Date(bruto).getTime()) / 86400000
+    return dias >= 0 && dias <= VALIDADE_DIAS
+  } catch {
+    return false
+  }
+}
+
+export function salvarInformado(): void {
+  try {
+    localStorage.setItem(CHAVE_INFORMADO, new Date().toISOString())
+  } catch {
+    /* storage bloqueado: o aviso volta a aparecer na próxima visita — sem problema, é só informativo */
+  }
+}
+
+// Identificador anônimo do visitante — persiste no localStorage, gerado uma
+// vez, usado pra correlacionar os registros de consentimento do MESMO
+// visitante ao longo do tempo (ex.: aceite seguido de uma revogação depois)
+// sem guardar nenhum dado que identifique a pessoa de verdade.
+const CHAVE_VISITANTE_ID = 'lf-visitante-id'
+
+export function obterVisitanteId(): string {
+  try {
+    let id = localStorage.getItem(CHAVE_VISITANTE_ID)
+    if (!id) {
+      id = crypto.randomUUID()
+      localStorage.setItem(CHAVE_VISITANTE_ID, id)
+    }
+    return id
+  } catch {
+    return '' // storage bloqueado: registro segue sem identificador de retorno
+  }
+}
+
 export interface CategoriasConsentimento {
   analiticos: boolean
   marketing: boolean

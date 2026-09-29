@@ -24,6 +24,7 @@ export interface SiteComoConfig {
   metaPixelId?: string
   legal?: {
     cookies?: Array<{ categoria?: string; [k: string]: unknown }>
+    versaoPolitica?: string
   }
   cookieBanner?: CookieBannerConfig
 }
@@ -69,11 +70,24 @@ export function cookiesNaoEssenciais(site: SiteComoConfig | undefined | null): C
 }
 
 /**
- * O banner só existe se houver algo para consentir: uma categoria de cookie
- * não essencial cadastrada OU um rastreador (GA/GTM/Pixel) configurado.
- * Só cookie essencial + nenhuma integração = nada para consentir = sem banner.
+ * O banner é SEMPRE obrigatório (Relatório de Testes 4, erro 45 — antes o
+ * sistema decidia sozinho "sem nada pra consentir, sem banner", o que é
+ * falso em produção: todo cliente real vai ter Analytics/Pixel mais cedo
+ * ou mais tarde, e o formulário de contato já coleta dado pessoal mesmo
+ * sem nenhum cookie). Quem muda é o TIPO do banner — ver `pedeConsentimento`.
  */
-export function bannerNecessario(site: SiteComoConfig | undefined | null): boolean {
+export function bannerNecessario(_site?: SiteComoConfig | undefined | null): boolean {
+  return true
+}
+
+/**
+ * true = banner pede consentimento de verdade (tem categoria de cookie não
+ * essencial ou rastreador configurado). false = só aviso informativo — a
+ * ANPD considera que não há "escolha real" pra pedir consentimento de um
+ * site que só usa cookie estritamente necessário, mas o dever de informar
+ * continua (o site já coleta dado pessoal pelo formulário de contato).
+ */
+export function pedeConsentimento(site: SiteComoConfig | undefined | null): boolean {
   const integ = integracoesAtivas(site)
   return integ.analiticos || integ.marketing || cookiesNaoEssenciais(site).length > 0
 }

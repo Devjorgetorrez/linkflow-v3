@@ -79,6 +79,7 @@ export const MATRIZ = {
   "redirects:GET": ADM,
   "redirects:POST": ADM,
   "redirects/[id]:DELETE": ADM,
+  "consentimentos:GET": ADM,
   // Leads e tarefas (tabela silenciosa): administrador e editor; formulários, só admin altera.
   "leads:GET": ADM_ED,
   "leads:POST": ADM_ED,

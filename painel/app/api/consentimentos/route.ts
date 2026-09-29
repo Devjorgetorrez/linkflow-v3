@@ -18,20 +18,32 @@
  * SHA-256 truncado a 16 caracteres — dá para detectar abuso/repetição vindo do
  * mesmo IP sem guardar o IP em si (minimização de dados, LGPD).
  *
- * Próximo passo (fora do escopo desta tarefa): uma tela no painel para listar
- * dados/consentimentos.json — hoje o arquivo só é gravado, não há tela de leitura.
+ * GET /api/consentimentos → autenticado (sessão administrador ou x-api-key),
+ * lista os registros pra tela de consulta/exportação do painel
+ * (app/(painel)/privacidade/consentimentos) — Relatório de Testes 4, erro 45.
  */
 import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { lerDados, salvarDados } from "@/lib/dados";
 import { origensPermitidas } from "@/lib/formularios-dados";
 import { criarLimiteSubmissao, ipDoCliente } from "@/lib/limite-submissao";
+import { exigirPapel } from "@/lib/auth";
+import { MATRIZ } from "@/lib/permissoes";
 
 const MAX_CORPO = 4 * 1024;
 const limite = criarLimiteSubmissao();
 
-const ESCOLHAS = ["aceito", "rejeitado", "personalizado"] as const;
+const ESCOLHAS = ["aceito", "rejeitado", "personalizado", "informado"] as const;
 type Escolha = (typeof ESCOLHAS)[number];
+
+/**
+ * Prazo de retenção dos registros de consentimento — PROVISÓRIO. O guia da
+ * ANPD não fixa um número; 5 anos aqui só repete o prazo já usado como
+ * padrão pra retenção de formulários (mesma ordem de grandeza de outras
+ * obrigações civis/fiscais no Brasil). Confirmar com advogado antes de
+ * qualquer cliente real depender disso — Relatório de Testes 4, erro 45.
+ */
+const RETENCAO_DIAS = 5 * 365;
 
 interface RegistroConsentimento {
   id: string;
@@ -40,6 +52,19 @@ interface RegistroConsentimento {
   categorias?: { analiticos: boolean; marketing: boolean; funcionais: boolean };
   paginaOrigem: string;
   ipHash: string;
+  /** Versão da política vigente no momento da escolha (site.legal.versaoPolitica). */
+  versaoPolitica?: string;
+  /** Id anônimo do navegador do visitante (localStorage) — correlaciona registros do mesmo visitante sem identificar a pessoa. */
+  visitanteId?: string;
+}
+
+/** Descarta registros além do prazo de retenção. Rodada "de passagem" — sem cron, sem job separado. */
+function purgarExpirados(lista: RegistroConsentimento[]): RegistroConsentimento[] {
+  const limiteMs = Date.now() - RETENCAO_DIAS * 86400000;
+  return lista.filter((r) => {
+    const t = new Date(r.data).getTime();
+    return Number.isNaN(t) || t >= limiteMs;
+  });
 }
 
 function cabecalhosCors(req: NextRequest): Record<string, string> {
@@ -68,6 +93,14 @@ const campo = (v: unknown, max: number) => String(v ?? "").trim().slice(0, max);
 /** Hash do IP — nunca o IP completo (minimização de dados, LGPD). */
 function ipHash(ip: string): string {
   return crypto.createHash("sha256").update(ip).digest("hex").slice(0, 16);
+}
+
+export async function GET(req: NextRequest) {
+  const auth = await exigirPapel(req, MATRIZ["consentimentos:GET"]);
+  if (auth) return auth;
+
+  const lista = purgarExpirados(lerDados<RegistroConsentimento[]>("consentimentos.json", []));
+  return NextResponse.json({ ok: true, consentimentos: lista });
 }
 
 export async function POST(req: NextRequest) {
@@ -118,9 +151,11 @@ export async function POST(req: NextRequest) {
       categorias,
       paginaOrigem: campo(body.paginaOrigem ?? req.headers.get("referer"), 300),
       ipHash: ipHash(ip),
+      versaoPolitica: campo(body.versaoPolitica, 20) || undefined,
+      visitanteId: campo(body.visitanteId, 60) || undefined,
     };
 
-    const lista = lerDados<RegistroConsentimento[]>("consentimentos.json", []);
+    const lista = purgarExpirados(lerDados<RegistroConsentimento[]>("consentimentos.json", []));
     lista.unshift(registro);
     salvarDados("consentimentos.json", lista);
 
