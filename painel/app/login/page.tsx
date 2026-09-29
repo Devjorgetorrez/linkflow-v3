@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState, type FormEvent, Suspense } from "react";
 
 import { BotaoCopiar } from "@/components/BotaoCopiar";
-import { Marca } from "@/components/Marca";
+import { LogoPainel } from "@/components/LogoPainel";
 import { Botao, Campo, Entrada, Girando } from "@/components/ui";
 
 function LoginForm() {
@@ -58,7 +58,7 @@ function LoginForm() {
     <div className="flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-[320px]">
         <div className="mb-6 flex flex-col items-center">
-          <Marca tamanho={38} variante="completa" />
+          <LogoPainel tamanho={38} />
         </div>
 
         <form
