@@ -32,11 +32,38 @@
  * se o painel salvou um (prevalece) ou se o site nunca teve um (gera
  * básico, funcional desde o primeiro build, antes de qualquer edição no
  * painel).
+ *
+ * llms.txt básico (gerarLlmsBasico): título = site.nome (config/site.ts,
+ * lido por regex, sem executar o módulo), resumo = site.descricao, seção
+ * "Páginas" e seção "Serviços" (coleção content/servicos/) — só entra
+ * página com meta description real; rascunho sem SEO escrito fica de
+ * fora. Sem isso o arquivo ficava só com "# domínio" + linha de sitemap
+ * até o cliente abrir a tela /seo/llms no painel (erro 56, Relatório de
+ * Testes 4).
  */
-import { existsSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { readdir, readFile, writeFile } from 'node:fs/promises'
-import { join, relative, sep } from 'node:path'
+import { join, relative, sep, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
+
+const RAIZ_MOTOR = dirname(dirname(fileURLToPath(import.meta.url))) // .../_astro
+
+/** Lê um campo string de nível raiz de config/site.ts sem executar o módulo
+ *  (mesma técnica de painel/lib/fs.ts:getRotaPilar — regex sobre o texto). */
+function campoConfig(texto, campo) {
+  const m = texto.match(new RegExp(`\\b${campo}\\s*:\\s*(['"])((?:(?!\\1).)*)\\1`))
+  return m ? m[2] : null
+}
+
+function slugsDaColecao(colecao) {
+  const dir = join(RAIZ_MOTOR, 'src', 'content', colecao)
+  if (!existsSync(dir)) return new Set()
+  return new Set(
+    readdirSync(dir)
+      .filter(f => f.endsWith('.md'))
+      .map(f => f.replace(/\.md$/, '').toLowerCase()),
+  )
+}
 
 async function listarIndexHtml(dir) {
   const achados = []
@@ -69,6 +96,43 @@ const escaparXml = s =>
 
 const normalizarRota = p => (p.replace(/\/+$/, '') || '/')
 
+/** llms.txt real (título, resumo, páginas e serviços com texto de verdade),
+ * gerado só quando o cliente/painel ainda não salvou um em public/llms.txt
+ * (ver comentário no topo do arquivo). Nunca lista item sem meta description
+ * real — página ainda sem SEO escrito não entra. */
+function gerarLlmsBasico(dominioPrincipal, paginas) {
+  let configTexto = ''
+  try {
+    configTexto = readFileSync(join(RAIZ_MOTOR, 'src', 'config', 'site.ts'), 'utf-8')
+  } catch {
+    configTexto = ''
+  }
+  const nome = campoConfig(configTexto, 'nome') || dominioPrincipal
+  const descricao = campoConfig(configTexto, 'descricao')
+  const rotaPilarM = configTexto.match(/rotaPilar\s*:\s*['"]([^'"]+)['"]/)
+  const rotaPilar = rotaPilarM ? normalizarRota('/' + rotaPilarM[1].replace(/^\/+|\/+$/g, '')) : '/servicos'
+  const servicos = slugsDaColecao('servicos')
+
+  const comTextoReal = paginas.filter(p => p.rota !== '/' && p.descricao)
+  const paginasServico = comTextoReal.filter(p => servicos.has(p.rota.replace(/^\//, '')))
+  const paginasGerais = comTextoReal.filter(p => !servicos.has(p.rota.replace(/^\//, '')) && p.rota !== rotaPilar)
+
+  const secao = (titulo, itens) => {
+    if (itens.length === 0) return []
+    const linhas = [`## ${titulo}`]
+    for (const p of itens) linhas.push(`- [${p.titulo || p.loc}](${p.loc}): ${p.descricao}`)
+    linhas.push('')
+    return linhas
+  }
+
+  const linhas = [`# ${nome}`, '']
+  if (descricao) linhas.push(`> ${descricao}`, '')
+  linhas.push(...secao('Páginas', paginasGerais))
+  linhas.push(...secao('Serviços', paginasServico))
+  linhas.push(`Sitemap: https://${dominioPrincipal}/sitemap.xml`)
+  return linhas.join('\n') + '\n'
+}
+
 export default function sitemapCanonico() {
   return {
     name: 'linkflow-sitemap-canonico',
@@ -78,6 +142,7 @@ export default function sitemapCanonico() {
         const arquivos = await listarIndexHtml(raiz)
 
         const urls = new Map() // loc -> lastmod | null
+        const paginas = [] // { rota, loc, titulo, descricao } — só as incluídas no sitemap
         const hosts = new Set()
         const fora = { noindex: [], semCanonical: [], canonicalOutraRota: [] }
 
@@ -109,6 +174,10 @@ export default function sitemapCanonico() {
           const lastmod = html.match(/"dateModified"\s*:\s*"(\d{4}-\d{2}-\d{2})/)?.[1] ?? null
           hosts.add(url.host)
           urls.set(url.href, lastmod)
+
+          const titulo = (html.match(/<title>([\s\S]*?)<\/title>/i)?.[1] ?? '').trim()
+          const descricao = (tags(html, 'meta').find(a => (a.name ?? '').toLowerCase() === 'description')?.content ?? '').trim()
+          paginas.push({ rota: normalizarRota(rota), loc: url.href, titulo, descricao })
         }
 
         const resumo = (lista, rotulo) => {
@@ -136,10 +205,7 @@ export default function sitemapCanonico() {
 
           const llmsPath = join(raiz, 'llms.txt')
           if (!existsSync(llmsPath)) {
-            const llmsTxt =
-              `# ${dominioPrincipal}\n` +
-              '\n' +
-              `Sitemap: https://${dominioPrincipal}/sitemap.xml\n`
+            const llmsTxt = gerarLlmsBasico(dominioPrincipal, paginas)
             await writeFile(llmsPath, llmsTxt, 'utf-8')
             logger.info(`llms.txt gerado (basico) — ${dominioPrincipal}`)
           }
