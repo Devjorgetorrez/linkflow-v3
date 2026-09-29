@@ -1,4 +1,4 @@
-# Handoff — SiteFlow CMS / LinkFlow (Jorge Torrez) — v5 (27/09/2026, Plano de Correção de QA do Painel)
+# Handoff — SiteFlow CMS / LinkFlow (Jorge Torrez) — v6 (29/09/2026, Relatório de Testes 4 + acabamento do painel)
 
 > **Modelo de trabalho:** uma única sessão do Claude Code edita a pasta real
 > (`D:\LFSoft\Mentoria\linkflow-completo`, repositório git local), valida em
@@ -12,15 +12,30 @@
 > `git status` logo de cara para confirmar que a pasta bate com o descrito
 > aqui.
 
-## Estado atual em uma tela (27/09/2026)
+## Estado atual em uma tela (29/09/2026)
 
-- **O plano de correção de QA do painel** (`relatorios/Plano-Correcao-QA-Painel.md`,
-  a partir de `relatorios/Relatorio_QA_Painel_SiteFlow.pdf`, 87 defeitos) está
-  **concluído nas 7 fases (0 a 6)**. Ver seção própria abaixo — é o trabalho
-  mais recente e o mais extenso desta sessão.
+- **Relatório de Testes 4** (`relatorios/Plano-Correcao-Testes-4.md`, a partir
+  de `relatorios/Relatorio-Testes-4-LinkFlow-27-28-09.docx`, 38 erros,
+  numeração 29-66) está **concluído nas 10 fases (0 a 9)**, incluindo o erro
+  56 (llms.txt) que tinha ficado pra trás na primeira rodada. Ver seção
+  própria abaixo. É o trabalho mais recente e mais extenso desde a v5 deste
+  handoff.
+- **Depois do plano**, mais uma rodada de correções e acabamento, fora do
+  escopo do relatório original — achadas testando o produto de verdade
+  (deploy no VPS, `npm run dev` local, clique real no navegador): fundamentação
+  do prazo de retenção de cookies, deploy da Fase 7 no VPS de teste, favicon
+  do painel bloqueado pelo próprio middleware de autenticação, instalador que
+  nunca instalava nada, `NEXTAUTH_URL` de exemplo quebrando o painel local, e
+  logo/fonte do painel desatualizados (ícone aproximado em SVG em vez do
+  arquivo real, fonte genérica em vez de DM Sans). Ver seção própria "Depois
+  do Relatório de Testes 4" abaixo.
+- **Pacote de entrega atualizado**: `D:\LFSoft\Mentoria\_entrega-jorge\linkflow-completo.zip`
+  (fora do repo) reflete o commit mais recente. Processo documentado na seção
+  "Pacote de entrega" abaixo — refazer sempre que houver commit novo e o
+  Jorge pedir.
 - **Git limpo**, working tree sem pendência, tudo commitado (`git log --oneline`
-  mostra a sequência completa desde `bc70a98`, que fecha o Relatório de
-  Testes 3 — anterior ao plano de QA).
+  mostra a sequência completa; o plano de QA do painel — v5 — e o Relatório de
+  Testes 4 — v6 — são rodadas consecutivas, sem sobreposição de escopo).
 - **R5 — teste de ponta a ponta no VPS de teste: CONCLUÍDO em 27/09/2026**,
   com autorização explícita do Lucas. Ver seção própria abaixo (achou e
   corrigiu 3 bugs reais do instalador/motor).
@@ -152,6 +167,303 @@ bloco desses clientes. `torrez-desentupidora` (VPS de teste) já foi
 recriado do zero pelo `novo-cliente.sh` atual no R5 (27/09/2026) e já nasceu
 certo; `clinica-sorriso-vivo-jundiai`, criado antes, **ainda não foi
 conferido/corrigido** — não foi tocado no R5 por decisão do Lucas.
+
+---
+
+## Relatório de Testes 4 (Fases 0–9) — concluído
+
+Ponto de partida: `relatorios/Relatorio-Testes-4-LinkFlow-27-28-09.docx` (38
+defeitos, numeração 29-66, contínua desde os relatórios anteriores) e o plano
+derivado, `relatorios/Plano-Correcao-Testes-4.md` (ambos gitignored — só
+existem na pasta real, não no zip de entrega). 19 causas-raiz (D1-D19)
+mapeadas por 3 investigações somente-leitura em paralelo (painel,
+motor+servidor, scripts+skills) antes de qualquer correção. Cliente de teste
+desta rodada: Clínica Sorriso Serra do Japi (Jundiaí) — primeira vez com site
+de verdade no ar e painel em uso real (não só build/API isolados). **Todas as
+10 fases concluídas, os 38 erros corrigidos**, commits abaixo.
+
+### Fase 0 — Contenção de exposição e vazamento (commit `1062d02`)
+Senha literal exposta no `HANDOFF.md` (`[SENHA-REMOVIDA]`) e IP/porta SSH reais
+movidos para fora do documento distribuído (era a **terceira** ocorrência do
+mesmo tema — Rel. 2, erros 4 e 8); `robots.txt`/`noindex` próprios do painel
+(antes o painel inteiro era indexável); `gerar_excel_fase2.py` parou de usar
+dados fixos de um escritório de advocacia de Campinas e passou a ler só o
+`projeto.md` do cliente atual, falhando com erro claro se faltar campo;
+`criar-admin.mjs` (legado, não gravava usuário nenhum) removido — o caminho
+real já existe via `x-api-key` (ver Fase 8); autorização explícita antes de
+**qualquer** ação no VPS (leitura conta) documentada em `vps-setup/SKILL.md`;
+placeholder de produção (`[TEXTO EM PRODUÇÃO`) vira gate real no
+`guardiao_fase3.py`, não só regra procedural.
+
+### Fase 1 — Causa estrutural: quem escreve a Fase 3 (commit `744abd3`)
+**Decisão do Jorge**: Fase 3 usa só `fase3-conteudo`. `ranqueado`/
+`ranqueado-analisar` descontinuados como caminho da Fase 3 e arquivados em
+`skills-arquivadas/` (fora de `skills/`, o agente não carrega) —
+`ranqueado-configurar` (Fase 1, ICP) não foi tocado, continua ativo. Causa
+raiz era uma contradição literal entre duas fontes (`CLAUDE.md` linha 64
+apontava pra uma skill, linha 244 pra outra) que o agente vinha resolvendo
+sozinho, escolhendo a mais curta, sem avisar. **Regra nova permanente no
+CLAUDE.md**: contradição entre orquestrador e skill (ou entre duas skills) →
+parar e reportar, nunca decidir sozinho qual vale. A entrevista guiada que o
+`ranqueado` tinha não foi portada para `fase3-conteudo` — fica registrada como
+lacuna conhecida, não como pendência desta fase.
+
+### Fase 2 — Categorias: ligar o painel ao servidor de verdade (commit `4562eeb`)
+`lib/store.tsx` (`criarCategoria`/`atualizarCategoria`/`deletarCategoria`) só
+fazia `setState` — nunca chamava a API que já existia e funcionava. Corrigido
+com o mesmo padrão que os posts já usavam; id gerado pelo servidor, não mais
+`c${Date.now()}` local; toast de confirmação só depois da API responder;
+card de erro de build agora nomeia o post/categoria quebrados com botão de
+desvínculo direto, sem SSH; card de build refaz o fetch ao voltar pra tela
+(antes mostrava erro antigo mesmo já corrigido).
+
+### Fase 3 — Painel: plugar 6 telas com estado desconectado da fonte real (commit `71e9446`)
+**Bug novo encontrado, fora do escopo do relatório, registrado como
+pendência**: `posts/[id]/page.tsx` lança "Rendered more hooks than during the
+previous render" quando um post tem `status: publicado` — confirmado
+pré-existente via `git stash` (não introduzido por esta fase), causa não óbvia
+por leitura do código, precisa de sessão dedicada com React DevTools
+Profiler. Correções da fase: SEO/Verificações lia 5 de 6 cards com estado
+hardcoded (GSC/Bing/GA4/GTM/Pixel) em vez dos campos reais já existentes em
+`lib/site-config.ts`; "Analytics configurado" parou de disparar por regex
+genérica no HTML, só pela config real; validação de "Dados estruturados
+completo" expandida (formato de telefone, URL absoluta, `@id` cruzado);
+Política de Privacidade condiciona seções de Análise/Marketing por
+`integracoesAtivas()` real; badge "publicado" só liga depois de comparar com
+o último build OK de verdade; tela Core Web Vitals removida (100% decorativa,
+sem integração real — volta quando tiver PageSpeed Insights de verdade).
+
+### Fase 4 e 5 — Normalização de URL + resíduo de template (commit `fe6049e`)
+Escopo real bem maior que o previsto: padronizar canonical/sitemap/links
+**com barra no fim** (alinhando ao Nginx, que já força isso via `try_files`)
+exigiu tocar **51 arquivos** — cada tema (03-07) tem cópia própria de
+`contato.astro`/`sobre.astro`/`servicos/index.astro`/`blog/index.astro`/
+página-guia e cada um dos 17 componentes `ServicoDetalhe*`/`PostDetalhe*`/
+`CategoriaDetalhe*`, não só as 5 páginas base citadas no relatório.
+`novo-cliente.sh` passou a gerar bloco `server` separado pra www→canônico
+(antes um único bloco respondia pelos dois hosts) e `Cache-Control` curto no
+`location /` do HTML. H2 com `border-bottom` de 1 linha só corrigido nos 7
+layouts (reincidente desde o Relatório 1, erro 14 — ninguém tinha tocado
+naquela linha desde então). Rótulos "Atuação"/"Publicações" do tema-05
+(hardcoded pro nicho advocacia) parametrizados por config do cliente. CNPJ
+duplicado (`site.cnpj` raiz vs. `site.legal.controlador.cnpj`, editados em
+telas diferentes sem sincronia) unificado numa fonte só.
+**Achado do próprio processo de validação, não bug real**: sincronizar um
+fixture de teste já promovido copiando arquivo por arquivo expôs que
+`promover_tema.py` faz mais que copiar (`ajustar_profundidade_imports()`,
+`limpar_arquivos_promovidos()`) — pra mexer numa cópia já promovida, sempre
+rodar o script de promoção de novo, nunca copiar à mão.
+**Todos os sites publicados antes desta fase precisam ser regerados**
+(mesma ressalva do erro 48 original de R5) — `torrez-desentupidora` foi
+regerado depois (ver seção seguinte); `clinica-sorriso-vivo-jundiai`
+continua pendente, não tocado.
+
+### Fase 6, 8 e 9 — Identidade visual, instalador de VPS, menores (commit `d02c4dd`)
+- **Identidade**: favicon do site (não do painel — isso veio depois, ver
+  próxima seção) e mapa de ícone de rede social no `Footer.astro` estendido
+  pra cobrir mais que Facebook/Instagram, com as 3 variantes de rodapé
+  consultando; cor do WhatsApp mantida `#0B7A45` (decisão deliberada, já
+  documentada no código por contraste AA — não é bug).
+- **Instalador de VPS**: `certbot` ganhou a flag `--expand` (sem ela, toda 2ª
+  execução que precisa incluir domínio novo num certificado existente
+  falhava — 5ª ocorrência do mesmo bug, ver histórico do Relatório 3);
+  `vps-setup/SKILL.md` PASSO 7 parou de cair em `ssh ... grep
+  PAINEL_API_KEY` como fallback — o caminho real (`x-api-key` quando
+  `usuarios.json` está vazio) já existe e agora é a única fonte documentada.
+- **Menores**: H1 bloqueado no corpo do editor (antes só sugeria); URL colada
+  vira link automático; slug de categoria segue o nome até edição manual
+  (mesmo padrão de posts); autor genérico sai do sitemap por padrão; tela de
+  Redirects removida do painel (decisão do relatório — fica só com o agente,
+  que tem o contexto de arquitetura); regra de flexibilização de template
+  documentada por escrito no CLAUDE.md. **Erro 56 (`llms.txt`) ficou de fora
+  desta leva** (ver Fase 9 separada abaixo — foi corrigido depois, numa
+  rodada seguinte).
+
+### Fase 7 — Banner de cookies obrigatório, LGPD (commit `8e18d2a`)
+Banner deixou de ser condicional. `bannerNecessario()` sempre `true`; nova
+`pedeConsentimento()` decide o TIPO: consentimento real
+(Aceitar/Rejeitar/Personalizar) quando há cookie não-essencial ou rastreador
+configurado, ou aviso informativo (só "Entendi") quando o site só usa cookie
+estritamente necessário — a ANPD não exige "escolha real" nesse caso, mas o
+dever de informar continua. Registro de consentimento ganhou `versaoPolitica`
+e `visitanteId` (UUID anônimo, `localStorage`). Nova tela
+`/privacidade/consentimentos` no painel (admin) — tabela + exportação CSV
+(BOM UTF-8). `guardiao_construtor.py` bloqueia publicação se o HTML final não
+tiver o banner, ou se houver rastreador configurado sem
+`registroConsentimento` habilitado (`testar_guardiao.py` ganhou 3 cenários
+novos, 30/30 OK). Revogação e "desativado por padrão" já existiam, confirmados
+sem código novo. **Prazo de retenção** (`RETENCAO_DIAS = 5 * 365`,
+`purgarExpirados()` em `app/api/consentimentos/route.ts`) implementado como
+mecanismo real de purga automática — não é parecer jurídico, mas pesquisa
+feita em 28/09/2026 confirma que 5 anos é o teto do padrão de mercado (janela
+de 3-5 anos usada por CMPs pra auditoria retroativa) e que os 180 dias de
+validade do consentimento (`VALIDADE_DIAS` em `consentimento-carregar.ts`,
+banner reaparece nesse prazo) batem com a faixa de 6-12 meses recomendada
+pela CNIL — comentário no código e texto da tela atualizados pra citar essa
+base (commit `cd67cca`), mantendo a ressalva de que não substitui confirmação
+de um advogado.
+
+### Fase 9 (erro 56) — `llms.txt` real em vez de stub (commit `065f127`)
+O fallback gerado no build (`_astro/integracoes/sitemap-canonico.mjs`, hook
+`astro:build:done`, usado sempre que o cliente ainda não salvou um pelo
+painel) só escrevia `# domínio` + uma linha de `Sitemap:` — fora do formato
+da comunidade, sem resumo nem seções. Passou a gerar título (`site.nome`,
+lido de `config/site.ts` por regex, sem executar o módulo — mesma técnica de
+`painel/lib/fs.ts:getRotaPilar`), resumo (`site.descricao`) e duas seções com
+conteúdo real — "Páginas" e "Serviços" (coleção `content/servicos/`) — cada
+uma só com itens que têm meta description de verdade escrita; rascunho sem
+SEO fica de fora. Validado com build real na fixture de teste (tema-04,
+nicho de higienização).
+
+---
+
+## Depois do Relatório de Testes 4 (28-29/09/2026)
+
+Trabalho adicional, fora do escopo do relatório original — achado testando o
+produto de verdade (deploy real no VPS, `npm run dev` local, clique real no
+navegador), não por leitura de código isolada.
+
+### Deploy da Fase 7 + erro 56 no VPS de teste (torrez-desentupidora)
+Pedido do Lucas: "implemente na vps, que eu quero testar no
+teste.turboblog.com.br". Achado ao conectar: o `projeto.md` do cliente
+registrava um caminho de VPS **desatualizado** (`vps_astro:
+/opt/linkflow-teste/_astro`) — não existe mais desde o R5; o caminho real é
+`/opt/linkflow/clientes/torrez-desentupidora/_astro` (multicliente,
+corrigido no próprio `projeto.md`). Sync manual dos 5 arquivos do motor
+compartilhado tocados pela Fase 7/erro 56 (`_astro/src/lib/consentimento.ts`,
+`_astro/src/scripts/consentimento-{ui,carregar}.ts`,
+`_astro/src/components/blocos/BannerCookies.astro`,
+`_astro/integracoes/sitemap-canonico.mjs`) via `scp`, build + deploy no
+servidor (autorização explícita pedida antes da escrita remota — ver D15).
+Verificado ao vivo com `curl`: banner presente (`data-consentimento="0"` —
+este cliente ainda não tem cookie não-essencial nem rastreador configurado,
+então usa o modo aviso informativo, correto), `llms.txt` com título/resumo/
+seções reais, `robots.txt`/`sitemap.xml` intactos. **Achado à parte, não é
+bug**: algumas descrições do `llms.txt` real citam "Hidroponto"/"Goiânia" —
+conteúdo fictício de demonstração já documentado no `projeto.md` como
+"autorizado só para teste, NÃO publicar sem substituir"; antes ficava
+invisível porque o `llms.txt` saía vazio, agora aparece porque reflete texto
+real. Não corrigido (fora do meu escopo sem contexto da Fase 3 desse
+cliente).
+
+### Favicon do painel bloqueado pelo próprio middleware
+Reportado pelo Lucas: favicon continuava genérico mesmo com
+`painel/app/icon.png` no lugar certo desde a Fase 6. Causa real (não era
+cache do navegador): o matcher de `painel/middleware.ts` protege **todas**
+as rotas por autenticação e esquecia de excluir `icon.png` — sem sessão, a
+requisição caía num redirect 307 pro login e o navegador nunca recebia a
+imagem. Corrigido (commit `8aa505b`), confirmado com `curl` antes/depois
+(307→200). Também gerado `app/favicon.ico` (16-64px, a partir do mesmo
+`icon.png`) pro pedido implícito que alguns navegadores fazem direto em
+`/favicon.ico`. Numa rodada seguinte, o Lucas trouxe um pacote gerado no
+favicon.io (mesma marca) e pediu pra usar os arquivos de lá em vez dos meus
+— trocado `favicon.ico`, mais `app/apple-icon.png` (convenção do Next.js
+pro ícone da Apple), `app/manifest.webmanifest` (nome "SiteFlow — Painel",
+preenchido — vinha vazio no pacote) e `public/android-chrome-{192,512}.png`
+que o manifest referencia; cada rota nova também precisou entrar na exceção
+do middleware (commit `f1daced`).
+
+### Instalador completo (antes só verificava, não instalava nada)
+Pergunta do Lucas ("o install.bat ainda serve pra instalação atualizada do
+agente?") expôs que `install.ps1`/`install.sh` nunca fizeram mais que
+conferir se os arquivos existiam — nenhum `npm install`, nenhuma dependência
+Python, nenhum `.env`. Um aluno baixando o zip e rodando o instalador tinha
+`/link-flow` funcionando (só texto + Python do sistema), mas `painel/` e
+`_astro/` quebravam na primeira tentativa. Corrigido (commit `1e88016`):
+confere Node.js/npm/Python além do Claude Code; roda `npm install` em
+`painel/` e `_astro/`; roda `pip install -r scripts/requirements.txt`
+(arquivo novo — só `openpyxl` e `requests`, os dois únicos pacotes de
+terceiros que `scripts/*.py` usa de verdade; as 3 skills de blog com venv
+isolado próprio via `scripts/run.py` continuam se instalando sozinhas no
+primeiro uso, sem mudança); gera `painel/.env.local` a partir do
+`.env.example`, com `NEXTAUTH_SECRET`/`PAINEL_API_KEY` sorteados
+automaticamente (nunca sobrescreve se já existir). `LINKFLOW_DIR`/
+`LINKFLOW_SLUG` ficam de propósito fora do escopo — são por cliente,
+definidos pelas próprias skills (`fase2-site-astro`, `vps-setup`,
+`site-atualizar`) na hora certa, nunca um valor fixo de instalação.
+**Bug real encontrado testando o instalador de verdade**: `install.ps1`
+original usava acento e travessão nos textos — quebrava rodando via
+`powershell.exe` (PowerShell 5.1, o que `install.bat` de fato chama), que lê
+o script no codepage do Windows, não UTF-8, corrompe o caractere acentuado e
+quebra o parser no meio de uma string. Reescrito em ASCII puro; testado
+rodando de verdade com `powershell.exe` legado (não só verificação de
+sintaxe), não só `pwsh`.
+**Segunda rodada** (commit `6f0bd38`): `NEXTAUTH_URL` no `.env.example` era
+`https://painel.seudominio.com.br` (domínio de exemplo, não existe) e o
+instalador não tocava nesse campo — resultado: primeiro `npm run dev` local,
+o NextAuth tenta buscar a sessão nesse domínio inexistente e o navegador
+mostra "Failed to fetch" (`CLIENT_FETCH_ERROR`, 2 issues no overlay de erro
+do Next) — reportado pelo Lucas rodando o painel local pela primeira vez.
+Corrigido: instalador grava `NEXTAUTH_URL=http://localhost:3210` no
+`.env.local`; não afeta produção, o VPS de cada cliente grava seu próprio
+valor real via `scripts/vps/novo-cliente.sh`/`migrar-para-multicliente.sh`,
+nunca este instalador local. Testado de ponta a ponta: `install.sh` do
+zero, painel local sobe sem nenhum erro de console (confirmado com
+Playwright).
+
+### Logo e fonte do painel desatualizados (sidebar e login)
+Pedido do Lucas: ícone da sidebar não batia com `app/icon.png` (o padrão do
+sistema) e o nome "SiteFlow" estava em fonte genérica — a fonte de marca é
+DM Sans. Causa: a sidebar usava `components/Marca.tsx`, uma reconstrução em
+SVG à mão do ícone (`MarcaSVG`/`Simbolo`), não o bitmap real — confirmado que
+`app/icon.png` tem canal alfa de verdade (funciona em fundo claro e escuro).
+DM Sans adicionada via `next/font/google` (auto-hospedada, sem chamada
+externa). **Armadilha real, não óbvia por leitura superficial**: o nome
+óbvio pra variável CSS, `--font-display`, **já tem dono** — é a tipografia
+que o CLIENTE escolhe pro site dele (tela Aparência > Personalizar),
+sobrescrita via JS em `lib/store.tsx` direto no `documentElement`, com
+prioridade maior que qualquer classe CSS. Sobrescrever esse token faria a
+marca do painel mudar de fonte junto com a fonte que o cliente escolhe pro
+próprio site — criada variável própria, `--font-marca`, exclusiva da marca
+do painel (commit `c984326`). Depois, mesmo bug encontrado no **login**
+(`app/login/page.tsx` também usava `Marca.tsx`, nunca tinha sido corrigido) —
+peso da fonte também ajustado de semibold pra **bold** (padrão real da DM
+Sans é mais forte). Extraído `components/LogoPainel.tsx` (ícone real + DM
+Sans bold), usado nos dois lugares; `Marca.tsx` ficou sem consumidor e foi
+removido (commit `3b9ac1f`). Validado com Playwright de verdade (login real
++ depois de autenticado): fonte computada `'DM Sans'` peso `700` nos dois
+pontos, `--font-display` continua intocado (confirmado refletindo a fonte
+"Fraunces" do cliente de teste, sem vazamento).
+
+## Pacote de entrega
+
+`D:\LFSoft\Mentoria\_entrega-jorge\linkflow-completo.zip` — fora do repo,
+pra enviar ao Jorge. Refazer sempre que houver commit novo e for pedido
+(não é automático). Processo (repetível, já rodado várias vezes nesta
+sessão):
+
+```powershell
+# 1. Copiar excluindo dados de cliente, dependências e lixo de ferramenta —
+#    .kilo/ (worktrees do Claude Code) nunca fez parte do pacote, node_modules/
+#    dist/.astro sempre gitignored, projetos/credenciais/_memoria/relatorios
+#    são dados reais que nunca podem vazar pro aluno.
+robocopy "D:\LFSoft\Mentoria\linkflow-completo" "D:\LFSoft\Mentoria\_staging-entrega\linkflow-completo" /E `
+  /XD node_modules .next dist .astro projetos _memoria credenciais relatorios templates-layout-temas .venv venv __pycache__ coletas checkpoints rascunhos saidas .kilo `
+  /XF *.pyc *.pyo Thumbs.db desktop.ini
+```
+
+```python
+# 2. Zipar com Python (zipfile), nunca Compress-Archive do PowerShell —
+#    ele SILENCIOSAMENTE pulou a pasta .git inteira numa das rodadas desta
+#    sessão (sem erro, sem aviso) e tambem aninha tudo sob uma pasta extra
+#    se voce nao usar o glob "\*" com cuidado. zipfile.write() com
+#    os.walk() bruto e confiavel e da controle total do caminho relativo
+#    (arquivos na RAIZ do zip, nao aninhados).
+import zipfile, os
+src = r"D:\LFSoft\Mentoria\_staging-entrega\linkflow-completo"
+dest = r"D:\LFSoft\Mentoria\_entrega-jorge\linkflow-completo.zip"
+with zipfile.ZipFile(dest, "w", zipfile.ZIP_DEFLATED, compresslevel=6) as zf:
+    for root, dirs, files in os.walk(src):
+        for f in files:
+            full = os.path.join(root, f)
+            zf.write(full, os.path.relpath(full, src))
+```
+
+Depois: `rm -rf _staging-entrega`; conferir com `unzip -l` que `.git/logs/HEAD`
+mostra o commit esperado no topo, que `projetos/`/`relatorios/`/
+`credenciais/`/`_memoria/`/`.kilo/`/`node_modules/` somam **zero** entradas, e
+que nenhum `.env.local` foi parar lá dentro (rodar `rm -f painel/.env.local`
+antes de copiar, se tiver sido criado durante testes locais).
 
 ---
 
@@ -493,9 +805,11 @@ nenhum momento.
 5. **Corpo de texto livre** das páginas fixas e da página-guia — só
    título/meta viraram editáveis; o corpo depende de mudança maior no
    motor (onde renderizar um texto livre dentro do layout de cada tema).
-6. **Tela de consentimentos registrados** (`dados/consentimentos.json`) —
-   o registro passou a acontecer de verdade (Fase 6), mas não há UI para
-   consultá-los no painel.
+6. ~~Tela de consentimentos registrados~~ — **resolvida em 28/09/2026**
+   (Relatório de Testes 4, Fase 7): `/privacidade/consentimentos` no painel
+   (admin), tabela + exportação CSV. Registro em `dados/consentimentos.json`
+   ganhou `versaoPolitica`/`visitanteId`; `GET /api/consentimentos`
+   autenticado alimenta a tela.
 7. **Trava de ~30 s em Leads (A44 do relatório de QA)** — não reproduzida
    nem confirmada como resolvida; suspeita é I/O síncrono em
    `painel/lib/dados.ts` somado ao excesso de chamadas (já reduzido).
@@ -518,10 +832,40 @@ nenhum momento.
     1º admin sem SSH já existe — `app/api/usuarios/route.ts` aceita
     `x-api-key` quando `usuarios.json` está vazio (ver Fase 8 do
     `relatorios/Plano-Correcao-Testes-4.md`).
-12. Limites conhecidos de antes do plano de QA, ainda sem correção:
+13. Limites conhecidos de antes do plano de QA, ainda sem correção:
     `hashtags`/`buscasFrequentes` dos configs apontam direto para slugs de
     post/serviço (link morto se o post virar rascunho); `public/tema-0X.json`
     ainda descreve rotas antigas (só informativo).
+14. **`posts/[id]/page.tsx` lança "Rendered more hooks than during the
+    previous render"** quando um post tem `status: publicado` (achado na
+    Fase 3 do Relatório de Testes 4, confirmado pré-existente via `git
+    stash` — não é regressão desta sessão). Reproduzido só forçando o
+    campo direto no `.md`; não reproduzido pela ação normal "Publicar
+    artigo" da tela dentro do tempo da rodada. Todos os hooks já estão
+    antes dos `return` condicionais, então a causa não é óbvia por leitura
+    — precisa de sessão dedicada com React DevTools Profiler ou bisect
+    mais fino.
+15. **Prazo de retenção de consentimento de cookies (`RETENCAO_DIAS = 5 *
+    365`, `app/api/consentimentos/route.ts`)** — implementado e
+    funcionando, fundamentado com pesquisa de mercado (28/09/2026, ver
+    Fase 7 acima), mas ainda sem confirmação formal de um advogado pra
+    este caso específico. Sinalizado no código e na tela do painel.
+16. **`clinica-sorriso-vivo-jundiai` não foi regenerado** com as correções
+    de Fase 4/5 (barra no fim de URL/canonical, bloco www→canônico
+    separado, Cache-Control) nem tem o banner de cookies da Fase 7 —
+    `torrez-desentupidora` foi regerado/atualizado nesta sessão,
+    `clinica-sorriso-vivo-jundiai` **não foi tocado em nenhum momento**
+    (mesma decisão do R5: cliente real, confirmar com o Lucas/Jorge antes
+    de mexer).
+17. **`llms.txt` de `torrez-desentupidora` no VPS de teste tem texto
+    fictício de outro nicho vazando** ("Hidroponto"/"Goiânia" em vez de
+    Torrez/Jundiaí, nas descrições de Contato/Sobre) — conteúdo de
+    demonstração já documentado no `projeto.md` do cliente como
+    "autorizado só para teste, NÃO publicar sem substituir". Antes ficava
+    invisível porque o `llms.txt` saía quase vazio (erro 56); agora que
+    reflete texto real, o resíduo apareceu. Corrigir é trabalho de Fase 3
+    desse cliente (reescrever Contato/Sobre com texto real), não deste
+    handoff.
 
 ## Suíte Playwright
 
@@ -564,29 +908,48 @@ real aqui, este arquivo é distribuído). **Pedir autorização ao responsável
 antes de qualquer ação no VPS** — leitura conta (testar conexão SSH,
 listar clientes hospedados), não só alteração — vale mesmo depois do R5.
 
-**Estado atual (27/09/2026), depois do R5:**
+**Estado atual (29/09/2026), depois do Relatório de Testes 4:**
 - `/opt/linkflow` — instalação multicliente atual, motor de referência e
-  scripts sincronizados com o repositório (feito no R5). É daqui que
-  `novo-cliente.sh` copia para cada cliente novo.
+  scripts sincronizados com o repositório **até o commit `0ce3b93`
+  (27/09/2026)**. As correções do Relatório de Testes 4 (commits
+  `1062d02` em diante) **não foram sincronizadas com o motor de
+  referência do VPS** — só os 5 arquivos da Fase 7/erro 56 foram levados
+  manualmente pro cliente `torrez-desentupidora` (ver seção "Depois do
+  Relatório de Testes 4" acima). Se for criar um cliente novo com
+  `novo-cliente.sh` a partir daqui, ele nasce sem as correções de Fase
+  0-9 — sincronizar `/opt/linkflow/_astro`, `/opt/linkflow/painel` e
+  `/opt/linkflow/scripts` com o repositório antes, do mesmo jeito que o
+  R5 fez.
 - `/opt/linkflow/clientes/torrez-desentupidora` — `LINKFLOW_SLUG:
   torrez-desentupidora`, criado do zero no R5, site em
   `teste.turboblog.com.br`, painel em `painel.teste.turboblog.com.br`
   (credenciais em `credenciais/vps-teste.md` — trocar antes de qualquer uso
   real). **Layout: `tema-06`** (trocado de `tema-04` no mesmo
-  dia — o Lucas achou que combinava mais com uma desentupidora; `tema-06` já
-  cita "desentupidora" na própria descrição do nicho e tem "Desentupimento"
-  como um dos serviços de demonstração). Conteúdo é o real do `projeto.md`
-  (NAP, 5 serviços reais, `site.paginas.home` com título/meta reais), mas a
-  prosa fixa do tema (H1 "Caça vazamento e encanador", "Treze anos
-  procurando água onde ninguém vê", FAQ, números da operação) ainda é de
-  demonstração — Fase 3 nunca rodou para este cliente. **Importante:**
-  trocar de tema recria a pasta `_astro` inteira do cliente — um post
-  publicado antes da troca (`quanto-tempo-leva-desentupimento-de-esgoto`)
-  foi perdido nessa troca e teve que ser republicado depois.
+  dia do R5 — o Lucas achou que combinava mais com uma desentupidora;
+  `tema-06` já cita "desentupidora" na própria descrição do nicho e tem
+  "Desentupimento" como um dos serviços de demonstração). Conteúdo é o
+  real do `projeto.md` (NAP, 5 serviços reais, `site.paginas.home` com
+  título/meta reais), mas a prosa fixa do tema (H1 "Caça vazamento e
+  encanador", "Treze anos procurando água onde ninguém vê", FAQ, números
+  da operação) ainda é de demonstração — Fase 3 nunca rodou para este
+  cliente, e o `llms.txt` real (28/09/2026) deixou esse resíduo visível
+  (ver pendência 17). **Banner de cookies e `llms.txt` atualizados
+  manualmente em 28/09/2026** (Fase 7 + erro 56) — o resto do motor deste
+  cliente ainda está na versão do R5 (27/09/2026), sem as correções de
+  Fase 0-6/8-9 do Relatório de Testes 4.
+- `/opt/linkflow/clientes/clinica-sorriso-serra-do-japi` — cliente usado
+  como referência de teste real durante o Relatório de Testes 4
+  ("primeira sessão com site de verdade no ar e painel em uso real"),
+  Jundiaí. Existe no VPS (painel + site publicados, confirmado via SSH em
+  29/09/2026) mas **sem detalhe documentado neste handoff** — não foi
+  criado nem tocado nesta sessão de correções, só usado como alvo de
+  teste manual pelo Lucas. Confirmar com o Lucas/Jorge o que esse cliente
+  é antes de mexer nele.
 - `/opt/linkflow/clientes/clinica-sorriso-vivo-jundiai` — cliente real,
   criado numa sessão anterior não documentada neste handoff, publicado em
-  `dentista.turboblog.com.br`. **Não foi tocado no R5.** Confirmar com o
-  Lucas/Jorge o que é esse cliente antes de mexer nele.
+  `dentista.turboblog.com.br`. **Não foi tocado nem no R5 nem no
+  Relatório de Testes 4.** Confirmar com o Lucas/Jorge o que esse cliente
+  é antes de mexer nele.
 - O modelo antigo de um único cliente (`/opt/linkflow-teste`) foi
   **removido** no R5 — não existe mais.
 
