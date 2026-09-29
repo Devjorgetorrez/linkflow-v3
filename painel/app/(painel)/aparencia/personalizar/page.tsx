@@ -338,8 +338,8 @@ export default function PersonalizarPage() {
                 <div className="rounded-[var(--radius)] border border-line bg-surface-2 p-3">
                   <p className="mb-2.5 text-[11.5px] font-medium text-ink">Estrutura do site</p>
                   <p className="mb-3 text-[10.5px] text-ink-muted">
-                    Definido pelo LinkFlow. Para alterar o prefixo do blog é necessário mover todos os
-                    posts e emitir 301s correspondentes — use Configurações → Arquitetura de informação.
+                    Definido pelo LinkFlow. Para alterar a estrutura de endereços é necessário mover
+                    todos os posts e emitir 301s correspondentes — peça ao agente (Claude Code).
                   </p>
                   <div className="space-y-1.5">
                     {[

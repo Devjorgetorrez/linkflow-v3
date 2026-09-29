@@ -23,6 +23,7 @@ import { useSession, signOut } from "next-auth/react";
 import { paginaPermitida } from "@/lib/permissoes-paginas";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
+import pkg from "@/package.json";
 
 /* ------------------------------------------------------------------ */
 /* Estrutura de navegação                                               */
@@ -592,6 +593,11 @@ export function Sidebar() {
 
       {/* Rodapé */}
       <div className="shrink-0 border-t border-white/15 px-3 py-3">
+        {/* Versão do painel — atualizada manualmente a cada rodada de correção
+            (package.json). Permite ver de cara se um VPS está rodando código
+            desatualizado em relação ao repositório, sem precisar de SSH
+            (erro 52, Relatório de Testes 5). */}
+        <p className="px-1 pb-2 text-[10px] text-white/35">v{pkg.version}</p>
         <Link
           href="/perfil"
           className="flex items-center gap-2.5 rounded-[var(--radius)] px-1 py-1 transition-colors hover:bg-white/10"

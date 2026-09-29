@@ -12,6 +12,7 @@ import { lerDados, salvarDados } from "@/lib/dados";
 import { getSiteSlug } from "@/lib/fs";
 import { getSiteDir } from "@/lib/build-estado";
 import { urlPost } from "@/lib/urls-publicas";
+import { hojeISOBrasil } from "@/lib/data-br";
 import type { Redirect } from "@/mock/types";
 
 export function lerRedirects(): Redirect[] {
@@ -97,7 +98,7 @@ export function registrarRenomeacao(slugAntigo: string, slugNovo: string): Resul
   }
 
   // 3) o redirect do endereço antigo (um só: substitui o que existir, inclusive 410)
-  const hoje = new Date().toISOString().slice(0, 10);
+  const hoje = hojeISOBrasil();
   const idx = lista.findIndex((r) => r.origem === origem);
   const novo: Redirect = {
     id: idx >= 0 ? lista[idx].id : `r${Date.now()}`,

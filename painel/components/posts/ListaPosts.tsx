@@ -83,16 +83,22 @@ function formatarData(iso: string, curto = false): string {
   if (!iso) return "—";
   const d = new Date(iso);
   if (isNaN(d.getTime())) return "—";
+  // A data gravada é só AAAA-MM-DD (sem hora) — new Date() lê isso como
+  // meia-noite UTC. Formatar sem timeZone usa o fuso do navegador: um
+  // visitante no Brasil (UTC-3) via a data "voltar" um dia (erro 82,
+  // Relatório de Testes 5). timeZone: "UTC" mantém o dia gravado.
   if (curto) {
     return new Intl.DateTimeFormat("pt-BR", {
       day: "2-digit",
       month: "short",
       year: "numeric",
+      timeZone: "UTC",
     }).format(d);
   }
   return new Intl.DateTimeFormat("pt-BR", {
     year: "numeric",
     month: "long",
+    timeZone: "UTC",
   }).format(d);
 }
 
@@ -715,7 +721,7 @@ export function ListaPosts() {
         }
         const msg =
           `${total} ${total === 1 ? "conteúdo linka" : "conteúdos linkam"} para ${alvos.length === 1 ? "este artigo" : "estes artigos"}:\n${linhas.join("\n")}\n\n` +
-          "Depois de mover, esses links ficarão quebrados. Corrija-os ou crie um redirecionamento em SEO › Redirects.\n\nMover para a lixeira mesmo assim?";
+          "Depois de mover, esses links ficarão quebrados. Corrija-os ou peça ao agente (Claude Code) para criar um redirecionamento.\n\nMover para a lixeira mesmo assim?";
         if (!window.confirm(msg)) return;
       }
     }

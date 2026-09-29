@@ -197,7 +197,7 @@ export async function PATCH(
         }
       } catch (err) {
         console.error("[api/posts PATCH] redirecionamento:", err);
-        avisoRedirect = "O post foi renomeado, mas não consegui criar o redirecionamento do endereço antigo. Crie em SEO > Redirecionamentos.";
+        avisoRedirect = "O post foi renomeado, mas não consegui criar o redirecionamento do endereço antigo. Peça ao agente (Claude Code) para criar.";
       }
     }
 

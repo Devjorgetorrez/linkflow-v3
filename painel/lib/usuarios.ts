@@ -60,7 +60,7 @@ export interface Usuario {
   iniciais?: string;
 }
 
-export interface UsuarioPublico extends Omit<Usuario, "senhaHash"> {}
+export type UsuarioPublico = Omit<Usuario, "senhaHash">;
 
 export function getUsuariosPath(): string {
   // Na arquitetura multi-cliente, cada cliente tem seu usuarios.json isolado

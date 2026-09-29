@@ -20,6 +20,39 @@ function todasUrls(itens: ItemMenu[]): string[] {
   return itens.flatMap((i) => [i.url, ...(i.filhos ? todasUrls(i.filhos) : [])]);
 }
 
+interface ItemNavApi {
+  label: string;
+  href: string;
+  filhos?: ItemNavApi[];
+}
+interface ColunaFooterApi {
+  titulo: string;
+  itens: ItemNavApi[];
+}
+interface ColunaFooterUI {
+  titulo: string;
+  itens: ItemMenu[];
+}
+
+function navApiParaItemMenu(item: ItemNavApi, id: string): ItemMenu {
+  return {
+    id,
+    label: item.label,
+    url: item.href,
+    filhos: item.filhos?.map((f, i) => navApiParaItemMenu(f, `${id}-${i}`)),
+  };
+}
+
+function itemMenuParaNavApi(item: ItemMenu): ItemNavApi {
+  return {
+    label: item.label,
+    href: item.url,
+    ...(item.filhos && item.filhos.length > 0
+      ? { filhos: item.filhos.map(itemMenuParaNavApi) }
+      : {}),
+  };
+}
+
 /* ------------------------------------------------------------------ */
 /* Form "Adicionar item"                                                */
 /* ------------------------------------------------------------------ */
@@ -264,6 +297,7 @@ function PainelMenu({
 export default function MenusPage() {
   const { menus: menusMock, atualizarMenu, paginas } = useStore();
   const [menus, setMenus] = useState(menusMock);
+  const [footerColunas, setFooterColunas] = useState<ColunaFooterUI[]>([]);
 
   const paginasPublicadas = paginas
     .filter((p) => p.status === "publicado")
@@ -299,6 +333,15 @@ export default function MenusPage() {
                 })),
               })),
             }] : []);
+
+        setFooterColunas(
+          (data.navFooter ?? []).map((coluna: ColunaFooterApi, colIdx: number) => ({
+            titulo: coluna.titulo,
+            itens: coluna.itens.map((item, itemIdx) =>
+              navApiParaItemMenu(item, `footer-${colIdx}-${itemIdx}`),
+            ),
+          })),
+        );
       })
       .catch(console.error);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -330,6 +373,38 @@ export default function MenusPage() {
     }
   }
 
+  // Persistir uma coluna do rodapé — sempre envia TODAS as colunas (a API
+  // substitui o array inteiro), nunca só a que mudou, senão apagaria as
+  // outras colunas no config.
+  function atualizarColunaFooter(colIdx: number, novosItens: ItemMenu[]) {
+    setFooterColunas((prev) => {
+      const next = prev.map((c, i) => (i === colIdx ? { ...c, itens: novosItens } : c));
+      fetch("/api/menus", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          navFooter: next.map((c) => ({
+            titulo: c.titulo,
+            itens: c.itens.map(itemMenuParaNavApi),
+          })),
+        }),
+      }).catch(console.error);
+      return next;
+    });
+  }
+
+  function removerItemFooter(colIdx: number, itemId: string) {
+    const coluna = footerColunas[colIdx];
+    if (!coluna) return;
+    atualizarColunaFooter(colIdx, coluna.itens.filter((i) => i.id !== itemId));
+  }
+
+  function adicionarItemFooter(colIdx: number, item: ItemMenu) {
+    const coluna = footerColunas[colIdx];
+    if (!coluna) return;
+    atualizarColunaFooter(colIdx, [...coluna.itens, item]);
+  }
+
   function toggleVisivel(itemId: string) {
     setVisibilidade((prev) => {
       const next = new Map(prev);
@@ -356,8 +431,12 @@ export default function MenusPage() {
     }
   }
 
-  /* páginas sem menu */
-  const urlsNoMenus = new Set(menus.flatMap((m) => todasUrls(m.itens)));
+  /* páginas sem menu — considera cabeçalho E rodapé, senão acusa falso
+     "sem menu" pra página que só está linkada no rodapé */
+  const urlsNoMenus = new Set([
+    ...menus.flatMap((m) => todasUrls(m.itens)),
+    ...footerColunas.flatMap((c) => todasUrls(c.itens)),
+  ]);
   const paginasSemMenu = paginasPublicadas.filter((p) => !urlsNoMenus.has(p.url));
 
   return (
@@ -401,6 +480,28 @@ export default function MenusPage() {
             />
           ))}
         </div>
+
+        {/* rodapé */}
+        {footerColunas.length > 0 && (
+          <div className="grid gap-5 lg:grid-cols-2">
+            {footerColunas.map((coluna, colIdx) => (
+              <PainelMenu
+                key={`footer-${colIdx}`}
+                menu={{
+                  id: `footer-${colIdx}`,
+                  nome: coluna.titulo,
+                  local: "Rodapé",
+                  itens: coluna.itens,
+                }}
+                paginasPublicadas={paginasPublicadas}
+                visibilidade={visibilidade}
+                onToggleVisivel={toggleVisivel}
+                onRemoverItem={(_menuId, itemId) => removerItemFooter(colIdx, itemId)}
+                onAdicionarItem={(_menuId, item) => adicionarItemFooter(colIdx, item)}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

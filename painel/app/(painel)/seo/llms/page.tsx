@@ -74,9 +74,16 @@ function selecionarAutomatico(
 ): Selecao {
   const excluidos: ItemExcluido[] = [];
 
-  // Páginas: publicadas, sem equivalente noindex (Pagina não tem campo noindex)
+  // Páginas: publicadas e não-noindex no HTML real (p.real vem do último
+  // build/prévia — ausente só em página de demonstração, nunca tratado como
+  // noindex por omissão).
   const paginasPublicadas = paginas.filter((p) => p.status === "publicado");
-  const paginasOrdenadas = [...paginasPublicadas].sort(
+  const paginasNoindex = paginasPublicadas.filter((p) => p.real?.noindex === true);
+  paginasNoindex.forEach((p) =>
+    excluidos.push({ titulo: p.titulo, motivo: "noindex" }),
+  );
+  const paginasIndexaveis = paginasPublicadas.filter((p) => p.real?.noindex !== true);
+  const paginasOrdenadas = [...paginasIndexaveis].sort(
     (a, b) => (TIPO_PRIORIDADE[a.tipo] ?? 9) - (TIPO_PRIORIDADE[b.tipo] ?? 9),
   );
   const paginasSel = paginasOrdenadas.slice(0, LIMITE);
@@ -276,6 +283,14 @@ export default function LlmsPage() {
         if (data.ok && data.conteudo) {
           setLlms(data.conteudo);
           setAtivo(data.conteudo.length > 0);
+          // A linha "> resumo" é o mesmo formato que gerarLlms() escreve
+          // (linha 148) — sem isto, a caixa "Resumo do negócio" ficava
+          // sempre vazia mesmo com o arquivo publicado tendo resumo real
+          // (erro 78, Relatório de Testes 5).
+          const linhaResumo = data.conteudo
+            .split("\n")
+            .find((l: string) => l.startsWith("> "));
+          if (linhaResumo) setResumo(linhaResumo.slice(2).trim());
         }
       })
       .catch(console.error);

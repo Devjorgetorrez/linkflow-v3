@@ -248,7 +248,11 @@ export default function CookiesPage() {
           modalDescricao: cb.modalDescricao ?? prev.modalDescricao,
           posicaoH: cb.posicaoH ?? prev.posicaoH,
           posicaoV: cb.posicaoV ?? prev.posicaoV,
-          registroConsentimento: cb.registroConsentimento ?? prev.registroConsentimento,
+          // Ausente no config = nunca foi salvo = registro DESLIGADO no site
+          // real (mesmo padrão do motor). Nunca cair no valor local anterior
+          // aqui — ele pode ser só o mock inicial, e mostraria "ligado" no
+          // painel enquanto o site publicado está desligado (erro 71).
+          registroConsentimento: cb.registroConsentimento ?? false,
         }));
       })
       .catch(console.error)
@@ -288,7 +292,7 @@ export default function CookiesPage() {
             <Info size={14} className="mt-0.5 shrink-0 text-[var(--ink-muted)]" />
             <p className="text-[12px] leading-relaxed text-[var(--ink-muted)]">
               <strong className="text-[var(--ink)]">Definido pela LGPD e pelo guia ANPD (out/2022):</strong>{" "}
-              Botões "Recusar todos" e "Aceitar todos" sempre presentes com peso visual idêntico.
+              Botões &quot;Recusar todos&quot; e &quot;Aceitar todos&quot; sempre presentes com peso visual idêntico.
               Nenhuma categoria não necessária marcada por padrão.
               Recusa possível em um clique.
               Estes itens não são configuráveis.
@@ -493,7 +497,7 @@ export default function CookiesPage() {
                 <AlertTriangle size={13} className="mt-0.5 shrink-0 text-[var(--danger)]" />
                 <p className="text-[11.5px] leading-relaxed text-[var(--danger)]">
                   Sem registro, não há como comprovar o consentimento obtido, e a prova cabe ao
-                  controlador (art. 38, LGPD). Mantenha ligado exceto se outro sistema registra.
+                  controlador (art. 8º, §2º, LGPD). Mantenha ligado exceto se outro sistema registra.
                 </p>
               </div>
             )}
@@ -505,13 +509,13 @@ export default function CookiesPage() {
             <ul className="space-y-1 text-[11.5px] text-[var(--ink-muted)]">
               <li>• O banner é real: script próprio do motor (sem biblioteca externa), publicado em todas as páginas do site.</li>
               <li>• Só aparece quando há algo para consentir — cookie não essencial cadastrado (Analíticos/Marketing/Funcionais) ou Google Analytics/GTM/Meta Pixel configurado em Integrações. Sem isso, não aparece.</li>
-              <li>• "Aceitar" e "Rejeitar" têm o mesmo peso visual e nenhuma categoria vem marcada por padrão.</li>
-              <li>• GA4/GTM/Meta Pixel só carregam depois do "Aceitar" (ou da categoria correspondente em "Personalizar") — nunca antes da escolha, e "Rejeitar" mantém tudo desligado.</li>
+              <li>• &quot;Aceitar&quot; e &quot;Rejeitar&quot; têm o mesmo peso visual e nenhuma categoria vem marcada por padrão.</li>
+              <li>• GA4/GTM/Meta Pixel só carregam depois do &quot;Aceitar&quot; (ou da categoria correspondente em &quot;Personalizar&quot;) — nunca antes da escolha, e &quot;Rejeitar&quot; mantém tudo desligado.</li>
               <li>• A escolha fica salva no navegador do visitante por até 6 meses; passado esse prazo, o banner volta a aparecer.</li>
-              <li>• Link "Preferências de cookies" no rodapé, em todas as páginas, para o visitante rever a escolha.</li>
+              <li>• Link &quot;Preferências de cookies&quot; no rodapé, em todas as páginas, para o visitante rever a escolha.</li>
               <li>• Título, descrição, introdução do modal de preferências e a posição do banner (esquerda/centro/direita, topo/centro da tela/rodapé) configurados aqui têm efeito real no site publicado. Sem nada configurado, o banner sai igual a antes (texto e faixa no rodapé padrão).</li>
-              <li>• Com "Registro de consentimento" ligado, cada clique em Aceitar/Rejeitar/Salvar preferências grava data/hora, a escolha e as categorias no servidor (não há tela de listagem desses registros ainda — próximo passo).</li>
-              <li>• Ainda não implementado nesta tela: a aba "Modal preferências" ao lado é só uma prévia do visual — no site publicado, "Personalizar" sempre abre o mesmo painel dentro do banner (nunca uma janela separada com véu escurecendo a página), mesmo quando a posição escolhida é "Centro da tela".</li>
+              <li>• Com &quot;Registro de consentimento&quot; ligado, cada clique em Aceitar/Rejeitar/Salvar preferências grava data/hora, a escolha e as categorias no servidor — visível em Privacidade → Consentimentos.</li>
+              <li>• Ainda não implementado nesta tela: a aba &quot;Modal preferências&quot; ao lado é só uma prévia do visual — no site publicado, &quot;Personalizar&quot; sempre abre o mesmo painel dentro do banner (nunca uma janela separada com véu escurecendo a página), mesmo quando a posição escolhida é &quot;Centro da tela&quot;.</li>
             </ul>
           </div>
 

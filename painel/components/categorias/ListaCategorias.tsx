@@ -153,7 +153,7 @@ function ModalExclusao({
           <div>
             <p className="text-[13px] font-semibold text-ink">Excluir categoria</p>
             <p className="mt-0.5 text-[12px] text-ink-muted">
-              Tem certeza que deseja excluir <strong className="text-ink">"{nome}"</strong>?
+              Tem certeza que deseja excluir <strong className="text-ink">&quot;{nome}&quot;</strong>?
             </p>
           </div>
         </div>

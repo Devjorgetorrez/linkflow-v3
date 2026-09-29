@@ -115,7 +115,7 @@ function CardGSC() {
           Código de verificação
         </label>
         <p className="mb-2 text-[12px] text-ink-muted">
-          No Search Console, escolha o método "Tag HTML" e cole aqui só o valor do atributo{" "}
+          No Search Console, escolha o método &quot;Tag HTML&quot; e cole aqui só o valor do atributo{" "}
           <code className="font-mono text-[11px]">content</code> (sem o resto da tag).
         </p>
         <Entrada

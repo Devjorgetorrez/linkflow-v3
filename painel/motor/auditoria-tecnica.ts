@@ -32,7 +32,11 @@ const URLS_RAIZ = new Set(["/", "/blog", "/servicos", "/planos", "/sobre", "/con
 function hrefParaNo(ix: Indexavel): string {
   if (ix.tipo === "post") return `/posts/${ix.node_id.replace("post-", "")}`;
   if (ix.tipo === "categoria") return "/categorias";
-  if (ix.tipo === "autor") return "/autores";
+  // "Autor" não tem tela própria — é o campo de autoria do usuário
+  // (lib/store.tsx, app/api/autores/route.ts). A credencial se edita em
+  // Usuários, não numa rota "/autores" que nunca existiu (erro 74,
+  // Relatório de Testes 5).
+  if (ix.tipo === "autor") return `/usuarios/${ix.node_id.replace("autor-", "")}`;
   if (ix.node_id.startsWith("pagina-")) return `/paginas/${ix.node_id.slice("pagina-".length)}`;
   return "/paginas";
 }
@@ -560,7 +564,7 @@ export function auditarTecnica(
         tipo: "link_quebrado_real",
         severidade: "prejudica",
         titulo: "Link interno quebrado",
-        detalhe: `"${nome}" (${origem}) tem ${alvos.length} link${alvos.length > 1 ? "s" : ""} para endereços que não existem no site: ${alvos.slice(0, 5).join(", ")}${alvos.length > 5 ? ` e mais ${alvos.length - 5}` : ""}. Corrija o link na página ou crie um redirecionamento em SEO > Redirecionamentos.`,
+        detalhe: `"${nome}" (${origem}) tem ${alvos.length} link${alvos.length > 1 ? "s" : ""} para endereços que não existem no site: ${alvos.slice(0, 5).join(", ")}${alvos.length > 5 ? ` e mais ${alvos.length - 5}` : ""}. Corrija o link na página ou peça ao agente (Claude Code) para criar um redirecionamento.`,
         node_ids: ix ? [ix.node_id] : [],
         href_conserto: ix ? hrefParaNo(ix) : "",
         procedencia: "calculado_no_build",
@@ -642,7 +646,8 @@ export function auditarTecnica(
         titulo: "Autor sem credencial profissional preenchida",
         detalhe: `"${ix.h1}" não tem Conselho e Registro preenchidos. Para conteúdo de saúde, isso enfraquece E-E-A-T.`,
         node_ids: [ix.node_id],
-        href_conserto: "/autores",
+        href_conserto: `/usuarios/${ix.node_id.replace("autor-", "")}`,
+        label_conserto: "Editar credencial",
         procedencia: "calculado_no_build",
         badge_tipo: "autor",
       });

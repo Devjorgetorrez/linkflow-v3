@@ -406,7 +406,7 @@ export function atualizarElementoNaLista(s: string, caminho: string[], idx: numb
 /** Acrescenta um elemento (objeto de strings) ao fim da lista em `caminho`; cria a lista se faltar. */
 export function acrescentarElementoNaLista(s: string, caminho: string[], obj: Record<string, string>): string {
   const item = renderValor(obj, "");
-  let a = arrayEm(s, caminho);
+  const a = arrayEm(s, caminho);
   if (!a) {
     s = definirValorNoCaminho(s, caminho, [obj]).s;
     return s;

@@ -172,6 +172,15 @@ export default function IdentidadePage() {
     setTipos((l) => (l.includes(valor) || l.length >= MAX_TIPOS_SCHEMA ? l : [...l, valor]));
   }
 
+  // Conselhos profissionais de saúde (CFO, CFM etc.) costumam proibir preço em
+  // publicidade — avisar em vez de oferecer o campo como se fosse neutro
+  // (erro 83, Relatório de Testes 5).
+  const TIPOS_SAUDE = useMemo(
+    () => new Set(GRUPOS_TIPOS_SCHEMA.find((g) => g.grupo === "Saúde")?.tipos.map((t) => t.value) ?? []),
+    [],
+  );
+  const segmentoSaudeRegulada = tipos.some((t) => TIPOS_SAUDE.has(t));
+
   const jsonLd = useMemo(
     () =>
       gerarJsonLd({
@@ -438,6 +447,14 @@ export default function IdentidadePage() {
                 placeholder="$$ ou R$50–R$200"
               />
               <MsgErro texto={erros.faixaPreco} />
+              {segmentoSaudeRegulada && (
+                <p className="mt-1 flex items-start gap-1.5 text-[11px] text-[var(--danger)]">
+                  <AlertTriangle size={11} className="mt-0.5 shrink-0" />
+                  O conselho profissional da sua área (ex.: CFO para dentistas, CFM para
+                  médicos) costuma proibir divulgar preço em publicidade. Confirme antes de
+                  preencher este campo.
+                </p>
+              )}
             </Campo>
           </div>
 

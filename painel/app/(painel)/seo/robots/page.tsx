@@ -650,7 +650,7 @@ export default function RobotsPage() {
                       Conflito noindex:
                     </span>{" "}
                     A página{" "}
-                    <span className="font-medium">"{a.titulo}"</span> está marcada
+                    <span className="font-medium">&quot;{a.titulo}&quot;</span> está marcada
                     para não aparecer na busca, mas o caminho{" "}
                     <code className="rounded bg-[var(--surface)] px-1 font-mono text-[11px]">
                       {a.path}

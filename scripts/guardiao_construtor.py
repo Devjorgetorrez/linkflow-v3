@@ -604,8 +604,10 @@ def verificar_saida(slug, fase="saida"):
         if len(posts) == 0:
             avisos.append("Nenhum post criado — blog estara vazio (ok para sites novos)")
 
-        # Verificar se o conteudo nao e generico
-        for md in servicos[:3]:  # checar os 3 primeiros
+        # Verificar se o conteudo nao e generico — todos os arquivos, nao so
+        # os 3 primeiros (checar so 3 de 15 deixava passar 12 sem checagem
+        # nenhuma; achado real, erro 41 do Relatorio de Testes 5).
+        for md in servicos:
             texto = md.read_text(encoding="utf-8", errors="ignore")
             genericos = ["lorem ipsum", "nome do servico", "sua cidade", "[cidade]", "[servico]"]
             if any(g in texto.lower() for g in genericos):

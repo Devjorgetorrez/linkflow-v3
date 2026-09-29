@@ -18,11 +18,12 @@ import { slugDoCategoria } from "@/lib/sync-categorias";
 import type { Ator } from "@/lib/auth";
 import type { Usuario } from "@/lib/usuarios";
 import type { Categoria } from "@/mock/types";
+import { hojeISOBrasil } from "@/lib/data-br";
 
 const STATUS_ACEITOS = ["publicado", "pronto", "rascunho", "revisao", "revisão", "agendado"];
 
 export function hojeISO(): string {
-  return new Date().toISOString().slice(0, 10);
+  return hojeISOBrasil();
 }
 
 /** Erro de validação (mensagem em português + status HTTP), ou null se estiver tudo certo. */

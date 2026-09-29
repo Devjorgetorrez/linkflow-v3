@@ -58,6 +58,24 @@ export default function SitemapPage() {
       .catch(console.error);
   }, []);
 
+  // Contagem REAL: o sitemap.xml publicado não sai deste cálculo — é gerado
+  // por um hook separado no build (_astro/integracoes/sitemap-canonico.mjs,
+  // que varre dist/**/index.html). As duas fontes podem divergir (erro 79,
+  // Relatório de Testes 5); em vez de confiar só no cálculo daqui, buscamos
+  // o arquivo real publicado e avisamos se os números não baterem.
+  const [totalUrlsPublicado, setTotalUrlsPublicado] = useState<number | null>(null);
+  useEffect(() => {
+    if (!DOMAIN) return;
+    fetch(`https://${DOMAIN}/sitemap.xml`, { cache: "no-store" })
+      .then((r) => (r.ok ? r.text() : null))
+      .then((texto) => {
+        if (texto == null) return setTotalUrlsPublicado(null);
+        const n = (texto.match(/<loc>/g) ?? []).length;
+        setTotalUrlsPublicado(n);
+      })
+      .catch(() => setTotalUrlsPublicado(null));
+  }, [DOMAIN]);
+
   // Deriving sitemap entries from indexaveis — the single source of truth
   const { entradas, totalUrls, exclNoindex, exclTaxonomia } = useMemo(() => {
     const indexaveis = gerarIndexaveis({ posts, paginas, categorias, autores, dominio: DOMAIN });
@@ -157,6 +175,20 @@ export default function SitemapPage() {
           </div>
         </div>
 
+        {/* ── Divergência com o sitemap.xml real ──────────────────── */}
+        {totalUrlsPublicado !== null && totalUrlsPublicado !== totalUrls && (
+          <div className="flex items-start gap-2 rounded-[var(--radius)] border border-[#f59e0b]/40 bg-[#f59e0b]/8 px-4 py-3">
+            <AlertTriangle size={14} className="mt-0.5 shrink-0 text-[#d97706]" />
+            <p className="text-[12px] text-[#b45309]">
+              Esta tela calcula {totalUrls} URLs, mas o sitemap.xml publicado
+              tem {totalUrlsPublicado}. As duas fontes podem divergir porque o
+              arquivo real é gerado por um passo separado do build a partir do
+              HTML final — o número abaixo é o calculado aqui, não
+              necessariamente o que está no ar agora.
+            </p>
+          </div>
+        )}
+
         {/* ── Contadores derivados do build ──────────────────────── */}
         <div className="grid grid-cols-3 gap-3">
           {[
@@ -184,11 +216,13 @@ export default function SitemapPage() {
               O lastmod vem da data real de atualização — datas falsas fazem o Google parar de confiar no lastmod do site inteiro.
             </p>
             <p>
-              Implementação: o sitemap sai da mesma fonte que a Visão geral SEO, via{" "}
-              <code className="rounded bg-[var(--surface)] px-1 font-mono text-[11px]">@astrojs/sitemap</code>{" "}
-              com <code className="rounded bg-[var(--surface)] px-1 font-mono text-[11px]">filter</code> e{" "}
-              <code className="rounded bg-[var(--surface)] px-1 font-mono text-[11px]">serialize</code>.
-              Um arquivo único até 1.000 URLs.
+              Implementação: o arquivo publicado é gerado por um passo próprio do
+              build (<code className="rounded bg-[var(--surface)] px-1 font-mono text-[11px]">sitemap-canonico.mjs</code>),
+              que varre o HTML final já gerado — não a biblioteca{" "}
+              <code className="rounded bg-[var(--surface)] px-1 font-mono text-[11px]">@astrojs/sitemap</code>.
+              Os números desta tela vêm de um cálculo próprio sobre o
+              conteúdo (não leem o arquivo publicado) — por isso o aviso
+              acima quando os dois não batem. Um arquivo único até 1.000 URLs.
             </p>
           </div>
         </div>

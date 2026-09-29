@@ -183,7 +183,7 @@ de verdade no ar e painel em uso real (não só build/API isolados). **Todas as
 10 fases concluídas, os 38 erros corrigidos**, commits abaixo.
 
 ### Fase 0 — Contenção de exposição e vazamento (commit `1062d02`)
-Senha literal exposta no `HANDOFF.md` (`[SENHA-REMOVIDA]`) e IP/porta SSH reais
+Senha literal exposta no `HANDOFF.md` e IP/porta SSH reais
 movidos para fora do documento distribuído (era a **terceira** ocorrência do
 mesmo tema — Rel. 2, erros 4 e 8); `robots.txt`/`noindex` próprios do painel
 (antes o painel inteiro era indexável); `gerar_excel_fase2.py` parou de usar

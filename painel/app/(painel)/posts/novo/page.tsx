@@ -1,45 +1,78 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useStore } from "@/lib/store";
+import { Botao, Campo, Entrada } from "@/components/ui";
+import { TITULO_MIN, TITULO_MAX } from "@/lib/posts-regras";
 
 /**
- * Cria o post NO SERVIDOR (já válido: título provisório, rascunho, data e
- * autor) e só então abre o editor no endereço real do arquivo. Nunca abre o
- * editor de um post que não existe.
+ * Pede o título ANTES de criar o post no servidor — o rascunho só nasce em
+ * disco quando o usuário confirma, não ao simplesmente abrir esta tela.
+ * Antes, "Novo Post" criava o arquivo já no useEffect de montagem: um clique
+ * sem intenção de escrever (ou navegar de volta rápido) deixava um rascunho
+ * "sem título" permanente na lista (erro 81, Relatório de Testes 5).
+ *
+ * Cria NO SERVIDOR (já válido: título, rascunho, data e autor) e só então
+ * abre o editor no endereço real do arquivo — nunca abre o editor de um
+ * post que não existe.
  */
 export default function NovoPostPage() {
   const { criarPost } = useStore();
   const router = useRouter();
-  const iniciado = useRef(false);
+  const [titulo, setTitulo] = useState("");
+  const [criando, setCriando] = useState(false);
   const [erro, setErro] = useState("");
 
-  useEffect(() => {
-    if (iniciado.current) return;
-    iniciado.current = true;
-    criarPost().then((r) => {
-      if (r.ok) router.replace(`/posts/${r.slug}`);
-      else setErro(r.erro);
-    });
-  }, [criarPost, router]);
+  const tituloValido = titulo.trim().length >= TITULO_MIN;
 
-  if (erro) {
-    return (
-      <div className="flex h-full flex-col items-center justify-center gap-2">
-        <p className="text-[13px] font-medium text-danger">Não consegui criar o post.</p>
-        <p className="text-[12px] text-ink-muted">{erro}</p>
-        <Link href="/posts" className="text-[12.5px] text-primary hover:underline">
-          Voltar para a lista
-        </Link>
-      </div>
-    );
+  async function criar() {
+    if (!tituloValido || criando) return;
+    setCriando(true);
+    setErro("");
+    const r = await criarPost(titulo.trim());
+    if (r.ok) router.replace(`/posts/${r.slug}`);
+    else {
+      setErro(r.erro);
+      setCriando(false);
+    }
   }
 
   return (
     <div className="flex h-full items-center justify-center">
-      <p className="text-[13px] text-ink-muted">Criando post…</p>
+      <div className="w-full max-w-md space-y-4 px-6">
+        <div>
+          <h1 className="text-[15px] font-semibold text-ink">Novo artigo</h1>
+          <p className="mt-0.5 text-[12.5px] text-ink-muted">
+            O rascunho só é criado depois de você confirmar o título.
+          </p>
+        </div>
+
+        <Campo label="Título">
+          <Entrada
+            autoFocus
+            value={titulo}
+            onChange={(e) => setTitulo(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") criar();
+            }}
+            placeholder="Título do artigo"
+            maxLength={TITULO_MAX}
+          />
+        </Campo>
+
+        {erro && <p className="text-[12px] text-danger">{erro}</p>}
+
+        <div className="flex items-center gap-2">
+          <Botao variante="primario" onClick={criar} disabled={!tituloValido || criando}>
+            {criando ? "Criando…" : "Criar artigo"}
+          </Botao>
+          <Link href="/posts" className="text-[12.5px] text-ink-muted hover:text-ink">
+            Cancelar
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }

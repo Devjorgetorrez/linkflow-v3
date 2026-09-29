@@ -253,7 +253,7 @@ export function Topo() {
           <div className="absolute top-[34px] left-0 z-40 w-full overflow-hidden rounded-[var(--radius)] border border-line bg-surface-2 shadow-xl">
             {resultados.length === 0 ? (
               <p className="px-3 py-3 text-[11.5px] text-ink-muted">
-                Nada encontrado para "{busca}".
+                Nada encontrado para &quot;{busca}&quot;.
               </p>
             ) : (
               <ul>
@@ -368,7 +368,7 @@ export function Topo() {
                   <b>{e.campo}</b>: {e.mensagem}
                   {e.campo === "categoria" && (
                     categoriaRemovidaDe.has(e.arquivo) ? (
-                      <span className="ml-1.5 text-success">Removido — clique em "Atualizar o site" de novo.</span>
+                      <span className="ml-1.5 text-success">Removido — clique em &quot;Atualizar o site&quot; de novo.</span>
                     ) : (
                       <button
                         type="button"

@@ -255,6 +255,7 @@ export default function EditorPostPage() {
       : palavraChave;
 
   const siteInfo = useSiteInfo();
+  const { base: baseSite } = useBaseSite();
 
   /* Análises computadas */
   const totalPalavras = useMemo(() => contarPalavras(post?.corpo ?? ""), [post?.corpo]);
@@ -346,7 +347,6 @@ export default function EditorPostPage() {
 
   // URL plana: o artigo fica direto na raiz (/<slug>), nunca /blog/<slug>
   const urlPublica = `${dominio ? `https://${dominio}` : "https://seudominio.com.br"}${urlPost(post.slug || "sem-slug")}`;
-  const { base: baseSite } = useBaseSite();
   const urlVer = `${baseSite || (dominio ? `https://${dominio}` : "")}${urlPost(post.slug || "sem-slug")}`;
 
   /* Validação de publicação */
@@ -602,7 +602,7 @@ export default function EditorPostPage() {
                           <div className="mt-1.5 flex items-start gap-1.5 rounded-[var(--radius)] bg-danger/10 px-2.5 py-2 text-[11px] text-danger">
                             <AlertCircle size={12} className="mt-0.5 shrink-0" />
                             <span>
-                              Canibalização: <Link href={`/posts/${conflito.id}`} className="font-medium underline underline-offset-2 hover:no-underline">"{conflito.titulo}"</Link> já usa esta palavra-chave.
+                              Canibalização: <Link href={`/posts/${conflito.id}`} className="font-medium underline underline-offset-2 hover:no-underline">&quot;{conflito.titulo}&quot;</Link> já usa esta palavra-chave.
                             </span>
                           </div>
                         );

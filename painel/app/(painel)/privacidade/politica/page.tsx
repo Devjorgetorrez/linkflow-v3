@@ -215,7 +215,7 @@ function PolicyDocument({
           </p>
         )}
         <p className="mt-1">
-          <strong>Funcionalidade:</strong> incorporações de mapa e vídeo. Base legal: {baseLabelFor("consentimento")}.
+          <strong>Funcionalidade:</strong> incorporação de mapa (localização). Base legal: {baseLabelFor("consentimento")}.
         </p>
       </Section2>
 
@@ -253,13 +253,20 @@ function PolicyDocument({
       </Section2>
 
       <Section2 n="4" title="Compartilhamento com terceiros">
-        <p>Os dados podem ser compartilhados com:</p>
-        <ul className="list-disc ml-5 mt-2 space-y-1">
-          {integ.analiticos && <li><strong>Google LLC</strong> — Analytics e Google Ads (EUA)</li>}
-          {integ.marketing && <li><strong>Meta Platforms Inc.</strong> — Meta Pixel (EUA)</li>}
-          <li><strong>Resend Inc.</strong> — envio de e-mails dos formulários (EUA)</li>
-          <li><strong>Vercel Inc.</strong> — hospedagem do site (EUA)</li>
-        </ul>
+        {integ.analiticos || integ.marketing ? (
+          <>
+            <p>Os dados podem ser compartilhados com:</p>
+            <ul className="list-disc ml-5 mt-2 space-y-1">
+              {integ.analiticos && <li><strong>Google LLC</strong> — Analytics e Google Ads (EUA)</li>}
+              {integ.marketing && <li><strong>Meta Platforms Inc.</strong> — Meta Pixel (EUA)</li>}
+            </ul>
+          </>
+        ) : (
+          <p>
+            Site e formulários hospedados em servidor próprio deste negócio — sem
+            compartilhamento com terceiros no momento.
+          </p>
+        )}
         <p className="mt-2">Não vendemos dados pessoais a terceiros.</p>
       </Section2>
 

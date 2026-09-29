@@ -12,11 +12,12 @@ import {
   META_MAX, META_MIN, META_PROVISORIA_SERVICO, TITULO_MAX, TITULO_MIN, TITULO_PROVISORIO_SERVICO,
   metaValida, tituloValido,
 } from "@/lib/servicos-regras";
+import { hojeISOBrasil } from "@/lib/data-br";
 
 export interface ErroCampos { erro: string; status: 400 | 409 | 422 }
 
 export function hojeISO(): string {
-  return new Date().toISOString().slice(0, 10);
+  return hojeISOBrasil();
 }
 
 /** Um slug de serviço colide com QUALQUER coisa que more na raiz do site (outro serviço ou um post). */

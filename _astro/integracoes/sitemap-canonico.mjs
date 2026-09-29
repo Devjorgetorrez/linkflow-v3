@@ -113,7 +113,11 @@ function gerarLlmsBasico(dominioPrincipal, paginas) {
   const rotaPilar = rotaPilarM ? normalizarRota('/' + rotaPilarM[1].replace(/^\/+|\/+$/g, '')) : '/servicos'
   const servicos = slugsDaColecao('servicos')
 
-  const comTextoReal = paginas.filter(p => p.rota !== '/' && p.descricao)
+  // A home entra igual a qualquer outra página com meta description real —
+  // ela é a página mais importante do site, não fazia sentido ficar de fora
+  // (erro 84, Relatório de Testes 5). Só o resumo em `> descricao` (acima)
+  // é tratado à parte; a linha em "## Páginas" é sobre o texto da home em si.
+  const comTextoReal = paginas.filter(p => p.descricao)
   const paginasServico = comTextoReal.filter(p => servicos.has(p.rota.replace(/^\//, '')))
   const paginasGerais = comTextoReal.filter(p => !servicos.has(p.rota.replace(/^\//, '')) && p.rota !== rotaPilar)
 

@@ -105,6 +105,27 @@ def verificar(slug, arquivo):
             f"(nunca pode ir ao build): {'; '.join(sorted(set(instrucoes_redacao)))}"
         )
 
+    # 10c. Qualquer outro colchete com minuscula dentro — bloqueante. O check 10
+    # (aviso) so cobre placeholder de campo simples, TUDO MAIUSCULO (ex.:
+    # [TELEFONE]). Colchete com minuscula e prosa/instrucao, nao um campo a
+    # preencher — mesma classe do erro 41 (Relatorio de Testes 5): nota interna
+    # ("regra do CFO", orientacao pro redator) vazando pro texto publico porque
+    # nao batia com o regex estreito do check 10b. Generaliza sem tocar no
+    # mecanismo de placeholder [CAMPO] (esse e comportamento valido, CLAUDE.md
+    # regra 1 — nunca inventar dado).
+    # Exclui link markdown de verdade: "[texto do link](url)" tem minuscula
+    # dentro dos colchetes por natureza e nao e nota interna nenhuma.
+    outros_colchetes_minusculos = [
+        m for m in re.findall(r'\[[^\]]*[a-zà-ú][^\]]*\](?!\()', texto)
+        if m not in instrucoes_redacao
+    ]
+    if outros_colchetes_minusculos:
+        erros.append(
+            f"Colchete com texto em minuscula no corpo (nota interna ou instrucao "
+            f"vazando pro visitante, nunca pode ir ao build): "
+            f"{'; '.join(sorted(set(outros_colchetes_minusculos)))}"
+        )
+
     # 11. Palavras proibidas
     texto_lower = texto.lower()
     for palavra in PALAVRAS_PROIBIDAS:

@@ -112,7 +112,7 @@ export default function ConsentimentosPage() {
       <div className="px-6 py-6">
         <p className="mb-4 max-w-2xl text-[12px] text-ink-muted">
           Cada linha é uma escolha registrada pelo banner de cookies do site — a prova de
-          consentimento exigida pela LGPD (art. 38: o ônus de provar cabe ao controlador).
+          consentimento exigida pela LGPD (art. 8º, §2º: o ônus de provar cabe ao controlador).
           O identificador do visitante é anônimo (gerado no navegador dele); o IP nunca é
           gravado, só um hash. Registros com mais de 5 anos são descartados automaticamente —
           teto do padrão de mercado (3 a 5 anos) para auditoria retroativa; ainda não é

@@ -125,7 +125,7 @@ function TermosDoc({
       <TermItem n="2" title="NATUREZA DO CONTEÚDO">
         {cfg.naoSubstitui || (
           <span style={{ color: "var(--danger)" }}>
-            ⚠️ Preencha "O que este site não substitui" abaixo — este texto é específico do seu
+            ⚠️ Preencha &quot;O que este site não substitui&quot; abaixo — este texto é específico do seu
             negócio (ex: não substitui consulta médica, não substitui aconselhamento jurídico).
           </span>
         )}
@@ -267,8 +267,8 @@ function AlertaDadosSensiveis({
                   >
                     <AlertTriangle size={11} className="mt-0.5 shrink-0" />
                     <span>
-                      Aviso a exibir: "Este campo pode conter dados sensíveis de saúde (art. 11,
-                      LGPD). Compartilhe apenas o que for necessário para o atendimento."
+                      Aviso a exibir: &quot;Este campo pode conter dados sensíveis de saúde (art. 11,
+                      LGPD). Compartilhe apenas o que for necessário para o atendimento.&quot;
                     </span>
                   </div>
                 )}
@@ -329,6 +329,12 @@ export default function TermosPage() {
         if (lp.foroCidade) patch.foroCidade = lp.foroCidade;
         if (lp.foroUf) patch.foroUf = lp.foroUf;
         if (lp.vigenciaDesde) patch.dataVersao = lp.vigenciaDesde;
+        // A página é sempre publicada pelo motor (_astro/src/pages/termos-de-uso.astro
+        // não tem gate nenhum) — "ativo" aqui não liga/desliga nada no site, só
+        // reflete se o texto real já foi escrito. Sem isto, o toggle ficava preso
+        // no padrão "false" do store mesmo com o conteúdo real já publicado
+        // (erro 80, Relatório de Testes 5).
+        patch.ativo = !!lp.naoSubstitui?.trim();
         if (Object.keys(patch).length > 0) set(patch);
       })
       .catch(console.error);
@@ -406,18 +412,24 @@ export default function TermosPage() {
                 color: cfg.ativo ? "var(--success)" : "var(--ink-muted)",
               }}
             >
-              {cfg.ativo ? "ATIVO" : "INATIVO"}
+              {cfg.ativo ? "COMPLETO" : "INCOMPLETO"}
             </span>
           }
         >
-          {/* master toggle */}
+          {/* marcador de conteúdo completo — a página em si é sempre publicada
+              pelo motor (_astro/src/pages/termos-de-uso.astro não tem gate),
+              sempre linkada no rodapé; este switch NÃO liga/desliga isso —
+              só marca se o texto abaixo já foi escrito de verdade (erro 80,
+              Relatório de Testes 5: o texto antigo prometia um controle que
+              não existe). */}
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium" style={{ color: "var(--ink)" }}>
-                Ativar página de Termos de Uso
+                Conteúdo completo
               </p>
               <p className="text-xs mt-0.5" style={{ color: "var(--ink-muted)" }}>
-                Quando ativo, gera o documento e exibe link no rodapé do site
+                A página é sempre publicada e sempre aparece no rodapé — este switch só marca
+                se você já preencheu o texto abaixo de verdade.
               </p>
             </div>
             <Toggle on={cfg.ativo} onToggle={() => set({ ativo: !cfg.ativo })} />
@@ -430,8 +442,8 @@ export default function TermosPage() {
             >
               <Power size={12} className="mt-0.5 shrink-0" />
               <span>
-                Termos de Uso desativados. O link não aparecerá no rodapé. Você pode ativar a
-                qualquer momento sem perder as configurações abaixo.
+                Marcado como incompleto. A página continua no ar do jeito que está — preencha
+                &quot;O que este site não substitui&quot; abaixo e marque como completo.
               </span>
             </div>
           )}
@@ -440,8 +452,8 @@ export default function TermosPage() {
           <div className="flex flex-col gap-1">
             <Label required>O que este site não substitui</Label>
             <p className="text-xs -mt-0.5" style={{ color: "var(--ink-muted)" }}>
-              Texto específico do seu negócio — não é genérico. Ex: "não substitui consulta médica,
-              diagnóstico ou tratamento" (saúde), "não substitui aconselhamento jurídico" (advocacia).
+              Texto específico do seu negócio — não é genérico. Ex: &quot;não substitui consulta médica,
+              diagnóstico ou tratamento&quot; (saúde), &quot;não substitui aconselhamento jurídico&quot; (advocacia).
             </p>
             <textarea
               value={cfg.naoSubstitui}
@@ -559,10 +571,10 @@ export default function TermosPage() {
               <div className="flex flex-col items-center justify-center gap-3 py-16 px-6 text-center">
                 <Power size={28} style={{ color: "var(--line)" }} />
                 <p className="text-sm font-medium" style={{ color: "var(--ink-muted)" }}>
-                  Termos de Uso desativados
+                  Conteúdo marcado como incompleto
                 </p>
                 <p className="text-xs" style={{ color: "var(--ink-muted)" }}>
-                  Ative o toggle à esquerda para gerar e visualizar o documento.
+                  Preencha os campos e marque como completo à esquerda para visualizar o documento.
                 </p>
               </div>
             )}

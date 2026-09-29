@@ -187,7 +187,7 @@ cp $CLIENTE_DIR/.env $PAINEL_SRC/.env.local.tmp
 
 # Build com variáveis do cliente
 cd $PAINEL_SRC
-env $(cat $CLIENTE_DIR/.env | grep -v '#' | xargs) npm run build -- --no-lint 2>&1 | tail -5
+env $(cat $CLIENTE_DIR/.env | grep -v '#' | xargs) npm run build 2>&1 | tail -5
 
 # Copiar build para pasta do cliente
 mkdir -p $CLIENTE_DIR/painel

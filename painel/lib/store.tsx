@@ -434,7 +434,7 @@ interface Estado {
   /** Id atual de um post (o arquivo muda de nome quando o slug muda). */
   resolverIdPost: (id: string) => string;
   /** Cria um post no servidor (título provisório, rascunho). Devolve o slug ou a mensagem de erro. */
-  criarPost: () => Promise<ResultadoPost>;
+  criarPost: (titulo?: string) => Promise<ResultadoPost>;
   duplicarPost: (id: string) => Promise<ResultadoPost>;
   /** Move para a lixeira (some do site). Devolve os ids que realmente foram movidos. */
   /** Move para a lixeira. `relacionadosLimpos` = quantos outros posts perderam este artigo da lista de relacionados. */
@@ -653,7 +653,11 @@ const COOKIE_CONFIG_INICIAL: CookieConfig = {
     "Escolha quais categorias de cookies deseja permitir. Cookies estritamente necessários não podem ser desativados.",
   posicaoH: "center",
   posicaoV: "bottom",
-  registroConsentimento: true,
+  // false = mesmo padrão do motor quando o cliente nunca configurou isso
+  // (_astro/src/components/blocos/BannerCookies.astro: cfg.registroConsentimento === true).
+  // Mostrar "ligado" aqui por padrão mascarava o site real estar desligado
+  // (erro 71, Relatório de Testes 5).
+  registroConsentimento: false,
   categorias: {
     analiticos:
       "Google Analytics 4 — mede visitas, origem do tráfego e comportamento de navegação. Dados anonimizados.",
@@ -1077,11 +1081,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const criarPost = useCallback(async (): Promise<ResultadoPost> => {
+  const criarPost = useCallback(async (titulo?: string): Promise<ResultadoPost> => {
     const r = await pedirAoServidor("/api/posts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({}),
+      body: JSON.stringify(titulo ? { titulo } : {}),
     });
     if (!r.ok || typeof r.dados.slug !== "string") return { ok: false, erro: r.erro || "Não foi possível criar o post." };
     await recarregarPosts();
