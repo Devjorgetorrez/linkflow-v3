@@ -1,0 +1,11 @@
+# Dependências Python dos scripts em scripts/ (guardiões, gates, geradores de
+# Excel, crawler/clusterizador da Fase 1). Tudo o mais usado aqui é biblioteca
+# padrão do Python.
+#
+# NÃO cobre as skills com seu próprio ambiente isolado (blog-audio,
+# blog-google, blog-notebooklm) — cada uma instala sozinha, na primeira vez
+# que roda, via scripts/run.py (ver requirements.txt/requirements.lock dentro
+# de cada uma). Misturar essas dependências aqui quebraria esse isolamento.
+
+openpyxl>=3.1.0,<4.0.0
+requests>=2.32.0,<3.0.0
