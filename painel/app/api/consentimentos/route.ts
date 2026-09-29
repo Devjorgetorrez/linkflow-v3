@@ -37,11 +37,12 @@ const ESCOLHAS = ["aceito", "rejeitado", "personalizado", "informado"] as const;
 type Escolha = (typeof ESCOLHAS)[number];
 
 /**
- * Prazo de retenção dos registros de consentimento — PROVISÓRIO. O guia da
- * ANPD não fixa um número; 5 anos aqui só repete o prazo já usado como
- * padrão pra retenção de formulários (mesma ordem de grandeza de outras
- * obrigações civis/fiscais no Brasil). Confirmar com advogado antes de
- * qualquer cliente real depender disso — Relatório de Testes 4, erro 45.
+ * Prazo de retenção dos registros de consentimento — o guia da ANPD não fixa
+ * um número. 5 anos é o teto do padrão de mercado usado por ferramentas de
+ * gestão de consentimento (CMPs) como janela de segurança para auditoria
+ * retroativa (a faixa documentada é 3 a 5 anos). Ainda não é parecer
+ * jurídico formal para este caso — confirmar com advogado antes de um
+ * cliente real depender disso — Relatório de Testes 4, erro 45.
  */
 const RETENCAO_DIAS = 5 * 365;
 
