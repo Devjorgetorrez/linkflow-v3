@@ -120,8 +120,22 @@ Se não, **um único pedido** com os três dados do e-mail da Hostgator:
 > Onde estamos: visual aprovado, falta o servidor.
 > Falta para o próximo marco: esses três dados."
 
-A senha root só será usada nesta sessão. Depois, recomende criar um usuário
-com chave SSH para o acesso futuro.
+A senha root só será usada nesta etapa — para autorizar a chave da máquina
+que roda o agente, uma única vez. Depois disso ela nunca é digitada de
+novo com este cliente, nem nesta sessão nem em nenhuma futura.
+
+Autorizar a chave com a senha recebida (`ssh`/`scp` comuns não sabem
+autenticar com senha — precisa deste script; ver "Por que este passo"
+abaixo). Se a saída for o erro "biblioteca 'paramiko' ausente", rodar
+`pip install paramiko` (uma vez, silencioso, sem perguntar) e tentar de
+novo:
+```bash
+python scripts/vps/autorizar_chave.py --ip [IP] --porta [porta] --senha [SENHA]
+```
+Deve imprimir `AUTORIZADO`. Se der erro de senha/conexão, mostrar a
+mensagem do script e pedir os dados de novo (mesma regra do PASSO 1
+abaixo). Depois de `AUTORIZADO`, todo `ssh`/`scp` do resto desta skill
+funciona sem senha nenhuma — a chave já está confiada.
 
 Salvar em `projeto.md` em `## Ambiente VPS`:
 ```
@@ -132,8 +146,20 @@ dominio: [dominio do site]            (já registrado no gate)
 dominio_painel: painel.[dominio]
 ```
 
-**Nunca salvar a senha root no projeto.md nem em nenhum arquivo.**
-Usar apenas durante a sessão atual.
+**Nunca salvar a senha root no projeto.md nem em nenhum arquivo, nem
+reutilizá-la em outro comando.** Ela só existe na memória do processo do
+`autorizar_chave.py` enquanto ele roda.
+
+**Por que este passo existe:** o OpenSSH comum só aceita senha em prompt
+interativo, que esta sessão não tem como responder — sem isto, a senha
+digitada no chat não autenticava nada de verdade, e o resto da skill só
+funcionava se já existisse uma chave confiável por fora (achado técnico
+ao revisar o erro 94, Relatório de Testes 6). `autorizar_chave.py` usa
+`paramiko` (biblioteca Python, `pip install paramiko` se ausente — mesma
+instalação em Windows/Mac/Linux, sem depender de `sshpass`/pacman/choco)
+para autenticar com a senha só nesta etapa e instalar a chave pública
+local (`~/.ssh/id_ed25519.pub`, gerada automaticamente se não existir)
+no `authorized_keys` do servidor.
 
 ---
 
