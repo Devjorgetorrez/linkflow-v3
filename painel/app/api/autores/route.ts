@@ -34,10 +34,15 @@ export async function GET(req: NextRequest) {
       bioLonga: u.autoria!.bioLonga,
       conselho: u.autoria!.conselho,
       registro: u.autoria!.registro,
-      especialidades: u.autoria!.especialidades,
-      formacao: u.autoria!.formacao,
+      // O primeiro admin (vps-setup PASSO 7) nasce só com nomePublico — os
+      // campos abaixo ficam ausentes de verdade em usuarios.json, mesmo o
+      // tipo Autor os declarando obrigatórios. Sem o valor padrão aqui,
+      // Object.values(autor.redes) quebrava o editor de post pra todo
+      // cliente novo (erro 85, Relatório de Testes 6).
+      especialidades: u.autoria!.especialidades ?? [],
+      formacao: u.autoria!.formacao ?? [],
       emailPublico: u.autoria!.emailPublico,
-      redes: u.autoria!.redes,
+      redes: u.autoria!.redes ?? {},
       urlExterna: u.autoria!.urlExterna,
       destaque: u.autoria!.destaque ?? false,
       ativo: u.acesso?.ativo ?? true,

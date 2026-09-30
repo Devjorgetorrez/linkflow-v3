@@ -117,7 +117,7 @@ function nodoAutor(autor: Autor, site: SiteInfo): NodoGraph {
   if (autor.conselho && autor.registro) {
     nodo.hasCredential = `${autor.conselho} ${autor.registro}`;
   }
-  const redes = Object.values(autor.redes).filter(Boolean);
+  const redes = Object.values(autor.redes ?? {}).filter(Boolean);
   if (redes.length) nodo.sameAs = redes;
   return nodo;
 }

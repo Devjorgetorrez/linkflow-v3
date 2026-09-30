@@ -99,7 +99,13 @@ export async function POST(req: NextRequest) {
       podeAcessar,
       acesso: podeAcessar ? { emailLogin, papel, ativo } : undefined,
       podeAssinar,
-      autoria: body.autoria ?? {
+      // Mesclar (nunca `body.autoria ?? {defaults}`): esse `??` só dispara
+      // se body.autoria for undefined, então um autoria PARCIAL (ex.:
+      // vps-setup manda só {nomePublico} pro primeiro admin) descartava
+      // TODOS os defaults, inclusive redes — Object.values(autor.redes)
+      // quebrava o editor de post pra todo cliente novo (erro 85,
+      // Relatório de Testes 6).
+      autoria: {
         nomePublico,
         slug: "",
         foto: "",
@@ -114,6 +120,7 @@ export async function POST(req: NextRequest) {
         redes: { instagram: "", linkedin: "", facebook: "" },
         urlExterna: "",
         destaque: false,
+        ...(body.autoria as Record<string, unknown> | undefined ?? {}),
       },
       senhaHash,
       criadoEm: new Date().toISOString().split("T")[0],
