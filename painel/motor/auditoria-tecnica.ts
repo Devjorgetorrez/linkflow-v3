@@ -355,7 +355,10 @@ export function auditarTecnica(
     // — não existe title/meta publicado para auditar.
     if (ix.tipo === "categoria") continue;
     if (ix.real?.erroLeitura) continue;
-    const len = ix.title.length;
+    // Página de autor (e possivelmente outras) pode chegar sem title —
+    // sem a guarda, essa checagem travava a Visão geral de SEO inteira
+    // (erro 86, Relatório de Testes 6).
+    const len = (ix.title ?? "").length;
     if (len < 3 || len > LIM_TITLE) {
       const nome = ix.title || ix.h1 || ix.url;
       problemas.push({
