@@ -302,4 +302,12 @@ export const site = {
       vigenciaDesde: '2026-08-15',
     },
   },
+
+  // Site novo nasce com o registro de consentimento LGPD ligado — a propria
+  // tela (Privacidade > Banner de cookies) diz "Mantenha ligado", mas
+  // nenhum template preenchia isso e todo cliente novo nascia sem provar
+  // consentimento nenhum (erro 71 revisto, Detalhamento de Erros
+  // 78/79/28/87, 30/09/2026). Continua sendo campo opcional — o painel pode
+  // desligar se o cliente pedir.
+  cookieBanner: { registroConsentimento: true },
 }

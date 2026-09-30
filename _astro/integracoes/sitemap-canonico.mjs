@@ -99,7 +99,17 @@ const normalizarRota = p => (p.replace(/\/+$/, '') || '/')
 /** llms.txt real (título, resumo, páginas e serviços com texto de verdade),
  * gerado só quando o cliente/painel ainda não salvou um em public/llms.txt
  * (ver comentário no topo do arquivo). Nunca lista item sem meta description
- * real — página ainda sem SEO escrito não entra. */
+ * real — página ainda sem SEO escrito não entra.
+ *
+ * "Páginas" limitada a 5 (pilar/institucional primeiro) e "Conteúdo
+ * recente" (posts, últimos 12 meses, top 5) seguem a MESMA regra da tela
+ * SEO > llms.txt (app/(painel)/seo/llms/page.tsx, selecionarAutomatico) —
+ * antes cada lado tinha a própria regra (build: tudo, sem limite; tela: 5
+ * páginas com prioridade), então a tela sempre divergia do publicado pra
+ * qualquer site com mais de 5 páginas indexáveis (erro 78, causa 2,
+ * Detalhamento de Erros 78/79/28/87, 30/09/2026). "Categorias do blog" não
+ * foi replicada aqui: o build não tem como identificar página de categoria
+ * de forma confiável varrendo o HTML publicado. */
 function gerarLlmsBasico(dominioPrincipal, paginas) {
   let configTexto = ''
   try {
@@ -112,6 +122,18 @@ function gerarLlmsBasico(dominioPrincipal, paginas) {
   const rotaPilarM = configTexto.match(/rotaPilar\s*:\s*['"]([^'"]+)['"]/)
   const rotaPilar = rotaPilarM ? normalizarRota('/' + rotaPilarM[1].replace(/^\/+|\/+$/g, '')) : '/servicos'
   const servicos = slugsDaColecao('servicos')
+  const posts = slugsDaColecao('posts')
+  const INSTITUCIONAIS = new Set(['sobre', 'contato', 'politica-de-privacidade', 'termos-de-uso'])
+
+  // Mesma ordem de prioridade da tela: home/money primeiro, depois pilar,
+  // depois institucional, o resto por último.
+  const prioridade = (p) => {
+    const slug = p.rota.replace(/^\//, '')
+    if (p.rota === '/' || servicos.has(slug)) return 0
+    if (p.rota === rotaPilar) return 1
+    if (INSTITUCIONAIS.has(slug)) return 2
+    return 3
+  }
 
   // A home entra igual a qualquer outra página com meta description real —
   // ela é a página mais importante do site, não fazia sentido ficar de fora
@@ -119,7 +141,18 @@ function gerarLlmsBasico(dominioPrincipal, paginas) {
   // é tratado à parte; a linha em "## Páginas" é sobre o texto da home em si.
   const comTextoReal = paginas.filter(p => p.descricao)
   const paginasServico = comTextoReal.filter(p => servicos.has(p.rota.replace(/^\//, '')))
-  const paginasGerais = comTextoReal.filter(p => !servicos.has(p.rota.replace(/^\//, '')) && p.rota !== rotaPilar)
+  const paginasPost = comTextoReal.filter(p => posts.has(p.rota.replace(/^\//, '')))
+  const paginasGerais = comTextoReal
+    .filter(p => !servicos.has(p.rota.replace(/^\//, '')) && !posts.has(p.rota.replace(/^\//, '')))
+    .sort((a, b) => prioridade(a) - prioridade(b))
+    .slice(0, 5)
+
+  const CORTE_12M = new Date()
+  CORTE_12M.setFullYear(CORTE_12M.getFullYear() - 1)
+  const postsRecentes = paginasPost
+    .filter(p => p.lastmod && new Date(p.lastmod) >= CORTE_12M)
+    .sort((a, b) => (b.lastmod ?? '').localeCompare(a.lastmod ?? ''))
+    .slice(0, 5)
 
   const secao = (titulo, itens) => {
     if (itens.length === 0) return []
@@ -133,6 +166,7 @@ function gerarLlmsBasico(dominioPrincipal, paginas) {
   if (descricao) linhas.push(`> ${descricao}`, '')
   linhas.push(...secao('Páginas', paginasGerais))
   linhas.push(...secao('Serviços', paginasServico))
+  linhas.push(...secao('Conteúdo recente', postsRecentes))
   linhas.push(`Sitemap: https://${dominioPrincipal}/sitemap.xml`)
   return linhas.join('\n') + '\n'
 }
@@ -181,7 +215,7 @@ export default function sitemapCanonico() {
 
           const titulo = (html.match(/<title>([\s\S]*?)<\/title>/i)?.[1] ?? '').trim()
           const descricao = (tags(html, 'meta').find(a => (a.name ?? '').toLowerCase() === 'description')?.content ?? '').trim()
-          paginas.push({ rota: normalizarRota(rota), loc: url.href, titulo, descricao })
+          paginas.push({ rota: normalizarRota(rota), loc: url.href, titulo, descricao, lastmod })
         }
 
         const resumo = (lista, rotulo) => {
