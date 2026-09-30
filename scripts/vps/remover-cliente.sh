@@ -12,6 +12,7 @@
 # Sem --confirmar, só mostra o que SERIA removido (dry-run) — nada é apagado.
 
 set -e
+set -o pipefail
 
 SLUG=${1:?"Erro: informe o slug do cliente a remover"}
 CONFIRMAR=${2:-""}
@@ -47,12 +48,20 @@ fi
 mkdir -p "$BACKUPS_DIR"
 BACKUP_ARQ="$BACKUPS_DIR/antes-de-remover-$TS.tar.gz"
 echo "  Fazendo backup final em $BACKUP_ARQ..."
-tar -czf "$BACKUP_ARQ" -C "$LINKFLOW_DIR/clientes" "$SLUG" \
+# --exclude precisa vir ANTES do argumento posicional ($SLUG) — o GNU tar
+# 1.35 (Ubuntu 24.04) recusa --exclude depois de um argumento não-opção e
+# sai com código 2; o "|| echo aviso" escondia essa falha real como se
+# fosse só "backup parcial" (achado real, Verificação 3009 v2, item 105 —
+# o mesmo defeito do atualizar-cliente.sh, aqui não tinha sido corrigido).
+if ! tar -czf "$BACKUP_ARQ" \
   --exclude="$SLUG/painel/node_modules" \
   --exclude="$SLUG/_astro/node_modules" \
   --exclude="$SLUG/_astro/.astro" \
   --exclude="$SLUG/_astro/dist" \
-  2>/dev/null || echo "  Aviso: backup parcial ou vazio (cliente pode não ter _astro/painel completos)."
+  -C "$LINKFLOW_DIR/clientes" "$SLUG"; then
+  echo "Erro: backup falhou de verdade — nada foi removido. Confira o erro do tar acima."
+  exit 1
+fi
 
 # ─── PM2 ──────────────────────────────────────────────────────────────────
 echo "  Parando processo PM2..."
@@ -62,8 +71,24 @@ pm2 save
 # ─── SSL — antes do Nginx, porque certbot precisa do bloco do site pra achar
 # os domínios corretamente em alguns casos; se falhar, segue (não bloqueia
 # o resto da remoção, só avisa) ─────────────────────────────────────────────
+# O certificado e' nomeado pelo DOMINIO real (ex. odontovilagalvao.turboblog.com.br),
+# nunca pelo slug do cliente (ex. odonto-vila-galvao) — procurar "Certificate
+# Name" contendo o slug nunca achava nada. E "grep -B2" pegava as 2 linhas
+# ANTES de "Certificate Path" (Domains, Expiry Date), nunca a linha
+# "Certificate Name:", que fica mais acima no bloco (achado real, Verificação
+# 3009 v2, item 105). Le o dominio real do config do cliente e casa pela
+# linha "Domains:" de cada bloco (awk, separando por "Certificate Name:").
 echo "  Removendo certificado SSL (se houver)..."
-DOMINIOS_CERT=$(certbot certificates 2>/dev/null | grep -B2 "/etc/letsencrypt/live/" | grep "Certificate Name:" | awk '{print $3}' | grep -i "$SLUG" || true)
+DOMINIO_CLIENTE=$(grep -m1 -oE "dominio:\s*['\"][^'\"]+['\"]" "$CLIENTE_DIR/_astro/src/config/site.ts" 2>/dev/null | sed -E "s/.*['\"]([^'\"]+)['\"]/\1/")
+if [ -z "$DOMINIO_CLIENTE" ]; then
+  echo "  Aviso: não encontrei o domínio do cliente em config/site.ts — certificado SSL não foi conferido, remova manualmente se existir."
+  DOMINIOS_CERT=""
+else
+  DOMINIOS_CERT=$(certbot certificates 2>/dev/null | awk -v dom="$DOMINIO_CLIENTE" '
+    /Certificate Name:/ { nome = $3 }
+    /Domains:/ { if (index($0, dom) > 0) print nome }
+  ')
+fi
 for cert in $DOMINIOS_CERT; do
   certbot delete --cert-name "$cert" --non-interactive 2>/dev/null || echo "  Aviso: não consegui remover o certificado $cert automaticamente."
 done

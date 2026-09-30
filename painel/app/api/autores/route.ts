@@ -9,11 +9,14 @@
  * (Usuario.autoria já tem exatamente os campos de Autor).
  */
 
+import fs from "fs";
+import path from "path";
 import { NextRequest, NextResponse } from "next/server";
 import { lerUsuarios } from "@/lib/usuarios";
 import { exigirPapel } from "@/lib/auth";
 import { MATRIZ } from "@/lib/permissoes";
 import { ehAutorPublicavel } from "@/lib/sync-autores";
+import { getContentDir, parseMd } from "@/lib/fs";
 
 export async function GET(req: NextRequest) {
   const auth = await exigirPapel(req, MATRIZ["autores:GET"]);
@@ -55,6 +58,56 @@ export async function GET(req: NextRequest) {
       ativo: u.acesso?.ativo ?? true,
       usuarioId: u.id,
     }));
+
+  // Autor que existe SÓ como arquivo do site (content/autores/<slug>.md,
+  // escrito direto pelo agente pra um profissional da equipe que nunca
+  // logou no painel) — caminho normal, não um caso raro (ver lib/sync-autores.ts,
+  // nomeAutorDoArquivo/resolverAutorDoPost). Esta rota só olhava
+  // usuarios.json, então a Fase 1/Visão geral de SEO sempre contava menos
+  // páginas de autor do que o site realmente publica pra qualquer cliente
+  // com autor assim (achado real, Verificação 3009 v2, item 79 revisado).
+  const slugsJaListados = new Set(autores.map((a) => a.slug));
+  const dirAutores = path.join(getContentDir(), "autores");
+  if (fs.existsSync(dirAutores)) {
+    for (const nome of fs.readdirSync(dirAutores)) {
+      if (!nome.endsWith(".md")) continue;
+      const slug = nome.replace(/\.md$/, "");
+      if (slugsJaListados.has(slug)) continue; // cadastro do painel prevalece
+      let raw: string;
+      try {
+        raw = fs.readFileSync(path.join(dirAutores, nome), "utf-8");
+      } catch {
+        continue;
+      }
+      const { frontmatter: fm } = parseMd(raw);
+      const nomePublico = typeof fm.nome === "string" ? fm.nome.trim() : "";
+      if (!nomePublico) continue; // mesmo limiar de ehAutorPublicavel: sem nome não é autor de verdade
+      slugsJaListados.add(slug);
+      autores.push({
+        id: slug, // sem usuário no painel — o slug É o identificador
+        nome: nomePublico,
+        slug,
+        foto: typeof fm.foto === "string" ? fm.foto : "",
+        fotoAlt: typeof fm.fotoAlt === "string" ? fm.fotoAlt : "",
+        cargo: typeof fm.cargo === "string" ? fm.cargo : "",
+        bioCurta: typeof fm.bioCurta === "string" ? fm.bioCurta : "",
+        bioLonga: typeof fm.bioLonga === "string" ? fm.bioLonga : "",
+        conselho: typeof fm.conselho === "string" ? fm.conselho : "",
+        registro: typeof fm.registro === "string" ? fm.registro : "",
+        especialidades: Array.isArray(fm.especialidades) ? fm.especialidades : [],
+        formacao: Array.isArray(fm.formacao) ? fm.formacao : [],
+        emailPublico: typeof fm.email === "string" ? fm.email : "",
+        redes: {
+          instagram: "", linkedin: "", facebook: "",
+          ...(fm.redes && typeof fm.redes === "object" ? fm.redes as Record<string, string> : {}),
+        },
+        urlExterna: "",
+        destaque: false,
+        ativo: fm.ativo !== false,
+        usuarioId: "", // sem usuário no painel — o slug (acima) é o identificador de verdade
+      });
+    }
+  }
 
   return NextResponse.json({ ok: true, autores });
 }

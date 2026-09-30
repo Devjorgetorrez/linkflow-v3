@@ -86,14 +86,21 @@ export function validarPublicacaoServico(fm: Record<string, unknown>, corpo: str
   if (fm.noindex !== false) return null; // segue como rascunho, sem restrição de conteúdo
   const titulo = typeof fm.titulo === "string" ? fm.titulo.trim() : "";
   const meta = typeof fm.metaDescription === "string" ? fm.metaDescription : "";
-  if (!titulo || titulo === TITULO_PROVISORIO_SERVICO) {
-    return { erro: "Escreva o título real do serviço antes de tirar do rascunho (tire o \"Novo serviço\").", status: 422 };
+  // Só conferia o título PROVISÓRIO exato ("Novo serviço") e o [CAMPO] na
+  // meta — título editado pra "[CAMPO] Nome do serviço" ou corpo com texto
+  // tipo "[CAMPO] Escreva aqui..." passavam batido e iam ao ar (achado real,
+  // Verificação 3009 v2: PATCH com esses valores voltou 200).
+  if (!titulo || titulo === TITULO_PROVISORIO_SERVICO || titulo.includes("[CAMPO]")) {
+    return { erro: "Escreva o título real do serviço antes de tirar do rascunho (tire o \"Novo serviço\" ou o [CAMPO]).", status: 422 };
   }
   if (meta.includes("[CAMPO]")) {
     return { erro: "A descrição de busca ainda tem o marcador [CAMPO] — escreva o texto real antes de publicar.", status: 422 };
   }
   if (corpo.trim() === "") {
     return { erro: "O serviço está sem texto no corpo. Escreva a descrição antes de tirar do rascunho.", status: 422 };
+  }
+  if (corpo.includes("[CAMPO]")) {
+    return { erro: "O corpo do serviço ainda tem o marcador [CAMPO] — escreva o texto real antes de publicar.", status: 422 };
   }
   return null;
 }

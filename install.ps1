@@ -21,6 +21,26 @@ function Write-Err($msg)  { Write-Host "  [ERRO] $msg" -ForegroundColor Red }
 function Write-Warn($msg) { Write-Host "  [AVISO] $msg" -ForegroundColor Yellow }
 function Write-Step($msg) { Write-Host ""; Write-Host $msg -ForegroundColor Cyan }
 
+# Com $ErrorActionPreference = "Stop" global, "comando 2>&1 | Out-Null"
+# vira erro FATAL na hora que o comando escreve qualquer coisa no stderr —
+# inclusive um aviso normal e inofensivo do npm ("npm warn deprecated...").
+# O instalador parava no meio por causa de um aviso, nao de um erro de
+# verdade (regressao real entre a 2909 e a 3009, achada na Verificacao
+# 3009 v2, item 10). Invoke-Nativo baixa o ErrorActionPreference so' pra
+# esta chamada (Continue: imprime/ignora, nunca lanca excecao) e usa
+# $LASTEXITCODE — o sinal de verdade de sucesso/falha de um programa
+# nativo — pra decidir o resultado.
+function Invoke-Nativo([string]$Exe, [string[]]$ArgList) {
+    $prevEap = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try {
+        & $Exe @ArgList 2>&1 | Out-Null
+        return $LASTEXITCODE
+    } finally {
+        $ErrorActionPreference = $prevEap
+    }
+}
+
 Write-Host ""
 Write-Host "Link Flow - Instalador" -ForegroundColor Cyan
 Write-Host "========================" -ForegroundColor Cyan
@@ -100,10 +120,10 @@ Write-Step "3. Instalando dependencias do painel (npm install) - pode levar algu
 
 Push-Location "$packageRoot\painel"
 try {
-    npm install --no-fund --no-audit 2>&1 | Out-Null
-    if ($LASTEXITCODE -ne 0) {
+    $codigo = Invoke-Nativo "npm" @("install", "--no-fund", "--no-audit")
+    if ($codigo -ne 0) {
         $errors += "npm install falhou em painel/. Rode manualmente: cd painel; npm install (para ver o erro completo)."
-        Write-Err "npm install falhou em painel/ (codigo $LASTEXITCODE)"
+        Write-Err "npm install falhou em painel/ (codigo $codigo)"
     } else {
         Write-Ok "Dependencias do painel instaladas"
     }
@@ -116,10 +136,10 @@ Write-Step "4. Instalando dependencias do motor do site (npm install) - pode lev
 
 Push-Location "$packageRoot\_astro"
 try {
-    npm install --no-fund --no-audit 2>&1 | Out-Null
-    if ($LASTEXITCODE -ne 0) {
+    $codigo = Invoke-Nativo "npm" @("install", "--no-fund", "--no-audit")
+    if ($codigo -ne 0) {
         $errors += "npm install falhou em _astro/. Rode manualmente: cd _astro; npm install (para ver o erro completo)."
-        Write-Err "npm install falhou em _astro/ (codigo $LASTEXITCODE)"
+        Write-Err "npm install falhou em _astro/ (codigo $codigo)"
     } else {
         Write-Ok "Dependencias do motor instaladas"
     }
@@ -130,12 +150,12 @@ try {
 # --- 5. Dependencias Python dos scripts -------------------------------------
 Write-Step "5. Instalando dependencias Python (scripts/requirements.txt)"
 
-& $pythonCmd -m pip install --quiet -r "$packageRoot\scripts\requirements.txt" 2>&1 | Out-Null
-if ($LASTEXITCODE -ne 0) {
+$codigo = Invoke-Nativo $pythonCmd @("-m", "pip", "install", "--quiet", "-r", "$packageRoot\scripts\requirements.txt")
+if ($codigo -ne 0) {
     $errors += "pip install falhou. Rode manualmente: $pythonCmd -m pip install -r scripts\requirements.txt (para ver o erro completo)."
-    Write-Err "pip install falhou (codigo $LASTEXITCODE)"
+    Write-Err "pip install falhou (codigo $codigo)"
 } else {
-    Write-Ok "Dependencias Python instaladas (openpyxl, requests)"
+    Write-Ok "Dependencias Python instaladas (openpyxl, requests, paramiko)"
 }
 
 # --- 6. Segredos do painel (.env.local) -------------------------------------
@@ -149,7 +169,13 @@ if (Test-Path $envLocal) {
 } elseif (Test-Path $envExample) {
     function New-Segredo([int]$bytes, [string]$formato) {
         $buf = New-Object byte[] $bytes
-        [System.Security.Cryptography.RandomNumberGenerator]::Fill($buf)
+        # ::Fill() e' .NET 6+ (nao existe no .NET Framework, que e' o runtime
+        # do PowerShell 5.1 do Windows) — o instalador parava bem aqui, na
+        # hora de gerar os segredos (regressao real entre a 2909 e a 3009,
+        # Verificacao 3009 v2, item 10). ::Create().GetBytes() funciona nos
+        # dois runtimes.
+        $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+        $rng.GetBytes($buf)
         if ($formato -eq "hex") {
             return -join ($buf | ForEach-Object { $_.ToString("x2") })
         }

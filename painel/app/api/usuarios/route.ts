@@ -10,6 +10,7 @@ import { exigirPapel, verificarApiKey } from "@/lib/auth";
 import { hojeISOBrasil } from "@/lib/data-br";
 import { MATRIZ } from "@/lib/permissoes";
 import { PAPEIS_VALIDOS, validarNovoUsuario } from "@/lib/usuarios-regras";
+import { slugify } from "@/lib/utils";
 
 const PAPEIS: PapelUsuario[] = [...PAPEIS_VALIDOS];
 
@@ -108,7 +109,13 @@ export async function POST(req: NextRequest) {
       // Relatório de Testes 6).
       autoria: {
         nomePublico,
-        slug: "",
+        // O primeiro admin (vps-setup PASSO 7) manda só {nomePublico} — sem
+        // gerar o slug aqui, ele nascia com autoria.slug vazio e não virava
+        // autor publicável (ehAutorPublicavel exige slug) até alguém editar
+        // o perfil na mão (achado real, Verificação 3009 v2, item "detalhes
+        // menores"). slugParaAssinar já faz esse auto-gerar depois, na
+        // primeira vez que o usuário assina algo — aqui só adianta.
+        slug: nomePublico ? slugify(nomePublico) : "",
         foto: "",
         cargo: "",
         bioCurta: "",

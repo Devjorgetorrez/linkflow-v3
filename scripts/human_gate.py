@@ -20,7 +20,15 @@ def gravar_aprovacao(slug: str, gate: str) -> int:
         print(f"ERRO: projeto.md não encontrado em {caminho}")
         return 1
 
-    conteudo = caminho.read_text(encoding="utf-8")
+    # newline="": desliga a traducao universal de quebra de linha do Python —
+    # sem isso, read_text/write_text normalizam \r\n -> \n na leitura e
+    # \n -> os.linesep na escrita, regravando o ARQUIVO INTEIRO com outra
+    # quebra de linha so' porque 2-3 linhas mudaram (acontece sempre que o
+    # arquivo foi criado no Windows e o script roda no VPS, Linux — achado
+    # real, Verificacao 3009 v2, "detalhes menores"). Preserva a quebra de
+    # linha original do arquivo, mexendo só no texto que de fato muda.
+    with open(caminho, "r", encoding="utf-8", newline="") as f:
+        conteudo = f.read()
     original = conteudo
     agora = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
 
@@ -29,7 +37,11 @@ def gravar_aprovacao(slug: str, gate: str) -> int:
             print("Gate 1 já foi aprovado anteriormente. Nenhuma alteração feita.")
             return 0
         conteudo = re.sub(r"`approved:\s*false`", "`approved: true`", conteudo)
-        conteudo = re.sub(r"-\s*`approved_at`:.*", f"- `approved_at`: {agora}", conteudo)
+        # [^\r\n]* (nao ".*"): "." sem re.DOTALL ja nao cruza \n, mas cruza
+        # \r — num arquivo CRLF isso comia o \r da linha e trocava a quebra
+        # so' dessa linha pra LF (achado ao testar a correcao de quebra de
+        # linha acima, nesta mesma rodada).
+        conteudo = re.sub(r"-\s*`approved_at`:[^\r\n]*", f"- `approved_at`: {agora}", conteudo)
         conteudo = re.sub(
             r"-\s*\[ \]\s*Fase 1 Planejamento\s+\[ \]\s*\.approved",
             f"- [x] Fase 1 Planejamento  [x] .approved — {agora}",
@@ -69,7 +81,8 @@ def gravar_aprovacao(slug: str, gate: str) -> int:
         )
         return 1
 
-    caminho.write_text(conteudo, encoding="utf-8")
+    with open(caminho, "w", encoding="utf-8", newline="") as f:
+        f.write(conteudo)
     print(f"{rotulo} gravado — confirmado no arquivo ({agora}).")
     return 0
 

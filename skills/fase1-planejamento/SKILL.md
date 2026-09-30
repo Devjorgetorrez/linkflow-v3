@@ -18,7 +18,7 @@ Mensagem: "A Fase 0 (auditoria do site) é pré-requisito obrigatório da Fase 1
 Concorrente real nao e quem aparece em UMA busca - e quem aparece RECORRENTEMENTE
 em MULTIPLAS variacoes de KW do negocio. Elimina ruido (diretorio aleatorio, site fora do nicho).
 
-## Ordem de ferramentas (Regra 3 INICIO.md) - vale para TODAS as etapas
+## Ordem de ferramentas - vale para TODAS as etapas
 1. Ubersuggest (primario)
 2. Semrush (secundario) - se Ubersuggest falhar OU devolver volume 0 pra
    uma KW obviamente comum (ex.: "implante dentario" no Brasil) — volume 0

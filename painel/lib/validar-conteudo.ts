@@ -331,7 +331,16 @@ export function validarConteudoSite(astroDir: string): { erros: ErroConteudo[]; 
         continue;
       }
       validarCampos(arquivo, campos, regras[col], erros);
-      if (col === "servicos" && lerCorpo(raw) === "") {
+      // Rascunho (noindex: true) pode nascer sem corpo de proposito — e'
+      // exatamente o estado que o erro 108 criou pra bloquear o servico de
+      // ir ao Google antes de ter conteudo. Bloquear o BUILD INTEIRO por
+      // causa de um rascunho vazio travava a publicacao de qualquer coisa
+      // no site, inclusive posts sem relacao nenhuma com o servico (achado
+      // real, Verificacao 3009 v2). So bloqueia quando o servico esta
+      // marcado pra ir ao ar (noindex: false ou ausente).
+      const noindexVal = campos.get("noindex");
+      const ehRascunho = noindexVal?.k === "boolean" && noindexVal.v === true;
+      if (col === "servicos" && !ehRascunho && lerCorpo(raw) === "") {
         erros.push({ arquivo, campo: "(corpo)", mensagem: "Sem texto no corpo do serviço. Abra o serviço e escreva a descrição antes de publicar." });
       }
       lidos.push({ col, arquivo, campos });

@@ -212,6 +212,13 @@ export default function LlmsPage() {
   const [pubStatus, setPubStatus] = useState<number | null>(null);
   const [pubData, setPubData] = useState<string | null>(null);
   const [pubConteudo, setPubConteudo] = useState<string | null>(null);
+  // Sem override manual salvo, o modo automático é uma PRÉVIA do que seria
+  // salvo — não uma previsão do que o build já gera sozinho no ar (outro
+  // algoritmo, outra fonte de dados: dist/**/index.html, não a API do
+  // painel). Comparar os dois sempre acusava divergência, mesmo sem
+  // ninguém ter mexido em nada (achado real, Verificação 3009 v2, item
+  // 78). O aviso só faz sentido quando existe algo salvo pra comparar.
+  const [temOverrideManual, setTemOverrideManual] = useState(false);
 
   // Seleção automática
   const selecao = useMemo(
@@ -271,6 +278,7 @@ export default function LlmsPage() {
   }, []);
 
   const divergente =
+    temOverrideManual &&
     pubStatus === 200 &&
     pubConteudo !== null &&
     pubConteudo.trim() !== gerado.trim();
@@ -283,6 +291,7 @@ export default function LlmsPage() {
         if (data.ok && data.conteudo) {
           setLlms(data.conteudo);
           setAtivo(data.conteudo.length > 0);
+          setTemOverrideManual(true);
           // A linha "> resumo" é o mesmo formato que gerarLlms() escreve
           // (linha 148) — sem isto, a caixa "Resumo do negócio" ficava
           // sempre vazia mesmo com o arquivo publicado tendo resumo real

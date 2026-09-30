@@ -17,6 +17,12 @@
 # Uso: bash atualizar-cliente.sh SLUG
 
 set -e
+# pipefail: "comando | tail -N" sem isto só falha se o TAIL falhar, nunca se
+# o comando da esquerda (ex.: npm run build) falhar — set -e sozinho nunca
+# pegava um build quebrado atras de um pipe (achado real, Verificação 3009
+# v2, item 90: build simulado pra falhar foi copiado como se tivesse dado
+# certo).
+set -o pipefail
 
 SLUG=${1:?"Erro: informe o slug do cliente (ex: torrez-desentupidora)"}
 LINKFLOW_DIR="/opt/linkflow"
@@ -45,11 +51,12 @@ echo "[atualizar-cliente] $SLUG: $VERSAO_ATUAL → $VERSAO_NOVA"
 # aumentariam o backup sem servir pra restaurar nada.
 mkdir -p "$BACKUPS_DIR"
 echo "  Fazendo backup..."
-tar -czf "$BACKUP_ARQ" -C "$LINKFLOW_DIR/clientes" "$SLUG" \
+tar -czf "$BACKUP_ARQ" \
   --exclude="$SLUG/painel/node_modules" \
   --exclude="$SLUG/_astro/node_modules" \
   --exclude="$SLUG/_astro/.astro" \
-  --exclude="$SLUG/_astro/dist"
+  --exclude="$SLUG/_astro/dist" \
+  -C "$LINKFLOW_DIR/clientes" "$SLUG"
 echo "  Backup salvo em $BACKUP_ARQ"
 
 restaurado=0
@@ -90,9 +97,13 @@ mv "$NOVO_ASTRO" "$CLIENTE_DIR/_astro"
 # ─── Build do motor — limpa o cache antes (erro 87: sem isso, conteúdo
 # apagado pelo painel pode voltar ao ar) ────────────────────────────────────
 cd "$CLIENTE_DIR/_astro"
-rm -rf .astro node_modules/.astro
+rm -rf .astro node_modules/.astro dist
 npm ci --silent
 npm run build 2>&1 | tail -20
+if [ ! -f "dist/index.html" ]; then
+  echo "Erro: build do motor não gerou dist/index.html — nada foi publicado para $SLUG."
+  exit 1
+fi
 mkdir -p "$SITES_DIR/$SLUG"
 # Sem --delete: nunca toca em /midia (fica fora do dist, servido por alias no Nginx).
 cp -r dist/. "$SITES_DIR/$SLUG/"
@@ -105,7 +116,15 @@ if [ ! -d "$PAINEL_SRC/node_modules" ]; then
   cd "$PAINEL_SRC" && npm ci --silent
 fi
 cd "$PAINEL_SRC"
+# $PAINEL_SRC é a referência compartilhada — apaga o .next antes pra um
+# BUILD_ID de um cliente anterior nunca ser confundido com sucesso deste
+# build (mesma causa do item 93, Verificação 3009 v2).
+rm -rf .next
 env $(cat "$CLIENTE_DIR/.env" | grep -v '#' | xargs) npm run build 2>&1 | tail -20
+if [ ! -f "$PAINEL_SRC/.next/BUILD_ID" ]; then
+  echo "Erro: build do painel não gerou .next/BUILD_ID — nada foi publicado para $SLUG."
+  exit 1
+fi
 
 rm -rf "$CLIENTE_DIR/painel/.next" "$CLIENTE_DIR/painel/public"
 cp -r "$PAINEL_SRC/.next" "$CLIENTE_DIR/painel/"

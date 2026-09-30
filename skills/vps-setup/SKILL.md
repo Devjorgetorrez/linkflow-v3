@@ -130,8 +130,10 @@ abaixo). Se a saída for o erro "biblioteca 'paramiko' ausente", rodar
 `pip install -r scripts/requirements.txt` (uma vez, silencioso, sem
 perguntar — já cobre `paramiko` junto com as outras dependências dos
 scripts) e tentar de novo:
+Preferir a entrada padrão (não deixa a senha no argv do processo — ver
+"Por que este passo" abaixo):
 ```bash
-python scripts/vps/autorizar_chave.py --ip [IP] --porta [porta] --senha [SENHA]
+echo "[SENHA]" | python scripts/vps/autorizar_chave.py --ip [IP] --porta [porta] --senha-stdin
 ```
 Deve imprimir `AUTORIZADO`. Se der erro de senha/conexão, mostrar a
 mensagem do script e pedir os dados de novo (mesma regra do PASSO 1
@@ -148,8 +150,13 @@ dominio_painel: painel.[dominio]
 ```
 
 **Nunca salvar a senha root no projeto.md nem em nenhum arquivo, nem
-reutilizá-la em outro comando.** Ela só existe na memória do processo do
-`autorizar_chave.py` enquanto ele roda.
+reutilizá-la em outro comando.** Dentro do próprio script ela só existe na
+memória do processo enquanto ele roda. **Isso não cobre o registro da
+conversa**: o comando que o agente executa (com a senha dentro) fica
+gravado no histórico da sessão — limitação da ferramenta que roda comandos,
+sem solução enquanto a senha precisar ser digitada no chat (correção ao
+texto anterior, que afirmava mais proteção do que existe de verdade —
+achado real, Verificação 3009 v2, item 94).
 
 **Por que este passo existe:** o OpenSSH comum só aceita senha em prompt
 interativo, que esta sessão não tem como responder — sem isto, a senha

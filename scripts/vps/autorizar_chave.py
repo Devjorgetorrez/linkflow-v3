@@ -12,11 +12,24 @@ tecnico ao revisar o erro 94, Relatorio de Testes 6). paramiko (biblioteca
 Python pura, sem depender de sshpass/pacman/choco) resolve isso igual em
 Windows, Mac e Linux.
 
-A senha so existe na memoria deste processo — nunca e salva em arquivo,
-nunca e logada, nunca e reutilizada depois que a chave esta autorizada.
+A senha nunca e salva em arquivo, nunca e logada, nunca e reutilizada
+depois que a chave esta autorizada — ela so existe na memoria deste
+processo enquanto ele roda.
+
+Isso NAO cobre dois lugares onde a senha ainda fica visivel, por limitação
+da ferramenta que executa este script, não deste script: (1) o comando que
+o agente roda fica registrado na conversa (é assim que a ferramenta opera,
+sem jeito de evitar); (2) se passada por `--senha`, a senha aparece no
+argv do processo enquanto ele roda — visível via `ps aux`/`/proc` pra
+quem tiver acesso à MESMA máquina que roda o agente. Prefira `--senha-stdin`
+(le a senha da entrada padrao) quando o ambiente permitir — evita o
+segundo ponto, o primeiro segue sem solução enquanto a senha precisar ser
+digitada no chat (achado real, Verificação 3009 v2, item 94: o texto da
+skill afirmava "só existe na memória do processo", que era impreciso).
 
 Uso:
   python scripts/vps/autorizar_chave.py --ip <IP> --porta <PORTA> --senha <SENHA> [--chave-publica <CAMINHO>]
+  echo "$SENHA" | python scripts/vps/autorizar_chave.py --ip <IP> --porta <PORTA> --senha-stdin
 
 Saida:
   "AUTORIZADO" e exit 0 em sucesso.
@@ -38,10 +51,19 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument("--ip", required=True)
     p.add_argument("--porta", type=int, default=22)
-    p.add_argument("--senha", required=True)
+    p.add_argument("--senha", default=None)
+    p.add_argument("--senha-stdin", action="store_true", help="Le a senha da entrada padrao em vez de --senha (nao aparece no argv do processo).")
     p.add_argument("--usuario", default="root")
     p.add_argument("--chave-publica", default=str(Path.home() / ".ssh" / "id_ed25519.pub"))
     args = p.parse_args()
+
+    if args.senha_stdin:
+        senha = sys.stdin.readline().rstrip("\n")
+    elif args.senha is not None:
+        senha = args.senha
+    else:
+        print("ERRO: informe --senha ou --senha-stdin.", file=sys.stderr)
+        sys.exit(1)
 
     chave_path = Path(args.chave_publica)
     if not chave_path.is_file():
@@ -64,7 +86,7 @@ def main():
             hostname=args.ip,
             port=args.porta,
             username=args.usuario,
-            password=args.senha,
+            password=senha,
             timeout=10,
             allow_agent=False,
             look_for_keys=False,

@@ -195,13 +195,22 @@ cd $PAINEL_SRC
 BUILD_OK=""
 for tentativa in 1 2 3; do
   echo "  Build do painel (tentativa $tentativa/3)..."
-  SAIDA_BUILD=$(env $(cat $CLIENTE_DIR/.env | grep -v '#' | xargs) npm run build 2>&1) || true
+  # $PAINEL_SRC é a referência COMPARTILHADA (todo cliente builda a partir
+  # dela, um de cada vez) — um BUILD_ID de um build anterior bem-sucedido
+  # ficava para trás se ESTE build falhasse antes do Next.js regenerar
+  # .next, e o check de existência abaixo aprovava um build que nunca
+  # rodou de verdade pra este cliente (achado real, Verificação 3009 v2,
+  # item 93). Apagar antes garante que o BUILD_ID só existe se ESTA
+  # tentativa terminou.
+  rm -rf "$PAINEL_SRC/.next"
+  ERRO_BUILD=0
+  SAIDA_BUILD=$(env $(cat $CLIENTE_DIR/.env | grep -v '#' | xargs) npm run build 2>&1) || ERRO_BUILD=1
   echo "$SAIDA_BUILD" | tail -5
-  if [ -f "$PAINEL_SRC/.next/BUILD_ID" ]; then
+  if [ "$ERRO_BUILD" = "0" ] && [ -f "$PAINEL_SRC/.next/BUILD_ID" ]; then
     BUILD_OK=1
     break
   fi
-  echo "  Build sem .next/BUILD_ID — não terminou de verdade. Tentando de novo..."
+  echo "  Build falhou (codigo de saida ou .next/BUILD_ID ausente). Tentando de novo..."
 done
 if [ -z "$BUILD_OK" ]; then
   echo "Erro: build do painel falhou 3 vezes. Nada foi publicado para $SLUG."

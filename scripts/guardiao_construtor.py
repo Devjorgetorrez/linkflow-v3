@@ -627,6 +627,18 @@ def verificar_saida(slug, fase="saida"):
             servicos_dir = content_dir / "servicos"
             servicos_slugs = {md.stem for md in servicos_dir.glob("*.md")} if servicos_dir.exists() else set()
             hrefs_footer = re.findall(r"href:\s*['\"]([^'\"]+)['\"]", match_footer.group(1)) if match_footer else []
+            # "itens: SERVICOS" (identificador, sem colchetes) em vez de um
+            # array literal na hora — comum quando o mesmo bloco de links e'
+            # reaproveitado em mais de um lugar do config. O regex acima so
+            # acha href dentro do proprio bloco de navFooterColunas; sem
+            # resolver o identificador, uma coluna que JA cumpre a funcao
+            # disparava aviso falso (achado real, Verificacao 3009 v2, item
+            # 102 — mesma raiz do erro 102 original, caso nao coberto).
+            if match_footer:
+                for ident in re.findall(r"itens:\s*([A-Za-z_][A-Za-z0-9_]*)\s*[,}]", match_footer.group(1)):
+                    m_var = re.search(rf"\b(?:const|let|var)\s+{re.escape(ident)}\s*=\s*\[([\s\S]*?)\n\s*\]", config_conteudo)
+                    if m_var:
+                        hrefs_footer += re.findall(r"href:\s*['\"]([^'\"]+)['\"]", m_var.group(1))
             tem_link_servicos = any(
                 h.strip("/") == rota_pilar.strip("/") or h.strip("/") in servicos_slugs
                 for h in hrefs_footer
