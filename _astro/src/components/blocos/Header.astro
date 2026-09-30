@@ -12,7 +12,7 @@
  * Empty state: nomeSite fallback "Nome do site"; logo ausente → texto.
  */
 
-interface NavItem { label: string; href: string; filhos?: NavItem[] }
+interface NavItem { label: string; href: string; filhos?: NavItem[]; oculto?: boolean }
 
 interface Props {
   variante?:  'padrao' | 'minimal' | 'centrado' | 'transparente'
@@ -48,6 +48,13 @@ const ctaHref  = ctaHrefProp ?? (whatsapp
 const ctaLabel = ctaTexto ?? (whatsapp ? 'WhatsApp' : telefone ?? null)
 
 const toggleId = `hdr-toggle-${variante}`
+
+// Item marcado oculto no painel (Menus > "Ocultar item") continua no config
+// mas nunca chega ao HTML — erro 91, Relatório de Testes 6: antes disso o
+// toggle só mudava o estado da tela do painel, nunca o que o site publicava.
+const navVisivel = nav
+  .filter(item => !item.oculto)
+  .map(item => ({ ...item, filhos: item.filhos?.filter(f => !f.oculto) }))
 ---
 
 {/* ── centrado: logo + nav em coluna, sem hamburger ─────────────── */}
@@ -60,10 +67,10 @@ const toggleId = `hdr-toggle-${variante}`
           : <span class="font-display text-2xl font-semibold text-primary">{nomeSite}</span>
         }
       </a>
-      {nav.length > 0 && (
+      {navVisivel.length > 0 && (
         <nav class="flex flex-wrap justify-center gap-x-6 gap-y-1 text-sm font-medium"
              aria-label="Navegação principal">
-          {nav.map(item => (
+          {navVisivel.map(item => (
             <a href={item.href}
                class="text-ink no-underline transition-colors hover:text-primary">
               {item.label}
@@ -89,10 +96,10 @@ const toggleId = `hdr-toggle-${variante}`
           }
         </a>
 
-        {nav.length > 0 && (
+        {navVisivel.length > 0 && (
           <nav class="hidden md:flex items-center gap-5 text-sm font-medium flex-1 justify-center"
                aria-label="Navegação principal">
-            {nav.map(item => (
+            {navVisivel.map(item => (
               <a href={item.href}
                  class="text-surface/80 no-underline transition-colors hover:text-surface">
                 {item.label}
@@ -121,10 +128,10 @@ const toggleId = `hdr-toggle-${variante}`
     </header>
 
     {/* Nav mobile — absolute, sobrepõe o hero */}
-    {nav.length > 0 && (
+    {navVisivel.length > 0 && (
       <div class="absolute top-16 left-0 right-0 z-40 hidden peer-checked:block bg-secondary">
         <nav class="container-wide py-2 flex flex-col" aria-label="Navegação mobile">
-          {nav.map(item => (
+          {navVisivel.map(item => (
             <a href={item.href}
                class="py-2.5 border-b border-surface/10 last:border-0 text-sm font-medium text-surface no-underline transition-colors hover:text-accent">
               {item.label}
@@ -153,10 +160,10 @@ const toggleId = `hdr-toggle-${variante}`
           }
         </a>
 
-        {nav.length > 0 && (
+        {navVisivel.length > 0 && (
           <nav class="hidden md:flex items-center gap-5 text-sm font-medium flex-1 justify-center"
                aria-label="Navegação principal">
-            {nav.map(item => (
+            {navVisivel.map(item => (
               item.filhos && item.filhos.length > 0 ? (
                 <div class="group relative">
                   <a href={item.href}
@@ -211,10 +218,10 @@ const toggleId = `hdr-toggle-${variante}`
     </header>
 
     {/* Nav mobile */}
-    {nav.length > 0 && (
+    {navVisivel.length > 0 && (
       <div class="sticky top-20 z-30 hidden peer-checked:block bg-surface border-b border-line md:hidden">
         <nav class="container-wide py-2 flex flex-col" aria-label="Navegação mobile">
-          {nav.map(item => (
+          {navVisivel.map(item => (
             <Fragment>
               <a href={item.href}
                  class="py-2.5 border-b border-line/40 last:border-0 text-sm font-medium text-ink no-underline transition-colors hover:text-primary">

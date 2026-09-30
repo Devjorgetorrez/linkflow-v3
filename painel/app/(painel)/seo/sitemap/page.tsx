@@ -63,14 +63,18 @@ export default function SitemapPage() {
   // que varre dist/**/index.html). As duas fontes podem divergir (erro 79,
   // Relatório de Testes 5); em vez de confiar só no cálculo daqui, buscamos
   // o arquivo real publicado e avisamos se os números não baterem.
+  // Via /api/verificar-publicado (servidor) — nunca fetch direto do navegador
+  // pro domínio do site: painel.<dominio> e <dominio> são origens diferentes,
+  // o Nginx do site não manda CORS, e o fetch falhava sempre em silêncio, sem
+  // o aviso de divergência nunca aparecer (erro 79, Relatório de Testes 6).
   const [totalUrlsPublicado, setTotalUrlsPublicado] = useState<number | null>(null);
   useEffect(() => {
     if (!DOMAIN) return;
-    fetch(`https://${DOMAIN}/sitemap.xml`, { cache: "no-store" })
-      .then((r) => (r.ok ? r.text() : null))
-      .then((texto) => {
-        if (texto == null) return setTotalUrlsPublicado(null);
-        const n = (texto.match(/<loc>/g) ?? []).length;
+    fetch("/api/verificar-publicado?arquivo=sitemap.xml", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data.ok || data.texto == null) return setTotalUrlsPublicado(null);
+        const n = (data.texto.match(/<loc>/g) ?? []).length;
         setTotalUrlsPublicado(n);
       })
       .catch(() => setTotalUrlsPublicado(null));

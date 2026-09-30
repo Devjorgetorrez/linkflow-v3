@@ -76,6 +76,8 @@ export const MATRIZ = {
   "robots:PATCH": ADM,
   "llms:GET": ADM,
   "llms:PATCH": ADM,
+  // Confere sitemap.xml/llms.txt no domínio publicado — mesmo papel de llms/sitemap.
+  "verificar-publicado:GET": ADM,
   "redirects:GET": ADM,
   "redirects:POST": ADM,
   "redirects/[id]:DELETE": ADM,

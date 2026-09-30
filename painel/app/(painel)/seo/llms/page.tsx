@@ -253,18 +253,18 @@ export default function LlmsPage() {
     });
   }
 
-  // Verifica o arquivo publicado no domínio real
+  // Verifica o arquivo publicado no domínio real — via /api/verificar-publicado
+  // (servidor), nunca fetch direto do navegador: painel.<dominio> e <dominio>
+  // são origens diferentes, e sem CORS do lado do site o fetch falhava sempre
+  // em silêncio (erro 78, Relatório de Testes 6).
   useEffect(() => {
     setVerificando(true);
-    fetch(URL_PUBLICADO, { cache: "no-store" })
-      .then(async (r) => {
-        const status = r.status;
-        const rawDate = r.headers.get("Last-Modified") ?? r.headers.get("Date");
-        const data = rawDate ? formatarDataHora(new Date(rawDate)) : null;
-        const texto = status === 200 ? await r.text() : null;
-        setPubStatus(status);
-        setPubData(data);
-        setPubConteudo(texto);
+    fetch("/api/verificar-publicado?arquivo=llms.txt", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((data) => {
+        setPubStatus(data.ok ? data.status : -1);
+        setPubData(data.ultimaModificacao ? formatarDataHora(new Date(data.ultimaModificacao)) : null);
+        setPubConteudo(data.texto ?? null);
       })
       .catch(() => setPubStatus(-1))
       .finally(() => setVerificando(false));
@@ -295,6 +295,18 @@ export default function LlmsPage() {
       })
       .catch(console.error);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Sem override manual salvo (public/llms.txt não existe), a caixa "Resumo do
+  // negócio" ficava vazia mesmo com o site publicando um llms.txt de verdade —
+  // o motor gera um básico sozinho no build quando não há override (ver
+  // integracoes/sitemap-canonico.mjs), e o /api/llms acima só lê o override.
+  // Preenche a partir do que está publicado de fato, só quando ainda não há
+  // nada carregado (nunca sobrescreve o que o usuário já digitou ou salvou).
+  useEffect(() => {
+    if (resumo || !pubConteudo) return;
+    const linha = pubConteudo.split("\n").find((l) => l.startsWith("> "));
+    if (linha) setResumo(linha.slice(2).trim());
+  }, [pubConteudo]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function salvar() {
     setSalvando(true);

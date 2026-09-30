@@ -643,58 +643,74 @@ export default function PoliticaPage() {
 
           <Divider />
 
-          {/* Analíticos */}
+          {/* Analíticos — só existe pra editar se o site tem GA4 de verdade (mesma
+              condição que já gate o texto publicado, linhas 237/256 acima); campo
+              pré-preenchido sem integração fazia a base legal/retenção parecerem já
+              configuradas para um cookie que o site nem usa (erro 92, Relatório de
+              Testes 6). */}
           <div>
             <div className="flex items-center gap-2 mb-2">
               <p className="text-xs font-semibold" style={{ color: "var(--ink)" }}>Cookies analíticos (GA4)</p>
               <ChipAuto label="Cookie config" />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <Field>
-                <Label>Base legal</Label>
-                <Select
-                  value={cfg.baseLegalAnaliticos}
-                  onChange={(v) => set({ baseLegalAnaliticos: v as BaseLegal })}
-                  options={BASES_LEGAIS.map((b) => ({ id: b.id, label: b.label }))}
-                />
-              </Field>
-              <Field>
-                <Label>Prazo de retenção</Label>
-                <Input
-                  value={cfg.retencaoAnaliticos}
-                  onChange={set1("retencaoAnaliticos")}
-                  placeholder="Ex: 14 meses"
-                />
-              </Field>
-            </div>
+            {integ.analiticos ? (
+              <div className="grid grid-cols-2 gap-3">
+                <Field>
+                  <Label>Base legal</Label>
+                  <Select
+                    value={cfg.baseLegalAnaliticos}
+                    onChange={(v) => set({ baseLegalAnaliticos: v as BaseLegal })}
+                    options={BASES_LEGAIS.map((b) => ({ id: b.id, label: b.label }))}
+                  />
+                </Field>
+                <Field>
+                  <Label>Prazo de retenção</Label>
+                  <Input
+                    value={cfg.retencaoAnaliticos}
+                    onChange={set1("retencaoAnaliticos")}
+                    placeholder="Ex: 14 meses"
+                  />
+                </Field>
+              </div>
+            ) : (
+              <p className="text-[11.5px]" style={{ color: "var(--ink-muted)" }}>
+                Este site não tem Google Analytics ativo — nenhum cookie analítico para declarar.
+              </p>
+            )}
           </div>
 
           <Divider />
 
-          {/* Marketing */}
+          {/* Marketing — mesma regra do bloco Analíticos acima. */}
           <div>
             <div className="flex items-center gap-2 mb-2">
               <p className="text-xs font-semibold" style={{ color: "var(--ink)" }}>Cookies de marketing (Meta + Google Ads)</p>
               <ChipAuto label="Cookie config" />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <Field>
-                <Label>Base legal</Label>
-                <Select
-                  value={cfg.baseLegalMarketing}
-                  onChange={(v) => set({ baseLegalMarketing: v as BaseLegal })}
-                  options={BASES_LEGAIS.map((b) => ({ id: b.id, label: b.label }))}
-                />
-              </Field>
-              <Field>
-                <Label>Prazo de retenção</Label>
-                <Input
-                  value={cfg.retencaoMarketing}
-                  onChange={set1("retencaoMarketing")}
-                  placeholder="Ex: 90 dias"
-                />
-              </Field>
-            </div>
+            {integ.marketing ? (
+              <div className="grid grid-cols-2 gap-3">
+                <Field>
+                  <Label>Base legal</Label>
+                  <Select
+                    value={cfg.baseLegalMarketing}
+                    onChange={(v) => set({ baseLegalMarketing: v as BaseLegal })}
+                    options={BASES_LEGAIS.map((b) => ({ id: b.id, label: b.label }))}
+                  />
+                </Field>
+                <Field>
+                  <Label>Prazo de retenção</Label>
+                  <Input
+                    value={cfg.retencaoMarketing}
+                    onChange={set1("retencaoMarketing")}
+                    placeholder="Ex: 90 dias"
+                  />
+                </Field>
+              </div>
+            ) : (
+              <p className="text-[11.5px]" style={{ color: "var(--ink-muted)" }}>
+                Este site não tem Meta Pixel nem Google Ads ativos — nenhum cookie de marketing para declarar.
+              </p>
+            )}
           </div>
         </Section>
 

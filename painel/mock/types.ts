@@ -302,6 +302,8 @@ export interface ItemMenu {
   label: string;
   url: string;
   filhos?: ItemMenu[];
+  /** Fica no menu/config mas não aparece no site — "Ocultar item" (erro 91, Relatório de Testes 6). */
+  oculto?: boolean;
 }
 
 export interface Menu {

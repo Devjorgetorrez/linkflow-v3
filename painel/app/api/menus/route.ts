@@ -20,6 +20,8 @@ interface ItemNav {
   label: string;
   href: string;
   filhos?: ItemNav[];
+  /** Item some do <nav> renderizado mas continua no config (erro 91, Relatório de Testes 6). */
+  oculto?: boolean;
 }
 interface ColunaFooter { titulo: string; itens: ItemNav[]; }
 
@@ -85,6 +87,13 @@ function parseItemNav(bloco: string): ItemNav | null {
 
   const item: ItemNav = { label: labelMatch[1], href: hrefMatch[1] };
 
+  // Só no CABEÇALHO do item (antes de "filhos:") — bloco inclui o texto bruto
+  // dos filhos aninhados, e um `oculto: true` de um FILHO não pode marcar o
+  // PAI como oculto também.
+  const filhosIdx = bloco.search(/\bfilhos:\s*\[/);
+  const cabecalho = filhosIdx >= 0 ? bloco.slice(0, filhosIdx) : bloco;
+  if (/\boculto:\s*true\b/.test(cabecalho)) item.oculto = true;
+
   const filhosMatch = bloco.match(/filhos:\s*(\[)/);
   if (filhosMatch && filhosMatch.index !== undefined) {
     const aberturaIdx = filhosMatch.index + filhosMatch[0].length - 1;
@@ -145,14 +154,15 @@ function lerNavFooter(raw: string): ColunaFooter[] {
 function serializarItemNav(item: ItemNav, indent: string): string {
   const label = item.label.replace(/['\\]/g, "");
   const href = item.href.replace(/['\\]/g, "");
+  const oculto = item.oculto ? " oculto: true," : "";
 
   if (item.filhos && item.filhos.length > 0) {
     const filhosStr = item.filhos
       .map((f) => `${indent}    ${serializarItemNav(f, "")}`)
       .join("\n");
-    return `{\n${indent}  label: '${label}', href: '${href}',\n${indent}  filhos: [\n${filhosStr}\n${indent}  ],\n${indent}},`;
+    return `{\n${indent}  label: '${label}', href: '${href}',${oculto}\n${indent}  filhos: [\n${filhosStr}\n${indent}  ],\n${indent}},`;
   }
-  return `{ label: '${label}', href: '${href}' },`;
+  return `{ label: '${label}', href: '${href}',${oculto} },`;
 }
 
 function serializarNav(itens: ItemNav[]): string {

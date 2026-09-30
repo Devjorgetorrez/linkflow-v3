@@ -82,6 +82,11 @@ type Item = Record<string, unknown>;
 const RX_FORM = /formul|contato|mensagem/i;
 const RX_AUDI = /audi|medi|anal|estat/i;
 const RX_MKT = /publicid|anunc|remarket|marketing/i;
+// `canalTitular` é texto livre ("e-mail + telefone + horário", por
+// convenção da fase2-site-astro), mas o campo do painel só aceita um
+// e-mail — jogar o texto inteiro nele derrubava a validação (erro 92,
+// Relatório de Testes 6). Extrai só o e-mail de dentro do texto.
+const EMAIL_NO_TEXTO = /[\w.+-]+@[\w-]+\.[\w.-]+/;
 
 function achaItem(lista: Item[], rx: RegExp, chave: string): Item | undefined {
   return lista.find((i) => rx.test(String(i[chave] ?? "")));
@@ -124,7 +129,7 @@ export function importarLegal(src: string): LegalPainel {
     ...base,
     cnpj: s(controlador.cnpj),
     endereco: s(controlador.endereco),
-    emailContato: s(legal.canalTitular),
+    emailContato: s(legal.canalTitular).match(EMAIL_NO_TEXTO)?.[0] ?? "",
     dpNome: "", // o site guarda só se há encarregado nomeado e o canal
     dpEmail: nomeado ? canal : "",
     baseLegalFormularios: bForm ? textoParaBase(bForm.base) : "",
@@ -225,7 +230,18 @@ export function aplicarLegal(src: string, atual: LegalPainel, novo: LegalPainel,
   if (mudou(atual, novo, "atualizadaEm")) def([...L, "atualizadaEm"], novo.atualizadaEm);
   if (mudou(atual, novo, "cnpj")) def([...L, "controlador", "cnpj"], novo.cnpj);
   if (mudou(atual, novo, "endereco")) def([...L, "controlador", "endereco"], novo.endereco);
-  if (mudou(atual, novo, "emailContato")) def([...L, "canalTitular"], novo.emailContato);
+  if (mudou(atual, novo, "emailContato")) {
+    // Troca só o e-mail dentro do texto de canalTitular — preserva
+    // telefone/horário que a fase2-site-astro possa ter escrito junto,
+    // em vez de apagar tudo e sobrar só o e-mail (erro 92, Relatório de
+    // Testes 6, mesma causa do bug de leitura acima).
+    const canalAtual = String(lerValorNoCaminho(s, [...L, "canalTitular"]) ?? "");
+    const novoEmail = novo.emailContato.trim();
+    def(
+      [...L, "canalTitular"],
+      EMAIL_NO_TEXTO.test(canalAtual) ? canalAtual.replace(EMAIL_NO_TEXTO, novoEmail) : novoEmail,
+    );
+  }
 
   if (mudou(atual, novo, "dpNome", "dpEmail", "emailContato")) {
     const nomeado = !!(novo.dpNome.trim() && novo.dpEmail.trim()) || (!!novo.dpEmail.trim() && !!atual.dpEmail.trim());

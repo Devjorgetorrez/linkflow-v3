@@ -13,7 +13,7 @@
  * Affiliate disclosure (isBlog) → descartado para SiteFlow negócio local.
  */
 
-interface NavItem    { label: string; href: string }
+interface NavItem    { label: string; href: string; oculto?: boolean }
 interface NavColuna  { titulo: string; itens: NavItem[] }
 interface RedeItem   { nome: string; href: string }
 
@@ -65,6 +65,12 @@ const redesIcons: Record<string, string> = {
 }
 
 const anoAtual = new Date().getFullYear()
+
+// Item marcado oculto no painel (Menus > "Ocultar item") continua no config
+// mas nunca chega ao HTML — mesma correção do Header.astro (erro 91,
+// Relatório de Testes 6).
+const navVisivel = nav.filter(item => !item.oculto)
+const colunasVisiveis = colunas.map(c => ({ ...c, itens: c.itens.filter(i => !i.oculto) }))
 ---
 
 {/* ── padrao ─────────────────────────────────────────────────────── */}
@@ -96,10 +102,10 @@ const anoAtual = new Date().getFullYear()
         </div>
 
         {/* Coluna 2: nav */}
-        {nav.length > 0 && (
+        {navVisivel.length > 0 && (
           <nav class="flex flex-wrap gap-x-6 gap-y-2 content-start text-sm"
                aria-label="Navegação do rodapé">
-            {nav.map(item => (
+            {navVisivel.map(item => (
               <a href={item.href}
                  class="text-ink-muted no-underline hover:text-primary transition-colors">
                 {item.label}
@@ -147,10 +153,10 @@ const anoAtual = new Date().getFullYear()
         }
       </a>
 
-      {nav.length > 0 && (
+      {navVisivel.length > 0 && (
         <nav class="flex flex-wrap gap-x-5 gap-y-1 text-xs text-ink-muted"
              aria-label="Navegação do rodapé">
-          {nav.map(item => (
+          {navVisivel.map(item => (
             <a href={item.href}
                class="text-ink-muted no-underline hover:text-primary transition-colors">
               {item.label}
@@ -200,7 +206,7 @@ const anoAtual = new Date().getFullYear()
         </div>
 
         {/* Colunas de nav categorizadas — omite coluna sem itens */}
-        {colunas.filter(col => col.itens.length > 0).slice(0, 3).map(col => (
+        {colunasVisiveis.filter(col => col.itens.length > 0).slice(0, 3).map(col => (
           <nav aria-label={col.titulo}>
             <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-ink">
               {col.titulo}
@@ -285,7 +291,7 @@ const anoAtual = new Date().getFullYear()
         </div>
 
         {/* Colunas de nav */}
-        {colunas.filter(col => col.itens.length > 0).slice(0, 3).map(col => (
+        {colunasVisiveis.filter(col => col.itens.length > 0).slice(0, 3).map(col => (
           <nav aria-label={col.titulo}>
             <p class="mb-4 text-xs font-semibold uppercase tracking-wider text-primary-ink/50">
               {col.titulo}

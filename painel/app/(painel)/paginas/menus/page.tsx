@@ -24,6 +24,7 @@ interface ItemNavApi {
   label: string;
   href: string;
   filhos?: ItemNavApi[];
+  oculto?: boolean;
 }
 interface ColunaFooterApi {
   titulo: string;
@@ -40,6 +41,7 @@ function navApiParaItemMenu(item: ItemNavApi, id: string): ItemMenu {
     label: item.label,
     url: item.href,
     filhos: item.filhos?.map((f, i) => navApiParaItemMenu(f, `${id}-${i}`)),
+    oculto: item.oculto,
   };
 }
 
@@ -47,6 +49,7 @@ function itemMenuParaNavApi(item: ItemMenu): ItemNavApi {
   return {
     label: item.label,
     href: item.url,
+    ...(item.oculto ? { oculto: true } : {}),
     ...(item.filhos && item.filhos.length > 0
       ? { filhos: item.filhos.map(itemMenuParaNavApi) }
       : {}),
@@ -204,7 +207,6 @@ function ItemRow({ item, visivel, onToggleVisivel, onRemover, indentado }: ItemR
 interface PainelMenuProps {
   menu: Menu;
   paginasPublicadas: { id: string; titulo: string; url: string }[];
-  visibilidade: Map<string, boolean>;
   onToggleVisivel: (itemId: string) => void;
   onRemoverItem: (menuId: string, itemId: string) => void;
   onAdicionarItem: (menuId: string, item: ItemMenu) => void;
@@ -213,7 +215,6 @@ interface PainelMenuProps {
 function PainelMenu({
   menu,
   paginasPublicadas,
-  visibilidade,
   onToggleVisivel,
   onRemoverItem,
   onAdicionarItem,
@@ -240,7 +241,7 @@ function PainelMenu({
           <div key={item.id}>
             <ItemRow
               item={item}
-              visivel={visibilidade.get(item.id) !== false}
+              visivel={!item.oculto}
               onToggleVisivel={() => onToggleVisivel(item.id)}
               onRemover={() => onRemoverItem(menu.id, item.id)}
             />
@@ -248,7 +249,7 @@ function PainelMenu({
               <div key={filho.id} className="mt-1">
                 <ItemRow
                   item={filho}
-                  visivel={visibilidade.get(filho.id) !== false}
+                  visivel={!filho.oculto}
                   onToggleVisivel={() => onToggleVisivel(filho.id)}
                   onRemover={() => {
                     const semFilho = menu.itens.map((i) =>
@@ -303,9 +304,6 @@ export default function MenusPage() {
     .filter((p) => p.status === "publicado")
     .map((p) => ({ id: p.id, titulo: p.titulo, url: p.url }));
 
-  /* visibilidade local por item id */
-  const [visibilidade, setVisibilidade] = useState<Map<string, boolean>>(new Map());
-
   // Carregar menus reais do config ao montar
   useEffect(() => {
     fetch("/api/menus")
@@ -319,10 +317,11 @@ export default function MenusPage() {
               id: "principal",
               nome: "Menu principal",
               local: "Cabeçalho do site",
-              itens: data.nav.map((i: { label: string; href: string; filhos?: { label: string; href: string }[] }, idx: number) => ({
+              itens: data.nav.map((i: ItemNavApi, idx: number) => ({
                 id: `nav-${idx}`,
                 label: i.label,
                 url: i.href,
+                oculto: i.oculto,
                 // Preservar filhos mesmo sem editor próprio ainda — sem isso,
                 // salvar qualquer coisa nesta tela apagaria o dropdown que
                 // o agente gerou (fase2-site-astro, ETAPA 4.2).
@@ -330,6 +329,7 @@ export default function MenusPage() {
                   id: `nav-${idx}-${subIdx}`,
                   label: f.label,
                   url: f.href,
+                  oculto: f.oculto,
                 })),
               })),
             }] : []);
@@ -396,11 +396,12 @@ export default function MenusPage() {
         nav: itens.map((i) => ({
           label: i.label,
           href: i.url,
+          ...(i.oculto ? { oculto: true } : {}),
           // Preservar filhos — sem editor próprio ainda nesta tela, mas
           // sem isso qualquer salvamento aqui apagaria o dropdown gerado
           // pelo agente (fase2-site-astro, ETAPA 4.2).
           ...(i.filhos && i.filhos.length > 0
-            ? { filhos: i.filhos.map((f) => ({ label: f.label, href: f.url })) }
+            ? { filhos: i.filhos.map((f) => ({ label: f.label, href: f.url, ...(f.oculto ? { oculto: true } : {}) })) }
             : {}),
         })),
       });
@@ -433,12 +434,42 @@ export default function MenusPage() {
     void atualizarColunaFooter(colIdx, [...coluna.itens, item]);
   }
 
+  // "Ocultar item" precisa sair do ar de verdade, não só riscar na tela —
+  // sem persistir, o item voltava ao recarregar e nunca chegou a sumir do
+  // site publicado (erro 91, Relatório de Testes 6). Mesmo caminho de
+  // salvamento de remover/adicionar: acha o item (menu principal, filho, ou
+  // coluna do rodapé) e grava com oculto invertido.
   function toggleVisivel(itemId: string) {
-    setVisibilidade((prev) => {
-      const next = new Map(prev);
-      next.set(itemId, prev.get(itemId) === false ? true : false);
-      return next;
-    });
+    const menuPrincipal = menus.find((m) => m.id === "principal");
+    if (menuPrincipal) {
+      if (menuPrincipal.itens.some((i) => i.id === itemId)) {
+        const itens = menuPrincipal.itens.map((i) =>
+          i.id === itemId ? { ...i, oculto: !i.oculto } : i,
+        );
+        void atualizarMenuReal("principal", { itens });
+        return;
+      }
+      const pai = menuPrincipal.itens.find((i) => i.filhos?.some((f) => f.id === itemId));
+      if (pai) {
+        const itens = menuPrincipal.itens.map((i) =>
+          i.id === pai.id
+            ? { ...i, filhos: i.filhos?.map((f) => (f.id === itemId ? { ...f, oculto: !f.oculto } : f)) }
+            : i,
+        );
+        void atualizarMenuReal("principal", { itens });
+        return;
+      }
+    }
+
+    for (let colIdx = 0; colIdx < footerColunas.length; colIdx++) {
+      if (footerColunas[colIdx].itens.some((i) => i.id === itemId)) {
+        const itens = footerColunas[colIdx].itens.map((i) =>
+          i.id === itemId ? { ...i, oculto: !i.oculto } : i,
+        );
+        void atualizarColunaFooter(colIdx, itens);
+        return;
+      }
+    }
   }
 
   function removerItem(menuId: string, itemId: string) {
@@ -514,7 +545,6 @@ export default function MenusPage() {
               key={menu.id}
               menu={menu}
               paginasPublicadas={paginasPublicadas}
-              visibilidade={visibilidade}
               onToggleVisivel={toggleVisivel}
               onRemoverItem={removerItem}
               onAdicionarItem={adicionarItem}
@@ -535,7 +565,6 @@ export default function MenusPage() {
                   itens: coluna.itens,
                 }}
                 paginasPublicadas={paginasPublicadas}
-                visibilidade={visibilidade}
                 onToggleVisivel={toggleVisivel}
                 onRemoverItem={(_menuId, itemId) => removerItemFooter(colIdx, itemId)}
                 onAdicionarItem={(_menuId, item) => adicionarItemFooter(colIdx, item)}
