@@ -16,7 +16,7 @@ import { getCollection } from 'astro:content'
 
 const depoimentos = (await getCollection('depoimentosT7'))
   .sort((a, b) => a.data.ordem - b.data.ordem)
-  .map(d => ({ nome: d.data.nome, cidade: d.data.cidade, servico: d.data.servico, corpo: d.body.trim() }))
+  .map(d => ({ nome: d.data.nome, cidade: d.data.cidade, servico: d.data.servico, corpo: (d.body ?? '').trim() }))
 
 const wa        = `https://wa.me/${site.nap.whatsapp}`
 const canonical = `${site.dominio}/contato/`

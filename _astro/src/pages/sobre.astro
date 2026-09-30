@@ -19,7 +19,7 @@ const depoimentos = todosDepoi
     nome:    d.data.nome,
     cidade:  d.data.cidade,
     servico: d.data.servico,
-    corpo:   d.body.trim(),
+    corpo:   (d.body ?? '').trim(),
   }))
 
 const canonical = `${site.dominio}/sobre/`

@@ -43,7 +43,7 @@ const outros = (await getCollection('servicosT6'))
 
 const depoimentos = (await getCollection('depoimentosT6'))
   .sort((a, b) => a.data.ordem - b.data.ordem)
-  .map(d => ({ nome: d.data.nome, cidade: d.data.cidade, servico: d.data.servico, corpo: d.body.trim() }))
+  .map(d => ({ nome: d.data.nome, cidade: d.data.cidade, servico: d.data.servico, corpo: (d.body ?? '').trim() }))
 
 const jsonLd = {
   '@context': 'https://schema.org',

@@ -41,7 +41,7 @@ const outros = (await getCollection('servicosT5'))
 
 const depoimentos = (await getCollection('depoimentosT5'))
   .sort((a, b) => a.data.ordem - b.data.ordem)
-  .map(d => ({ nome: d.data.nome, cidade: d.data.cidade, servico: d.data.servico, corpo: d.body.trim() }))
+  .map(d => ({ nome: d.data.nome, cidade: d.data.cidade, servico: d.data.servico, corpo: (d.body ?? '').trim() }))
 
 /* "Quem pode solicitar" reaproveita o bloco Servicos: mesma forma de card
    com imagem, título e descrição. Sem href, os cards não viram link. */

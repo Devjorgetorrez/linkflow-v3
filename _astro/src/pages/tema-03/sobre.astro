@@ -31,7 +31,7 @@ const depoimentos = (await getCollection('depoimentosT3'))
     nome:    d.data.nome,
     cidade:  d.data.cidade,
     servico: d.data.servico,
-    corpo:   d.body.trim(),
+    corpo:   (d.body ?? '').trim(),
   }))
 
 const anos      = site.anoFundacao ? new Date().getFullYear() - site.anoFundacao : null

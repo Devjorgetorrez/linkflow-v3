@@ -43,7 +43,7 @@ const outros = (await getCollection('servicosT4'))
 
 const depoimentos = (await getCollection('depoimentosT4'))
   .sort((a, b) => a.data.ordem - b.data.ordem)
-  .map(d => ({ nome: d.data.nome, cidade: d.data.cidade, servico: d.data.servico, corpo: d.body.trim() }))
+  .map(d => ({ nome: d.data.nome, cidade: d.data.cidade, servico: d.data.servico, corpo: (d.body ?? '').trim() }))
 
 const ficha = [
   entry.data.precoDe  && { rotulo: 'A partir de',  valor: entry.data.precoDe },

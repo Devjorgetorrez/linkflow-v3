@@ -22,7 +22,7 @@ const equipe = (await getCollection('equipeT4'))
 
 const depoimentos = (await getCollection('depoimentosT4'))
   .sort((a, b) => a.data.ordem - b.data.ordem)
-  .map(d => ({ nome: d.data.nome, cidade: d.data.cidade, servico: d.data.servico, corpo: d.body.trim() }))
+  .map(d => ({ nome: d.data.nome, cidade: d.data.cidade, servico: d.data.servico, corpo: (d.body ?? '').trim() }))
 
 const anos      = site.anoFundacao ? new Date().getFullYear() - site.anoFundacao : null
 const wa        = `https://wa.me/${site.nap.whatsapp}`

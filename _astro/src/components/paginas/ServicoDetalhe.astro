@@ -212,7 +212,7 @@ const faqs = site.faq ?? []
 
               {/* Texto */}
               <p class="text-sm text-ink leading-relaxed flex-1 italic">
-                "{dep.body.trim()}"
+                "{(dep.body ?? '').trim()}"
               </p>
 
               {/* Autor */}

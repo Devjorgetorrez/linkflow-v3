@@ -40,7 +40,7 @@ const depoimentos = (await getCollection('depoimentosT3'))
     nome:    d.data.nome,
     cidade:  d.data.cidade,
     servico: d.data.servico,
-    corpo:   d.body.trim(),
+    corpo:   (d.body ?? '').trim(),
   }))
 
 const autores = await getCollection('autoresT3')

@@ -14,7 +14,7 @@ const itens = todosServicos
   .sort((a, b) => a.data.ordem - b.data.ordem)
   .map(s => ({
     titulo:    s.data.titulo,
-    descricao: s.body.split('\n').find(l => l.trim().length > 0) ?? '',
+    descricao: (s.body ?? '').split('\n').find(l => l.trim().length > 0) ?? '',
     icone:     s.data.icone ?? '',
     imagem:    s.data.imagem,
     imagemAlt: s.data.imagemAlt,
