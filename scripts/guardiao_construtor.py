@@ -35,6 +35,15 @@ import re
 import sys
 from pathlib import Path
 
+# Terminal do Windows abre em cp1252 por padrao — print() de emoji (❌ ✅ ⚠️)
+# quebrava com UnicodeEncodeError ali, mas nunca no VPS (Linux, UTF-8 por
+# padrao). Forcar UTF-8 na saida evita depender de rodar com
+# PYTHONIOENCODING=utf-8 (erro 101, Relatorio de Testes 6). reconfigure()
+# existe desde Python 3.7; guardado por getattr por seguranca.
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        _stream.reconfigure(encoding="utf-8")
+
 _PROJECT_DIR = Path(os.environ.get('CLAUDE_PROJECT_DIR', '.'))
 _LINKFLOW_DIR = Path(os.environ.get('LINKFLOW_DIR', _PROJECT_DIR))
 # Onde o Nginx serve os sites (o build publicado). Configuravel so para poder
@@ -597,16 +606,27 @@ def verificar_saida(slug, fase="saida"):
 
         # 'navFooterColunas' com a coluna Servicos preenchida — da link direto
         # a cada servico a partir de QUALQUER pagina do site, nao só da Home.
+        # Confere pelo LINK (href pro pilar ou pra algum servico), nao pelo
+        # titulo da coluna — titulo e livre por nicho ("Tratamentos" na
+        # Odonto, por exemplo), e exigir "Serviços"/"Servicos" literal dava
+        # falso positivo numa coluna que ja cumpria a funcao (erro 102,
+        # Relatorio de Testes 6).
         if qtd_servicos > 1:
             match_footer = re.search(
                 r"navFooterColunas\s*:\s*\[([\s\S]*?)\n  \]", config_conteudo
             )
-            rotulos_ok = ("Serviços", "Servicos", rotulo_pilar)
-            if not match_footer or not any(r in match_footer.group(1) for r in rotulos_ok):
+            servicos_dir = content_dir / "servicos"
+            servicos_slugs = {md.stem for md in servicos_dir.glob("*.md")} if servicos_dir.exists() else set()
+            hrefs_footer = re.findall(r"href:\s*['\"]([^'\"]+)['\"]", match_footer.group(1)) if match_footer else []
+            tem_link_servicos = any(
+                h.strip("/") == rota_pilar.strip("/") or h.strip("/") in servicos_slugs
+                for h in hrefs_footer
+            )
+            if not tem_link_servicos:
                 avisos.append(
-                    f"navFooterColunas sem coluna de {rotulo_pilar} — cada item so tem "
-                    "1 link de entrada (via /servicos), em vez de aparecer no rodape "
-                    "de todo o site. Nao bloqueia, mas reduz o link interno."
+                    f"navFooterColunas sem link para {rota_pilar} nem para nenhum servico — "
+                    "cada item so tem 1 link de entrada (via /servicos), em vez de aparecer "
+                    "no rodape de todo o site. Nao bloqueia, mas reduz o link interno."
                 )
 
     # ── Conteúdo real criado ──────────────────────────────────────────────────
@@ -798,6 +818,16 @@ def verificar_saida(slug, fase="saida"):
                     "'Registro de consentimento' em Privacidade > Banner de cookies "
                     "antes de publicar. Sem isso nao ha prova de consentimento gravada."
                 )
+        # Sem <link rel="icon">, o navegador cai no globo generico na aba —
+        # {site.favicon && <link .../>} no layout OMITE a tag inteira quando
+        # o campo esta vazio, e nenhum guardiao conferia isso antes. Achado
+        # real: site da Odonto foi ao ar assim (erro 97, Relatorio de Testes 6).
+        if 'rel="icon"' not in home_html and "rel='icon'" not in home_html:
+            avisos.append(
+                f"Sem <link rel=\"icon\"> na home publicada {onde} — o site vai ao ar com o "
+                "icone generico do navegador na aba. Preencha 'favicon' em Identidade > "
+                "Logo e favicon no painel."
+            )
     elif not previa:
         avisos.append(f"index.html nao encontrado {onde} — nao foi possivel confirmar o banner de cookies")
 

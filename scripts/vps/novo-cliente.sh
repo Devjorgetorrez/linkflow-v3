@@ -185,9 +185,29 @@ fi
 # Copiar .env para o diretório do painel durante o build
 cp $CLIENTE_DIR/.env $PAINEL_SRC/.env.local.tmp
 
-# Build com variáveis do cliente
+# Build com variáveis do cliente — "| tail -5" sozinho engolia o código de
+# saída do npm run build: uma falha intermitente passava batido, o script
+# seguia até "✅ configurado" com o PM2 depois caindo em loop ("Could not
+# find a production build") — erro 93, Relatório de Testes 6. Confere de
+# verdade (.next/BUILD_ID só existe num build que terminou), com retry —
+# falha vista era intermitente (rede, npm ci de pacote nativo).
 cd $PAINEL_SRC
-env $(cat $CLIENTE_DIR/.env | grep -v '#' | xargs) npm run build 2>&1 | tail -5
+BUILD_OK=""
+for tentativa in 1 2 3; do
+  echo "  Build do painel (tentativa $tentativa/3)..."
+  SAIDA_BUILD=$(env $(cat $CLIENTE_DIR/.env | grep -v '#' | xargs) npm run build 2>&1) || true
+  echo "$SAIDA_BUILD" | tail -5
+  if [ -f "$PAINEL_SRC/.next/BUILD_ID" ]; then
+    BUILD_OK=1
+    break
+  fi
+  echo "  Build sem .next/BUILD_ID — não terminou de verdade. Tentando de novo..."
+done
+if [ -z "$BUILD_OK" ]; then
+  echo "Erro: build do painel falhou 3 vezes. Nada foi publicado para $SLUG."
+  echo "$SAIDA_BUILD" | tail -40
+  exit 1
+fi
 
 # Copiar build para pasta do cliente
 mkdir -p $CLIENTE_DIR/painel

@@ -673,8 +673,15 @@ teste ao endpoint que o formulário usa e conferir que ele aparece na tela de
 Leads do painel (Origem = página `/teste-instalacao`):
 
 ```bash
-curl -s -X POST "https://painel.[dominio]/api/submissao"   -H "Content-Type: application/json" -H "Origin: https://[dominio]"   -d '{"formularioId":"contato","nome":"Teste de instalação","email":"","telefone":"","mensagem":"Teste automático do formulário — pode apagar.","_hp":"","paginaOrigem":"/teste-instalacao","lgpdAceite":false,"camposExtras":{}}'
+curl -s -X POST "https://painel.[dominio]/api/submissao"   -H "Content-Type: application/json" -H "Origin: https://[dominio]"   -d '{"formularioId":"contato","nome":"Teste de instalação","email":"","telefone":"11999999999","mensagem":"Teste automático do formulário — pode apagar.","_hp":"","paginaOrigem":"/teste-instalacao","lgpdAceite":true,"camposExtras":{}}'
 ```
+
+O painel exige e-mail OU telefone, e `lgpdAceite: true` — sem os dois, a
+API recusa de propósito ("Informe um e-mail ou um telefone" / "É preciso
+aceitar"), e isso não é falha de rede nem do formulário (erro 95,
+Relatório de Testes 6: o payload de teste antigo mandava os dois vazios e
+`lgpdAceite: false`, então a API sempre recusava e o teste nunca provava
+nada sobre o site de verdade).
 
 Deve responder `{"ok":true,...}`. Se responder erro de validação, falha de rede ou
 CORS, **parar e avisar** ("o formulário do site ainda não entrega os contatos") —

@@ -43,9 +43,15 @@ export async function GET(req: NextRequest) {
       else if (status === "revisao") revisao++;
       else rascunhos++;
 
-      const data = String(frontmatter.publicadoEm ?? frontmatter.atualizadoEm ?? "");
-      if (data && (!ultimaPublicacao || data > ultimaPublicacao)) {
-        ultimaPublicacao = data;
+      // Só post PUBLICADO conta pra "último em" — antes considerava qualquer
+      // arquivo, então um rascunho editado recentemente virava a data mostrada
+      // no card "Publicados" mesmo com 0 posts publicados de verdade (erro
+      // 103, Relatório de Testes 6).
+      if (status === "publicado") {
+        const data = String(frontmatter.publicadoEm ?? frontmatter.atualizadoEm ?? "");
+        if (data && (!ultimaPublicacao || data > ultimaPublicacao)) {
+          ultimaPublicacao = data;
+        }
       }
     }
 
