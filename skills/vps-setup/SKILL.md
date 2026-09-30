@@ -109,39 +109,19 @@ pergunte de novo. Ler `dominio` e `dominio_painel` do `projeto.md`.
 Verificar se `## Ambiente VPS` no `projeto.md` já tem `vps_ip`.
 Se sim, ir para PASSO 2 (decidir bootstrap vs. novo cliente).
 
-**Nunca peça a senha root no chat.** Não é só prudência — a ferramenta que
-executa comandos SSH nesta sessão não tem como digitar uma senha de forma
-interativa, então uma senha colada no chat não autentica nada mesmo; e
-ela ficaria registrada em texto puro na conversa por nada. O caminho de
-verdade é autorizar a CHAVE PÚBLICA da máquina que roda o agente — o
-operador faz isso no próprio terminal dele (ou no console VNC da
-Hostgator), sem nunca digitar a senha root para o agente (erro 94,
-Relatório de Testes 6).
+Se não, **um único pedido** com os três dados do e-mail da Hostgator:
 
-Garantir que existe uma chave local (gera só se realmente faltar — nunca
-sobrescrever uma chave existente, que pode já estar autorizada em outro
-servidor):
-```bash
-[ -f ~/.ssh/id_ed25519 ] || ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519 -N "" -C linkflow-agente
-cat ~/.ssh/id_ed25519.pub
-```
-
-Depois, **um único pedido** com o que falta — IP e porta do e-mail da
-Hostgator, mais a autorização da chave (cole a saída do `cat` acima no
-lugar de `[CHAVE_PUBLICA]`):
-
-> "Para colocar o site no ar, preciso de três coisas:
-> 1. **IP do servidor** (o e-mail de boas-vindas da Hostgator, plano VPS)
-> 2. **Porta SSH** (o padrão da Hostgator VPS é `22022`)
-> 3. Autorize esta chave no servidor — pelo console VNC da Hostgator (Portal
->    Hostgator → VPS e Dedicados → seu plano → Console) ou pelo seu próprio
->    terminal SSH, cole e rode:
->    `mkdir -p ~/.ssh && echo '[CHAVE_PUBLICA]' >> ~/.ssh/authorized_keys && chmod 700 ~/.ssh && chmod 600 ~/.ssh/authorized_keys`
->    Não preciso da sua senha root em nenhum momento — só que você rode esse
->    comando aí do seu lado.
+> "Para colocar o site no ar, preciso dos dados do servidor que a Hostgator
+> mandou no e-mail de boas-vindas do plano VPS. Me passe:
+> 1. **IP do servidor** (ex: `189.34.140.57`)
+> 2. **Senha root**
+> 3. **Porta SSH** (o padrão da Hostgator VPS é `22022`)
 >
 > Onde estamos: visual aprovado, falta o servidor.
-> Falta para o próximo marco: esses três itens."
+> Falta para o próximo marco: esses três dados."
+
+A senha root só será usada nesta sessão. Depois, recomende criar um usuário
+com chave SSH para o acesso futuro.
 
 Salvar em `projeto.md` em `## Ambiente VPS`:
 ```
@@ -151,6 +131,9 @@ vps_user: root
 dominio: [dominio do site]            (já registrado no gate)
 dominio_painel: painel.[dominio]
 ```
+
+**Nunca salvar a senha root no projeto.md nem em nenhum arquivo.**
+Usar apenas durante a sessão atual.
 
 ---
 
@@ -182,13 +165,11 @@ Se falhar:
 >
 > - **IP correto:** está no Portal Hostgator → VPS e Dedicados → seu plano
 > - **Porta correta:** VPS Hostgator usa porta `22022` por padrão
-> - **Chave autorizada:** confirme que o comando do PASSO 0 rodou sem erro
->   no servidor (console VNC ou seu terminal) — é ele que autoriza esta
->   máquina, sem senha nenhuma
+> - **Senha correta:** é a senha root que chegou no e-mail de boas-vindas
 > - **Firewall:** alguns provedores de internet bloqueiam SSH — tente
 >   de outra rede ou pelo painel VNC da Hostgator
 >
-> Me passe os dados corrigidos, ou confirme que rodou o comando de novo."
+> Me passe os dados corrigidos."
 
 Tentar até 3 vezes com dados diferentes antes de parar.
 
@@ -548,7 +529,7 @@ ssh -p [porta] root@[IP] "df -h"
 
 | Situação | Ação |
 |---|---|
-| SSH não conecta | Verificar IP, porta e se a chave foi autorizada de verdade (PASSO 0) — tentar VNC no portal Hostgator |
+| SSH não conecta | Verificar IP, porta e senha — tentar VNC no portal Hostgator |
 | Script falha no meio | Ler o output do erro, corrigir e rodar de novo — `novo-cliente.sh` verifica se o cliente já existe antes de recriar |
 | Painel não sobe (PM2 offline) | `ssh ... "pm2 logs painel-[SLUG] --lines 50"` para ver o erro |
 | DNS não propagou | Aguardar até 4h — verificar configuração no registrador do domínio |
