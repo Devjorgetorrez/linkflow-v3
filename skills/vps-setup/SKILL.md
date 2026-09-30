@@ -127,8 +127,9 @@ novo com este cliente, nem nesta sessão nem em nenhuma futura.
 Autorizar a chave com a senha recebida (`ssh`/`scp` comuns não sabem
 autenticar com senha — precisa deste script; ver "Por que este passo"
 abaixo). Se a saída for o erro "biblioteca 'paramiko' ausente", rodar
-`pip install paramiko` (uma vez, silencioso, sem perguntar) e tentar de
-novo:
+`pip install -r scripts/requirements.txt` (uma vez, silencioso, sem
+perguntar — já cobre `paramiko` junto com as outras dependências dos
+scripts) e tentar de novo:
 ```bash
 python scripts/vps/autorizar_chave.py --ip [IP] --porta [porta] --senha [SENHA]
 ```
@@ -155,7 +156,7 @@ interativo, que esta sessão não tem como responder — sem isto, a senha
 digitada no chat não autenticava nada de verdade, e o resto da skill só
 funcionava se já existisse uma chave confiável por fora (achado técnico
 ao revisar o erro 94, Relatório de Testes 6). `autorizar_chave.py` usa
-`paramiko` (biblioteca Python, `pip install paramiko` se ausente — mesma
+`paramiko` (biblioteca Python, ver `scripts/requirements.txt` — mesma
 instalação em Windows/Mac/Linux, sem depender de `sshpass`/pacman/choco)
 para autenticar com a senha só nesta etapa e instalar a chave pública
 local (`~/.ssh/id_ed25519.pub`, gerada automaticamente se não existir)
