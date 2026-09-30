@@ -74,6 +74,30 @@ export function validarCamposObrigatoriosServico(fm: Record<string, unknown>): E
   return null;
 }
 
+/**
+ * Bloqueia deixar um serviço público (noindex: false) sem conteúdo de
+ * verdade: título/meta ainda no texto provisório, marcador `[CAMPO]`
+ * sobrando, ou corpo vazio. Sem isso o serviço ia ao Google com "Novo
+ * serviço" e o texto de instrução na descrição de busca (erro 108,
+ * Relatório de Testes 6). Só entra em vigor quando o resultado final é
+ * público — ficar como rascunho (noindex: true) continua livre.
+ */
+export function validarPublicacaoServico(fm: Record<string, unknown>, corpo: string): ErroCampos | null {
+  if (fm.noindex !== false) return null; // segue como rascunho, sem restrição de conteúdo
+  const titulo = typeof fm.titulo === "string" ? fm.titulo.trim() : "";
+  const meta = typeof fm.metaDescription === "string" ? fm.metaDescription : "";
+  if (!titulo || titulo === TITULO_PROVISORIO_SERVICO) {
+    return { erro: "Escreva o título real do serviço antes de tirar do rascunho (tire o \"Novo serviço\").", status: 422 };
+  }
+  if (meta.includes("[CAMPO]")) {
+    return { erro: "A descrição de busca ainda tem o marcador [CAMPO] — escreva o texto real antes de publicar.", status: 422 };
+  }
+  if (corpo.trim() === "") {
+    return { erro: "O serviço está sem texto no corpo. Escreva a descrição antes de tirar do rascunho.", status: 422 };
+  }
+  return null;
+}
+
 /** Painel → frontmatter do site: só campos que o schema `servicos` conhece, com o nome do site. */
 export function painelParaFrontmatterServico(entrada: Record<string, unknown>): Record<string, unknown> {
   const fm: Record<string, unknown> = {};
@@ -123,7 +147,12 @@ export function frontmatterInicialServico(campos: Record<string, unknown>): Reco
     metaDescription: META_PROVISORIA_SERVICO,
     ordem: 99,
     destaque: false,
-    noindex: false,
+    // Nasce fora do Google: título e meta ainda são placeholder [CAMPO] e o
+    // corpo está vazio. Sem isso a página ia ao ar indexável com esse texto
+    // se o autor esquecesse de completar antes de publicar (erro 108,
+    // Relatório de Testes 6). O usuário desliga o noindex na tela quando o
+    // conteúdo estiver pronto.
+    noindex: true,
     ...campos,
   };
 }

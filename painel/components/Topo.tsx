@@ -41,6 +41,10 @@ export function Topo() {
   const [build, setBuild] = useState<EstadoBuild | null>(null);
   const [aviso, setAviso] = useState<string | null>(null); // falha sem estado do servidor (rede, 409...)
   const [detalhes, setDetalhes] = useState(false);
+  // Sem isso o card de erro ficava preso na tela até uma nova tentativa —
+  // "Painel sem saída depois da falha" (erro 107, Relatório de Testes 6):
+  // o operador não tinha como limpar a mensagem enquanto não corrigia.
+  const [dispensado, setDispensado] = useState(false);
   const [agora, setAgora] = useState(() => Date.now());
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const eraRodando = useRef(false);
@@ -90,6 +94,12 @@ export function Topo() {
     };
   }, [rodando, consultar]);
 
+  // "Dispensar" some só com a falha atual — uma tentativa nova (deste painel
+  // ou de outra aba) some com o aviso quando build.fim muda.
+  useEffect(() => {
+    setDispensado(false);
+  }, [build?.fim]);
+
   // "Publicado" só depois que o servidor confirmou ok: só então zera as pendências
   useEffect(() => {
     if (rodando) eraRodando.current = true;
@@ -104,6 +114,7 @@ export function Topo() {
     if (rodando || !podePublicar) return;
     setAviso(null);
     setDetalhes(false);
+    setDispensado(false);
     try {
       const res = await fetch("/api/build", {
         method: "POST",
@@ -149,6 +160,17 @@ export function Topo() {
     } finally {
       setRemovendoCategoria(null);
     }
+  }
+
+  // Link "Abrir para corrigir" a partir do caminho relatado pela validação
+  // (ex. "servicos/novo-servico.md" → /servicos/novo-servico). Só cobre as
+  // coleções com tela própria no painel; as demais mostram só o nome do
+  // arquivo, sem link.
+  function hrefDoErro(arquivo: string): string | null {
+    const m = arquivo.match(/^(servicos|posts)\/(.+)\.md$/);
+    if (!m) return null;
+    const [, colecao, slug] = m;
+    return colecao === "servicos" ? `/servicos/${slug}` : `/posts/${slug}`;
   }
 
   // ── Busca ──────────────────────────────────────────────────────────────────
@@ -294,16 +316,26 @@ export function Topo() {
             {infoBuild}
           </span>
         )}
-        {(emErro || aviso) && !rodando && (
-          <button
-            type="button"
-            onClick={() => setDetalhes((d) => !d)}
-            className="flex max-w-[260px] items-center gap-1 text-[10.5px] text-danger underline-offset-2 hover:underline"
-            title={aviso ?? build?.resumo}
-          >
-            <AlertTriangle size={11} className="shrink-0" />
-            <span className="truncate">{aviso ?? build?.resumo ?? "A atualização do site falhou."}</span>
-          </button>
+        {(emErro || aviso) && !rodando && !dispensado && (
+          <>
+            <button
+              type="button"
+              onClick={() => setDetalhes((d) => !d)}
+              className="flex max-w-[260px] items-center gap-1 text-[10.5px] text-danger underline-offset-2 hover:underline"
+              title={aviso ?? build?.resumo}
+            >
+              <AlertTriangle size={11} className="shrink-0" />
+              <span className="truncate">{aviso ?? build?.resumo ?? "A atualização do site falhou."}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => { setDispensado(true); setDetalhes(false); }}
+              title="Dispensar esta mensagem (o botão continua marcado como falha até uma nova tentativa)"
+              className="text-[10.5px] text-ink-muted hover:text-ink"
+            >
+              Dispensar
+            </button>
+          </>
         )}
 
         {/* Ver site */}
@@ -361,11 +393,18 @@ export function Topo() {
           <p className="mb-2 text-[11.5px] text-ink">{aviso ?? build?.resumo}</p>
           {build?.erros && build.erros.length > 0 && (
             <ul className="mb-2 space-y-1.5">
-              {build.erros.map((e, i) => (
+              {build.erros.map((e, i) => {
+                const href = hrefDoErro(e.arquivo);
+                return (
                 <li key={`${e.arquivo}-${e.campo}-${i}`} className="text-[11px] text-ink">
                   <span className="font-mono text-[10.5px] text-ink-muted">{e.arquivo}</span>
                   {" · "}
                   <b>{e.campo}</b>: {e.mensagem}
+                  {href && (
+                    <Link href={href} className="ml-1.5 text-primary underline">
+                      Abrir para corrigir
+                    </Link>
+                  )}
                   {e.campo === "categoria" && (
                     categoriaRemovidaDe.has(e.arquivo) ? (
                       <span className="ml-1.5 text-success">Removido — clique em &quot;Atualizar o site&quot; de novo.</span>
@@ -381,7 +420,8 @@ export function Topo() {
                     )
                   )}
                 </li>
-              ))}
+                );
+              })}
             </ul>
           )}
           {build?.final && !(build.erros && build.erros.length > 0) && (

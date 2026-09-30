@@ -12,7 +12,7 @@ import { MATRIZ } from "@/lib/permissoes";
 import { servicoParaApi } from "@/lib/servicos-api";
 import {
   camposParaLimparServico, painelParaFrontmatterServico, slugOcupadoGlobal,
-  validarCamposObrigatoriosServico, validarCorpoRequisicaoServico,
+  validarCamposObrigatoriosServico, validarCorpoRequisicaoServico, validarPublicacaoServico,
 } from "@/lib/servicos-campos";
 import {
   caminhoServico, gravarAtomico, gravarNovoAtomico, moverServicoParaLixeira, slugLivreServico,
@@ -74,6 +74,10 @@ export async function PATCH(
     for (const k of limpar) delete fmFinal[k];
     const invalido = validarCamposObrigatoriosServico(fmFinal);
     if (invalido) return NextResponse.json({ ok: false, erro: invalido.erro }, { status: invalido.status });
+
+    const corpoFinal = corpo !== undefined ? corpo : parseMd(raw).content;
+    const bloqueado = validarPublicacaoServico(fmFinal, corpoFinal);
+    if (bloqueado) return NextResponse.json({ ok: false, erro: bloqueado.erro }, { status: bloqueado.status });
 
     // ── Slug novo? (renomear o arquivo) ──────────────────────────────────────
     let slugFinal = slug;

@@ -151,6 +151,17 @@ function valorInline(bruto: string): Valor {
   return { k: "string", v };
 }
 
+// Corpo (markdown depois do segundo ---) n\u00E3o \u00E9 campo de schema \u2014 o Zod nunca
+// v\u00EA essa parte do arquivo, ent\u00E3o nenhuma regra acima cobria um servi\u00E7o
+// nascido s\u00F3 com frontmatter. Isso n\u00E3o travava mais o build (motor j\u00E1 trata
+// corpo ausente como ''), mas ainda publicava uma p\u00E1gina sem texto sem
+// avisar ningu\u00E9m antes \u2014 erro 107, Relat\u00F3rio de Testes 6.
+function lerCorpo(raw: string): string {
+  const texto = raw.replace(/^\uFEFF/, "").replace(/\r\n/g, "\n");
+  const m = texto.match(/^---\n[\s\S]*?\n---\s*\n([\s\S]*)$/);
+  return (m?.[1] ?? "").trim();
+}
+
 function lerFrontmatter(raw: string): Map<string, Valor> | null {
   const texto = raw.replace(/^\uFEFF/, "").replace(/\r\n/g, "\n");
   const m = texto.match(/^---\n([\s\S]*?)\n---\s*(?:\n[\s\S]*)?$/);
@@ -320,6 +331,9 @@ export function validarConteudoSite(astroDir: string): { erros: ErroConteudo[]; 
         continue;
       }
       validarCampos(arquivo, campos, regras[col], erros);
+      if (col === "servicos" && lerCorpo(raw) === "") {
+        erros.push({ arquivo, campo: "(corpo)", mensagem: "Sem texto no corpo do serviço. Abra o serviço e escreva a descrição antes de publicar." });
+      }
       lidos.push({ col, arquivo, campos });
     }
   }
