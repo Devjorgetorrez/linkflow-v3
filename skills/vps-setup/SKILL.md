@@ -51,6 +51,9 @@ institucionais, layout — isso é `fase2-site-astro`.
   Marco 2, envia o site para a estrutura que `vps-setup` criou.
 - **`site-atualizar`:** republica o site depois que conteúdo mudou fora
   do fluxo de blog (Fase 3, edição pelo painel).
+- **`atualizar-cliente`:** propaga uma correção de CÓDIGO (motor ou painel,
+  feita no repositório) para um cliente já publicado — diferente de
+  `site-atualizar`, que republica conteúdo. Erro 90, Relatório de Testes 6.
 
 ---
 

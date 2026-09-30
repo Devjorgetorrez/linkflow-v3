@@ -283,6 +283,21 @@ tela de login:
 - Nunca guarde a senha provisória em arquivo; ela aparece uma única vez, na
   resposta ao usuário.
 
+## Trigger: atualizar cliente(s)
+
+Quando o usuário pedir para "atualizar o site/painel do cliente X",
+"levar a correção pro ar", "propagar a correção", "ver quem está
+desatualizado" ou similar — leia e execute `skills/atualizar-cliente/SKILL.md`.
+Só se aplica a `site_tipo: astro` (cada cliente é uma cópia isolada de
+código; WordPress publica via Novamira/Yoast, sem cópia de código por
+cliente).
+
+**Nunca propagar sozinho**, mesmo depois de subir uma correção para a
+referência compartilhada do VPS — reiniciar o painel/site de um cliente
+real é visível a quem está usando naquele momento. Perguntar quais
+clientes antes de rodar, exceto quando o próprio usuário já especificou
+o slug.
+
 ## Trigger: automatizar blog
 
 Quando o usuário digitar "automatizar blog", "agendar blog", "publicar automaticamente" ou similar:
