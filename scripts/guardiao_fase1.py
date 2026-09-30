@@ -21,8 +21,11 @@ def verificar(slug):
     erros = []
     avisos = []
 
-    # CHECK 0 — PRÉ-REQUISITO BLOQUEANTE: Fase 0 concluída
-    if not re.search(r"auditoria_global\s*:\s*concluida", conteudo, re.IGNORECASE):
+    # CHECK 0 — PRÉ-REQUISITO BLOQUEANTE: Fase 0 concluída OU marcada como
+    # nao aplicavel (cliente sem site — nao ha WordPress pra auditar). Gate
+    # binario "linha existe ou nao" travava todo cliente de site novo, que
+    # e um dos dois cenarios principais do produto, nao uma excecao.
+    if not re.search(r"auditoria_global\s*:\s*(concluida|n[ãa]o se aplica)", conteudo, re.IGNORECASE):
         print("FAIL: Fase 0 (auditoria do site) nao foi executada. E pre-requisito da Fase 1.")
         print("  Execute /link-flow auditoria antes de rodar o planejamento.")
         return 1

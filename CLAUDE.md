@@ -65,8 +65,8 @@ Cada fase tem pré-requisito verificado em código pelo guardião da fase seguin
 | Fase | Sub-skill | Guardião (gate) |
 |---|---|---|
 | `novo` | `orq-icp` (intake 3×3, cria `projetos/<slug>/projeto.md`) | — |
-| `auditoria` | `fase0-auditoria-site` | — (somente leitura; bloqueia Fase 3 se molde sujo) |
-| `planejamento` | `fase1-planejamento` | `guardiao_fase1.py` → **GATE HUMANO 1** (`.approved`) · pré-req: `auditoria_global: concluida` |
+| `auditoria` | `fase0-auditoria-site` | — (somente leitura; bloqueia Fase 3 se molde sujo; cliente sem site: registra "não se aplica" sem rodar a auditoria) |
+| `planejamento` | `fase1-planejamento` | `guardiao_fase1.py` → **GATE HUMANO 1** (`.approved`) · pré-req: `auditoria_global: concluida` OU `auditoria_global: não se aplica` |
 | `site` | ver roteamento abaixo | `guardiao_fase2.py` (exige `.approved`) |
 | `conteudo` | `fase3-conteudo` | `guardiao_fase3.py` → **GATE HUMANO 2** (`.publish-approved`) |
 | `backlinks` | `fase4-backlinks` (stub v2) | — |

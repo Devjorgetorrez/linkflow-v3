@@ -7,7 +7,10 @@ NUNCA pede dados que ja estao no projeto.md. kw_principal e DEFINIDA aqui (nao e
 ## PRÉ-REQUISITO — BLOQUEANTE (executar ANTES de qualquer etapa)
 
 Ler `## Estado das Fases` no projeto.md do cliente.
-Se NÃO contiver a linha `auditoria_global: concluida` → PARAR IMEDIATAMENTE.
+Se NÃO contiver `auditoria_global: concluida` NEM `auditoria_global: não se aplica`
+→ PARAR IMEDIATAMENTE. (Os dois valores liberam a Fase 1: "concluida" = site
+existente auditado; "não se aplica" = cliente sem site, nada pra auditar —
+nunca tratar como sinônimos em outro lugar, só aqui como gate.)
 Não continuar. Não perguntar se o cliente quer pular. Invocar `fase0-auditoria-site`.
 Mensagem: "A Fase 0 (auditoria do site) é pré-requisito obrigatório da Fase 1. Rodando agora."
 

@@ -4,6 +4,7 @@ description: >
   Audita a camada global de um site WordPress existente ANTES de qualquer alteração de conteúdo.
   SOMENTE LEITURA — não corrige nada. Mapeia o que está herdado do dono anterior (templates,
   menus, wp_options, SEO plugin, páginas) e bloqueia a Fase 3 se o molde estiver sujo.
+  Cliente sem site ainda: registra "não se aplica" e libera a Fase 1 sem rodar a auditoria.
 allowed-tools: Read, Write, Glob, Grep, Bash
 ---
 
@@ -13,7 +14,33 @@ Invocada por `link-flow auditoria <slug>`. Roda UMA VEZ, após o `orq-icp` e ANT
 
 ## TRAVA DE IDEMPOTÊNCIA
 Antes de qualquer ação, ler `## Estado das Fases` no `projetos/<slug>/projeto.md`.
-Se já contém `auditoria_global: concluida` → responder "Auditoria já realizada em [data]. Quer repetir?" e aguardar confirmação antes de sobrescrever.
+Se já contém `auditoria_global: concluida` ou `auditoria_global: não se aplica` → responder "Auditoria já realizada em [data] (ou marcada como não aplicável). Quer repetir?" e aguardar confirmação antes de sobrescrever.
+
+## RAMO: CLIENTE SEM SITE (verificar ANTES de tudo abaixo)
+
+Ler `site_url` no `projeto.md`. Toda esta skill (camadas A-F) audita um
+WordPress EXISTENTE — não existe para site novo, e não deve ser forçada.
+
+Se `site_url` estiver ausente, vazio, ou contiver "a criar" (cliente
+respondeu NÃO em "Você já tem site no ar?" no onboarding):
+- NÃO rodar nenhuma camada abaixo (A a F) — não há WordPress, molde nem
+  wp_options para auditar.
+- Registrar direto no `projeto.md`:
+  ```
+  ## Estado das Fases
+  auditoria_global: não se aplica (site novo) em [data]
+  molde_status: não definido
+  ```
+  **Nunca gravar `concluida` aqui** — não houve auditoria nenhuma, só a
+  constatação de que o cliente não tem site para auditar. Confundir os
+  dois esconde de fases futuras (ex: `fase2-diagnostico`) que não existe
+  histórico de site anterior a considerar.
+- Informar ao cliente: "Site novo, sem WordPress existente para auditar —
+  a Fase 0 não se aplica aqui. Seguindo direto para a Fase 1."
+- Parar. Não seguir para o MODO: SOMENTE REPORTAR abaixo.
+
+Se `site_url` tiver uma URL real preenchida → seguir normalmente para o
+MODO: SOMENTE REPORTAR abaixo (fluxo original, sem mudança).
 
 ## MODO: SOMENTE REPORTAR
 O agente NÃO corrige NADA nesta etapa.

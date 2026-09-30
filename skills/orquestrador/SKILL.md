@@ -47,8 +47,8 @@ O agente escolhe o caminho — nunca o cliente.
 ## Tabela de roteamento
 | Fase | Sub-skill | Guardiao (gate) |
 |---|---|---|
-| auditoria | `fase0-auditoria-site` | — (somente leitura; bloqueia Fase 3 se molde sujo) |
-| planejamento | `fase1-planejamento` | `guardiao_fase1.py` -> **GATE HUMANO 1** (`.approved`) — ⛔ PRÉ-REQUISITO: `auditoria_global: concluida` no projeto.md |
+| auditoria | `fase0-auditoria-site` | — (somente leitura; bloqueia Fase 3 se molde sujo; cliente sem site: pula direto pra "não se aplica") |
+| planejamento | `fase1-planejamento` | `guardiao_fase1.py` -> **GATE HUMANO 1** (`.approved`) — ⛔ PRÉ-REQUISITO: `auditoria_global: concluida` OU `auditoria_global: não se aplica` no projeto.md |
 | vps | `vps-setup` (só site_tipo=astro; roda no Marco 2, depois da aprovação do visual) | — (infraestrutura; sem ela `fase2-site-astro` não publica) |
 | site | `fase2-site` (+ `fase2-site-astro` se site_tipo=astro — ver Roteamento site) | `guardiao_fase2.py` (exige `.approved`) — se astro, também `guardiao_construtor.py` |
 | conteudo | `fase3-conteudo` | `guardiao_fase3.py` -> **GATE HUMANO 2** (`.publish-approved`) |
