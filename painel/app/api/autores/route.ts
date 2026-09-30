@@ -29,11 +29,18 @@ export async function GET(req: NextRequest) {
       slug: u.autoria!.slug,
       foto: u.autoria!.foto,
       fotoAlt: u.autoria!.fotoAlt ?? "",
-      cargo: u.autoria!.cargo,
-      bioCurta: u.autoria!.bioCurta,
-      bioLonga: u.autoria!.bioLonga,
-      conselho: u.autoria!.conselho,
-      registro: u.autoria!.registro,
+      cargo: u.autoria!.cargo ?? "",
+      // bioCurta vira meta_description da página do autor
+      // (motor/indexaveis.ts) — sem o valor padrão, undefined chegava até
+      // ix.meta_description.length e travava a Visão geral de SEO pra todo
+      // cliente novo, o mesmo autor sem bio criado pelo instalador (erro 86,
+      // causa real confirmada em "Detalhamento de Erros 78/79/28/87",
+      // 30/09/2026 — corrige o Relatório de Testes 6, que tinha apontado
+      // ix.title como a causa).
+      bioCurta: u.autoria!.bioCurta ?? "",
+      bioLonga: u.autoria!.bioLonga ?? "",
+      conselho: u.autoria!.conselho ?? "",
+      registro: u.autoria!.registro ?? "",
       // O primeiro admin (vps-setup PASSO 7) nasce só com nomePublico — os
       // campos abaixo ficam ausentes de verdade em usuarios.json, mesmo o
       // tipo Autor os declarando obrigatórios. Sem o valor padrão aqui,
@@ -41,9 +48,9 @@ export async function GET(req: NextRequest) {
       // cliente novo (erro 85, Relatório de Testes 6).
       especialidades: u.autoria!.especialidades ?? [],
       formacao: u.autoria!.formacao ?? [],
-      emailPublico: u.autoria!.emailPublico,
+      emailPublico: u.autoria!.emailPublico ?? "",
       redes: u.autoria!.redes ?? {},
-      urlExterna: u.autoria!.urlExterna,
+      urlExterna: u.autoria!.urlExterna ?? "",
       destaque: u.autoria!.destaque ?? false,
       ativo: u.acesso?.ativo ?? true,
       usuarioId: u.id,

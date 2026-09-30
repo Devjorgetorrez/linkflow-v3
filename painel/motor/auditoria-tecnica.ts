@@ -381,7 +381,13 @@ export function auditarTecnica(
   for (const ix of indexaveis) {
     if (ix.tipo === "categoria") continue;
     if (ix.real?.erroLeitura) continue;
-    const len = ix.meta_description.length;
+    // Página de autor mapeia meta_description para autor.bioCurta — o
+    // administrador criado pelo instalador nasce sem bio curta (chega
+    // undefined). Essa e a quebra real que travava a Visao geral de SEO,
+    // não a de ix.title (guardada acima, linha 361) — confirmado rodando o
+    // código real com e sem bio (Detalhamento de Erros 78/79/28/87,
+    // 30/09/2026, que corrige o Relatório de Testes 6 nesse ponto).
+    const len = (ix.meta_description ?? "").length;
     if (len === 0 || len < MIN_META || len > LIM_META) {
       const msg =
         len === 0

@@ -154,15 +154,31 @@ export function gerarIndexaveis(dados: {
 
   // ── Autores ────────────────────────────────────────────────────────────
   // Autor tem página própria no site: /autor/<slug>
+  // Regra de indexável precisa bater com a do site (pages/autor/[slug].astro:
+  // noindex={total === 0 || autorGenerico}) — sem isso a tela conta um
+  // /autor/<slug> a mais do que o sitemap publicado pra todo cliente novo,
+  // porque o admin criado pelo instalador nasce sem artigo e sem bio (erro
+  // 79, causa 1, confirmada em "Detalhamento de Erros 78/79/28/87", 30/09/2026).
+  const NOMES_GENERICOS_AUTOR = ["administrador", "admin", "usuário", "usuario"];
+  const artigosPublicadosPorAutor = new Map<string, number>();
+  for (const post of posts) {
+    if (post.autorId && !post.noindex && post.status === "publicado") {
+      artigosPublicadosPorAutor.set(post.autorId, (artigosPublicadosPorAutor.get(post.autorId) ?? 0) + 1);
+    }
+  }
   for (const autor of autores) {
     if (!autor.slug?.trim()) continue; // rascunho sem slug não tem página no site
     const url = urlAutor(autor.slug);
+    const temArtigoPublicado = (artigosPublicadosPorAutor.get(autor.id) ?? 0) > 0;
+    const autorGenerico =
+      NOMES_GENERICOS_AUTOR.includes(autor.nome.trim().toLowerCase()) ||
+      (autor.bioCurta ?? "").length < 50;
     indexaveis.push({
       node_id: `autor-${autor.id}`,
       url,
       tipo: "autor",
       status: "publicado",
-      indexavel: autor.ativo !== false,
+      indexavel: autor.ativo !== false && temArtigoPublicado && !autorGenerico,
       title: nomeSite ? `${autor.nome} · ${nomeSite}` : autor.nome,
       meta_description: autor.bioCurta,
       h1: autor.nome,
