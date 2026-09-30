@@ -13,10 +13,13 @@ Desenvolvido por **Link Flow** · Criado por **Jorge Torrez**
 (Linux/macOS).
 
 **Já tem clientes cadastrados numa instalação anterior e está atualizando
-para um pacote novo?** Copie as pastas `projetos/` (e `credenciais/`,
-`_memoria/` se existirem) da instalação antiga para dentro desta pasta nova
-**antes** de instalar, e execute `update.bat` (Windows) ou `update.sh`
-(Linux/macOS) em vez do `install`. Ele confere se essas pastas realmente
+para um pacote novo?** As pastas `projetos/`, `credenciais/` (se existir) e
+`_memoria/` (se existir) ficam soltas na **raiz** da instalação antiga — o
+mesmo nível de `install.bat`, `skills/`, `painel/` e `_astro/` de lá, nunca
+dentro de outra pasta. Copie essas pastas da raiz da instalação antiga para
+a raiz **desta pasta nova** (o mesmo nível deste `README.md`) **antes** de
+instalar, e execute `update.bat` (Windows) ou `update.sh` (Linux/macOS) em
+vez do `install`. Ele confere se essas pastas realmente
 estão aqui antes de seguir — se esquecer de copiar, ele avisa em vez de
 seguir em silêncio com o cadastro de clientes vazio.
 

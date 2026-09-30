@@ -43,15 +43,21 @@ if ($clientes.Count -gt 0) {
     Write-Warn "Pasta projetos\ nao encontrada (ou vazia) nesta pasta."
     Write-Host ""
     Write-Host "  Pacotes do Link Flow NUNCA incluem os dados dos seus clientes -" -ForegroundColor Yellow
-    Write-Host "  ficam de fora de proposito. Se voce ja tem clientes cadastrados" -ForegroundColor Yellow
-    Write-Host "  numa instalacao anterior (outra pasta), copie estas pastas de la" -ForegroundColor Yellow
-    Write-Host "  para AQUI antes de continuar:" -ForegroundColor Yellow
+    Write-Host "  ficam de fora de proposito. Se voce ja tem clientes cadastrados," -ForegroundColor Yellow
+    Write-Host "  va na pasta da instalacao ANTIGA (onde voce roda o Claude Code" -ForegroundColor Yellow
+    Write-Host "  hoje - a que tem install.bat e as pastas skills\, painel\, _astro\)" -ForegroundColor Yellow
+    Write-Host "  e copie estas pastas de la, soltas na raiz dela, para a raiz desta" -ForegroundColor Yellow
+    Write-Host "  pasta nova (o mesmo nivel deste update.bat):" -ForegroundColor Yellow
     Write-Host ""
     Write-Host "    projetos\      (obrigatorio  - cadastro de cada cliente)" -ForegroundColor Yellow
     Write-Host "    credenciais\   (se existir    - acessos de VPS guardados)" -ForegroundColor Yellow
     Write-Host "    _memoria\      (se usar /GMN  - memoria do Agente GMB)" -ForegroundColor Yellow
     Write-Host ""
-    Write-Host "  Pasta atual: $scriptDir" -ForegroundColor Yellow
+    Write-Host "  Exemplo: se a instalacao antiga esta em" -ForegroundColor Yellow
+    Write-Host "  C:\LinkFlow\linkflow-completo\, as tres pastas ficam direto dentro" -ForegroundColor Yellow
+    Write-Host "  dela - C:\LinkFlow\linkflow-completo\projetos\, etc." -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "  Pasta desta instalacao nova (destino da copia): $scriptDir" -ForegroundColor Yellow
     Write-Host ""
     $resposta = Read-Host "Continuar mesmo assim, sem nenhum cliente cadastrado? (s/n)"
     if ($resposta -notmatch "^[sS]") {
