@@ -14,6 +14,25 @@
 
 ## Estado atual em uma tela (29/09/2026)
 
+- **Relatório de Testes 5** (varredura + testes reais com Playwright contra o
+  painel publicado, não só leitura de código): 15 erros novos confirmados e
+  corrigidos, 2 reincidências (política inventando conteúdo, guardião de
+  placeholder ampliado), histórico do git reescrito pra remover credenciais
+  de teste que vazavam em commits antigos (`git-filter-repo`, hashes de
+  commit mudaram — ver seção própria). Achados reais rodando o painel de
+  verdade (não só lendo código): condição de corrida no salvamento da tela
+  de Menus, e um bug antigo (`postDaApi()` nunca mapeava `atualizadoEm`)
+  que travava o badge "publicado no ar" sempre em falso — nenhum dos dois
+  aparecia numa leitura estática do código. Painel versionado
+  (`package.json`, mostrado no rodapé da Sidebar) — 0.2.2 ao fim desta
+  rodada; regra: toda correção bump a versão.
+- **`update.bat`/`update.ps1`/`update.sh` novos** (29/09/2026) — pra quando o
+  Jorge já tem clientes cadastrados e está trocando de pasta pra uma versão
+  nova do pacote. `install.bat` continua igual, só pra primeira instalação;
+  `update` confere se `projetos/` foi copiado da instalação anterior antes
+  de seguir, e avisa em vez de deixar passar em silêncio (achado real: o
+  Jorge rodou `install.bat` numa pasta nova, extraída do zip mais recente,
+  e teria perdido a visão do cadastro dos clientes dele sem perceber).
 - **Relatório de Testes 4** (`relatorios/Plano-Correcao-Testes-4.md`, a partir
   de `relatorios/Relatorio-Testes-4-LinkFlow-27-28-09.docx`, 38 erros,
   numeração 29-66) está **concluído nas 10 fases (0 a 9)**, incluindo o erro

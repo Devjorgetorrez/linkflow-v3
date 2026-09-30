@@ -9,8 +9,19 @@ Desenvolvido por **Link Flow** · Criado por **Jorge Torrez**
 
 ### 1. Instalar
 
-Execute `install.bat` (Windows) ou `install.sh` (Linux/macOS). Isso confere se
-o pacote está completo e instala tudo que falta:
+**Primeira vez?** Execute `install.bat` (Windows) ou `install.sh`
+(Linux/macOS).
+
+**Já tem clientes cadastrados numa instalação anterior e está atualizando
+para um pacote novo?** Copie as pastas `projetos/` (e `credenciais/`,
+`_memoria/` se existirem) da instalação antiga para dentro desta pasta nova
+**antes** de instalar, e execute `update.bat` (Windows) ou `update.sh`
+(Linux/macOS) em vez do `install`. Ele confere se essas pastas realmente
+estão aqui antes de seguir — se esquecer de copiar, ele avisa em vez de
+seguir em silêncio com o cadastro de clientes vazio.
+
+Os dois (`install`/`update`) conferem se o pacote está completo e instalam
+tudo que falta:
 
 - Confirma Node.js, npm, Python e o Claude Code CLI.
 - `npm install` em `painel/` (o painel de gestão, Next.js).
@@ -64,9 +75,12 @@ linkflow-completo/
 ├── scripts/                 ← scripts Python dos guardiões, gates e requirements.txt
 ├── painel/                  ← painel de gestão SiteFlow (Next.js) — cliente site_tipo: astro
 ├── _astro/                  ← motor que gera os sites (temas de referência + engine)
-├── install.bat              ← instalador (Windows)
+├── install.bat              ← instalador, primeira instalação (Windows)
 ├── install.ps1              ← script do instalador
-├── install.sh               ← instalador (Linux/macOS)
+├── install.sh               ← instalador, primeira instalação (Linux/macOS)
+├── update.bat                ← atualizador, instalação já existente (Windows)
+├── update.ps1                ← script do atualizador
+├── update.sh                  ← atualizador, instalação já existente (Linux/macOS)
 ├── CLAUDE.md                ← fonte de verdade: todo o comportamento do sistema
 ├── README.md                ← este arquivo
 └── .gitignore                ← bloqueia projetos/, credenciais/, _memoria/ e dados de clientes
