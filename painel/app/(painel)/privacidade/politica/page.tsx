@@ -349,14 +349,20 @@ function Section2({ n, title, children }: { n: string; title: string; children: 
 
 /* ─── Completeness indicator ─────────────────────────────────── */
 
+// Campo com o marcador [CAMPO] não é dado preenchido — é uma pendência
+// disfarçada de texto (erro 88, Relatório de Testes 6: a Política da Odonto
+// foi ao ar com "[CAMPO]" dentro do texto e esta tela marcou 100%, porque só
+// conferia se o campo tinha ALGUM valor, nunca se era o placeholder).
+const preenchido = (v: unknown) => typeof v === "string" && v.trim() !== "" && !/\[CAMPO\]/i.test(v);
+
 function Completeness({ cfg }: { cfg: PrivacidadeConfig }) {
   const checks = [
-    { label: "CNPJ", ok: !!cfg.cnpj },
-    { label: "Endereço", ok: !!cfg.endereco },
-    { label: "E-mail de contato", ok: !!cfg.emailContato },
-    { label: "DPO (opcional)", ok: !!(cfg.dpNome && cfg.dpEmail), optional: true },
-    { label: "Retenções definidas", ok: !!(cfg.retencaoFormularios && cfg.retencaoAnaliticos && cfg.retencaoMarketing) },
-    { label: "Versão e data", ok: !!(cfg.versao && cfg.dataVersao) },
+    { label: "CNPJ", ok: preenchido(cfg.cnpj) },
+    { label: "Endereço", ok: preenchido(cfg.endereco) },
+    { label: "E-mail de contato", ok: preenchido(cfg.emailContato) },
+    { label: "DPO (opcional)", ok: preenchido(cfg.dpNome) && preenchido(cfg.dpEmail), optional: true },
+    { label: "Retenções definidas", ok: preenchido(cfg.retencaoFormularios) && preenchido(cfg.retencaoAnaliticos) && preenchido(cfg.retencaoMarketing) },
+    { label: "Versão e data", ok: preenchido(cfg.versao) && preenchido(cfg.dataVersao) },
   ];
   const required = checks.filter((c) => !c.optional);
   const done = required.filter((c) => c.ok).length;

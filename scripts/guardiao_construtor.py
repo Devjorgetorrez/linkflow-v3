@@ -466,6 +466,24 @@ def verificar_saida(slug, fase="saida"):
                 "resolver. Isso precisa aparecer no resumo final ao cliente."
             )
 
+    # ── Fotos/depoimentos ficticios nunca vao ao ar sem aviso explicito ──────
+    # projeto.md registrar fotos_status/depoimentos como "ficticio (teste)" e
+    # o gate passar mesmo assim foi o que aconteceu de verdade (erro 89,
+    # Relatorio de Testes 6) — a remocao antes do envio foi manual, feita
+    # pelo agente, nunca pelo guardiao. So roda na saida (pos-deploy): na
+    # previa local, dado de demonstracao/teste e esperado.
+    if not previa:
+        match_negocio_ficticio = re.search(r"^negocio_ficticio[^:\n]*:[ \t]*(sim)\b", conteudo, re.IGNORECASE | re.MULTILINE)
+        if not match_negocio_ficticio:
+            for campo in ("fotos_status", "depoimentos"):
+                m = re.search(rf"^{campo}[^:\n]*:[ \t]*(.+)", conteudo, re.IGNORECASE | re.MULTILINE)
+                if m and "ficticio" in m.group(1).lower():
+                    erros.append(
+                        f"{campo} registrado como ficticio/teste ('{m.group(1).strip()}') e o site vai ser "
+                        "publicado de verdade — remova o dado ficticio antes de publicar, ou registre "
+                        "'negocio_ficticio: sim' no projeto.md se este cliente e mesmo uma demonstracao."
+                    )
+
     # Descobrir LINKFLOW_DIR (já é a pasta isolada deste cliente, via .env —
     # nunca acrescentar o slug de novo aqui, senão aninha em dobro)
     linkflow = _LINKFLOW_DIR
@@ -613,6 +631,22 @@ def verificar_saida(slug, fase="saida"):
             if any(g in texto.lower() for g in genericos):
                 erros.append(f"Conteudo generico/placeholder detectado em {md.name} — substituir por conteudo real")
 
+            # O esqueleto de exemplo da propria skill (fase2-site-astro, ETAPA 4.3)
+            # tem colchetes de instrucao tipo "[2-3 paragrafos. Tom de voz...]" —
+            # se o agente copiar o esqueleto sem trocar por texto real, isso vai
+            # publicado e visivel a quem abre a URL direto (noindex so tira do
+            # Google, nao esconde a pagina). Achado real: Japi, clareamento
+            # dental (erro 41, Relatorio de Testes 6). Exclui link markdown de
+            # verdade ("[texto](url)") e o placeholder valido [CAMPO] (so maiusculo).
+            colchetes_instrucao = [
+                m for m in re.findall(r'\[[^\]]*[a-zà-ú][^\]]*\](?!\()', texto)
+            ]
+            if colchetes_instrucao:
+                erros.append(
+                    f"Colchete com instrucao/esqueleto ainda no corpo de {md.name} "
+                    f"(nunca pode ir ao ar): {'; '.join(sorted(set(colchetes_instrucao)))}"
+                )
+
         # ── Colisao de slug na raiz (URL plana) ─────────────────────────────
         # servicos, posts e categorias nascem todos em /<slug> — pagina fixa
         # (sobre, contato, servicos, blog, autor, legais) tem prioridade
@@ -703,6 +737,38 @@ def verificar_saida(slug, fase="saida"):
     llms = site_dir_seo / "llms.txt"
     if not llms.exists():
         avisos.append(f"llms.txt nao encontrado {onde} — recomendado para visibilidade em IAs")
+
+    # ── Marcador interno vazando pro HTML publicado ───────────────────────────
+    # noindex tira do Google, mas nao esconde a URL de quem abre direto — e o
+    # guardiao ate agora so olhava os .md fonte, nunca o HTML que realmente sai
+    # no ar. Achado real: Politica da Odonto foi ao ar com "[CAMPO]" dentro do
+    # texto de site.legal (erro 88, Relatorio de Testes 6) e o guardiao passou.
+    # Varre TODO html publicado — nao so servicos — por [CAMPO], [PENDENTE],
+    # [TEXTO EM PRODUCAO e qualquer colchete de instrucao (letra minuscula
+    # dentro), com a mesma regra do check de servicos acima.
+    if site_dir_seo.exists():
+        paginas_com_marcador = []
+        for html_file in site_dir_seo.rglob("*.html"):
+            html_bruto = html_file.read_text(encoding="utf-8", errors="ignore")
+            # So o texto visivel: tira <script>/<style> inteiros (onde colchete
+            # de JS/CSS e normal, ex. Tailwind "w-[200px]") e depois as tags —
+            # sem isso, hex de cor ("#abc123", tem letra minuscula) e classe
+            # arbitraria do Tailwind geravam falso positivo aos montes.
+            sem_script = re.sub(r'<(script|style)\b[^>]*>[\s\S]*?</\1>', ' ', html_bruto, flags=re.IGNORECASE)
+            texto_visivel = re.sub(r'<[^>]+>', ' ', sem_script)
+            achados_html = sorted(set(re.findall(r'\[CAMPO\]|\[PENDENTE\]', texto_visivel, re.IGNORECASE)))
+            # Colchete de instrucao: exige um espaco dentro (prosa de verdade,
+            # nunca uma classe ou um valor solto).
+            achados_html += sorted(set(re.findall(r'\[[^\]<]*[a-zà-ú][^\]<]* [^\]<]*\]', texto_visivel)))
+            if achados_html:
+                paginas_com_marcador.append((html_file.relative_to(site_dir_seo), achados_html[:3]))
+        for caminho_rel, marcadores in paginas_com_marcador[:8]:
+            erros.append(
+                f"Marcador interno no HTML publicado ({caminho_rel}): {'; '.join(marcadores)} — "
+                "nunca pode ficar visivel ao visitante, mesmo com noindex"
+            )
+        if len(paginas_com_marcador) > 8:
+            erros.append(f"... e mais {len(paginas_com_marcador) - 8} pagina(s) com marcador interno no HTML.")
 
     # ── Banner de cookies: obrigatorio, sempre (erro 45) ──────────────────────
     # Confere a HOME publicada de verdade, nao so o codigo-fonte: o banner

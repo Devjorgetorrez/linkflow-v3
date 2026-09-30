@@ -334,7 +334,11 @@ export default function TermosPage() {
         // reflete se o texto real já foi escrito. Sem isto, o toggle ficava preso
         // no padrão "false" do store mesmo com o conteúdo real já publicado
         // (erro 80, Relatório de Testes 5).
-        patch.ativo = !!lp.naoSubstitui?.trim();
+        // [CAMPO] no meio do texto não é conteúdo real — é a mesma pendência
+        // disfarçada que foi ao ar na Política da Odonto (erro 88, Relatório
+        // de Testes 6): "COMPLETO" precisa exigir o marcador ausente, não só
+        // o campo não-vazio.
+        patch.ativo = !!lp.naoSubstitui?.trim() && !/\[CAMPO\]/i.test(lp.naoSubstitui.trim());
         if (Object.keys(patch).length > 0) set(patch);
       })
       .catch(console.error);

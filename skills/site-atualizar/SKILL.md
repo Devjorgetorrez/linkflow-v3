@@ -72,6 +72,7 @@ rsync -avz -e "ssh -p [vps_porta]" \
 ```bash
 ssh -p [vps_porta] root@[vps_ip] << REMOTE
   cd "[vps_cliente_dir]/_astro"
+  rm -rf .astro node_modules/.astro
   npm run build
 
   cp -r "dist/." "[vps_site_dir]/"
@@ -79,6 +80,13 @@ ssh -p [vps_porta] root@[vps_ip] << REMOTE
   echo "Build e deploy OK"
 REMOTE
 ```
+
+`rm -rf .astro node_modules/.astro` **sempre**, antes do build: sem isso o
+cache de content collections do Astro pode servir a versão antiga de um
+depoimento/serviço/post que foi apagado, e o conteúdo removido volta ao ar
+mesmo depois do arquivo já ter sumido do disco (erro 87, Relatório de Testes
+6 — reproduzido apagando depoimentos e rodando o build; só sumiu depois de
+apagar `node_modules/.astro`).
 
 > A mídia do painel fica em `[vps_cliente_dir]/midia` (fora de `[vps_site_dir]`) e o Nginx
 > a serve por `alias`. Este `cp -r` (sem `--delete`) nunca a toca. Nunca acrescentar

@@ -341,6 +341,20 @@ export function iniciarBuild(slug: string): ResultadoInicio {
     }
     fs.appendFileSync(arqLog, `[validação] ${arquivos} arquivo(s) de conteúdo conferidos, nenhum problema.\n\n`);
 
+    // 1b) Cache de content collections do Astro — se um depoimento/serviço/post
+    // foi apagado pelo painel desde o último build, o Astro pode servir a
+    // versão em cache e o conteúdo removido volta ao ar (erro 87, Relatório
+    // de Testes 6: repro real apagando depoimentos e rodando o build — só
+    // sumiu depois de apagar node_modules/.astro). Mais seguro apagar sempre
+    // do que tentar decidir quando invalidar.
+    for (const cache of [path.join(astroDir, ".astro"), path.join(astroDir, "node_modules", ".astro")]) {
+      try {
+        fs.rmSync(cache, { recursive: true, force: true });
+      } catch (err) {
+        fs.appendFileSync(arqLog, `[painel] Aviso: não consegui limpar o cache ${cache}: ${String(err)}\n`);
+      }
+    }
+
     // 2) npm run build
     gravarEstado({ ...base, etapa: "construindo" });
     const win = process.platform === "win32";

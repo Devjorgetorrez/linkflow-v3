@@ -399,6 +399,15 @@ escolhido**: cada um tem campos próprios (ex: `quemPode`/`situacoes` no tema-05
 sem ele o build do site inteiro falha). Nunca `descricao`. Campo opcional sem
 dado no projeto.md é omitido, nunca inventado.
 
+**O bloco abaixo é o ESQUELETO da estrutura, não o texto a escrever.** Todo
+colchete é uma instrução para o agente escrever em cima — nenhum colchete
+pode sobrar no arquivo final. `noindex: true` tira a página do Google
+enquanto isso, mas não esconde a URL de quem abre direto: um colchete de
+instrução esquecido ("[2-3 parágrafos...]") vai parar na tela do visitante
+do mesmo jeito (erro 41, Relatório de Testes 6, cliente Japi). O guardião
+(`guardiao_construtor.py`) bloqueia qualquer colchete com letra minúscula
+dentro — escrever o texto real é a única forma de passar.
+
 ```markdown
 ---
 titulo: "[Nome do Serviço] em [Cidade]"

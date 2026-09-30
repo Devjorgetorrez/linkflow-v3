@@ -283,6 +283,7 @@ Buildar e publicar no servidor:
 ```bash
 ssh -p [vps_porta] root@[vps_ip] << REMOTE
   cd "[vps_cliente_dir]/_astro"
+  rm -rf .astro node_modules/.astro
   npm run build
 
   cp -r "dist/." "[vps_site_dir]/"
@@ -290,6 +291,10 @@ ssh -p [vps_porta] root@[vps_ip] << REMOTE
   echo "Build e deploy OK"
 REMOTE
 ```
+
+`rm -rf .astro node_modules/.astro` **sempre**, antes do build no servidor:
+sem isso o cache de content collections pode servir uma versão antiga (ex.:
+um depoimento apagado volta ao ar) — erro 87, Relatório de Testes 6.
 
 > A mídia do painel fica em `[vps_cliente_dir]/midia` (fora de `[vps_site_dir]`) e o Nginx
 > a serve por `alias`. Este `cp -r` (sem `--delete`) nunca a toca. Nunca acrescentar
