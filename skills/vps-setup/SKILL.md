@@ -548,6 +548,13 @@ ssh -p [porta] root@[IP] "bash /opt/linkflow/scripts/vps/checar-capacidade.sh"
 
 # Ver espaço em disco
 ssh -p [porta] root@[IP] "df -h"
+
+# Remover um cliente por completo (PM2 + Nginx + SSL + pastas) — sempre
+# confirmar com o usuário antes, mesma regra do atualizar-cliente. Primeiro
+# sem --confirmar pra ver o que seria removido, só depois com --confirmar.
+scp -P [porta] scripts/vps/remover-cliente.sh root@[IP]:/root/
+ssh -p [porta] root@[IP] "bash /root/remover-cliente.sh [SLUG]"
+ssh -p [porta] root@[IP] "bash /root/remover-cliente.sh [SLUG] --confirmar"
 ```
 
 ---

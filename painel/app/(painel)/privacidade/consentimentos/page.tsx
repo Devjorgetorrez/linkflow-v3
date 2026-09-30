@@ -4,6 +4,7 @@ import { Download, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { Botao, Painel, Vazio } from "@/components/ui";
+import { hojeISOBrasil } from "@/lib/data-br";
 
 /* ------------------------------------------------------------------ */
 /* Tipos e helpers                                                       */
@@ -69,7 +70,7 @@ function exportarCsv(lista: RegistroConsentimento[]) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `consentimentos-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.download = `consentimentos-${hojeISOBrasil()}.csv`;
   a.click();
   URL.revokeObjectURL(url);
 }

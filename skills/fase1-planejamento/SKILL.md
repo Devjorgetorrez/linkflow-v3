@@ -20,7 +20,13 @@ em MULTIPLAS variacoes de KW do negocio. Elimina ruido (diretorio aleatorio, sit
 
 ## Ordem de ferramentas (Regra 3 INICIO.md) - vale para TODAS as etapas
 1. Ubersuggest (primario)
-2. Semrush (secundario) - se Ubersuggest falhar
+2. Semrush (secundario) - se Ubersuggest falhar OU devolver volume 0 pra
+   uma KW obviamente comum (ex.: "implante dentario" no Brasil) — volume 0
+   nesse caso e dado ruim, nao "sem demanda de verdade", e response 200 com
+   0 nao conta como sucesso pra decidir Money Page/prioridade em cima dele.
+   Achado real: Ubersuggest devolveu 0 pra uma KW que o Semrush media em
+   33.100/mes (erro 104, Relatorio de Testes 6) — sem o fallback rodar
+   tambem nesse caso, a Fase 1 quase descartou um servico de alta demanda.
 3. web_search nativo (fallback) - se ambos MCP falharem
 
 ## ETAPA 0 - Consultar ICP (sem perguntar nada novo)
@@ -209,9 +215,14 @@ PROIBIDO: "validado manualmente" / "script ausente" / "PASS" sem output / qualqu
 Se o script não existir → PARAR e avisar (verificar com `ls "${CLAUDE_PLUGIN_ROOT}/scripts/"`). Não improvisar validação manual.
 Se o script falhar ao executar → PARAR e mostrar o erro. Não assumir PASS.
 
-Após PASS do script:
-   b) Consultar agents/guardiao-fase1.md: verificar processo (tabela exibida, H2s salvos, locId correto)
-      - Só após PASS do script E verificação de processo: apresentar Gate Humano 1 ao cliente
+Após PASS do script, verificar o PROCESSO desta Fase (nunca existiu o arquivo
+`agents/guardiao-fase1.md` citado aqui antes — a lista abaixo é o que ele
+descrevia, inline; erro 104, Relatório de Testes 6):
+- A tabela de KWs/concorrentes (ETAPA 3) foi exibida ao cliente, não só salva
+- Os H2s sugeridos (ETAPA 4/5, se aplicável) foram salvos no projeto.md
+- O `locId` usado nas consultas bate com a cidade/região real do cliente
+  (ETAPA 0 — nunca nacional quando o negócio é local, nem o contrário)
+Só após PASS do script E esta verificação: apresentar Gate Humano 1 ao cliente.
 
 Fase 1 NÃO gera Excel. Todos os dados (concorrentes, páginas, KWs, arquitetura) são salvos apenas no projeto.md. O Excel consolidado é gerado uma única vez ao fim da Fase 2 (Opção B — evita dois arquivos dessincronizados).
 

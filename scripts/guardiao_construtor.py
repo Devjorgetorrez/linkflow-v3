@@ -233,7 +233,16 @@ def verificar_construcao(slug):
             avisos.append("Menos de 2 servicos definidos — site ficara muito pequeno")
 
     # ── Nome do negócio ───────────────────────────────────────────────────────
-    match = re.search(r"(nome[_\s]*negocio|nome[^:\n]*empresa|empresa)[^:\n]*:[ \t]*(.+)", conteudo, re.IGNORECASE)
+    # "Negocio / segmento" e o campo que o onboarding (orq-icp) e
+    # guardiao_icp.py realmente escrevem/exigem — os outros dois nomes
+    # (nome_negocio, empresa) nunca foram gerados por nada nesta base de
+    # codigo. Duas fontes de verdade com nomes de campo diferentes pro mesmo
+    # dado (erro 99, Relatorio de Testes 6) fazia este guardiao reprovar todo
+    # projeto criado pelo caminho real.
+    match = re.search(
+        r"(nome[_\s]*negocio|nome[^:\n]*empresa|empresa|Negocio\s*/\s*segmento)[^:\n]*:[ \t]*(.+)",
+        conteudo, re.IGNORECASE,
+    )
     if not match or campo_vazio(match.group(2)):
         erros.append("Nome do negocio nao encontrado no projeto.md")
 

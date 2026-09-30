@@ -10,6 +10,7 @@ import {
 import { useState, useEffect } from "react";
 
 import { Botao, Vazio } from "@/components/ui";
+import { hojeISOBrasil } from "@/lib/data-br";
 import { numeroWhatsApp } from "@/lib/formularios-regras";
 import { useStore } from "@/lib/store";
 import type { Lead, StatusLead } from "@/mock/types";
@@ -72,7 +73,7 @@ function exportarCSV(leads: Lead[]) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `leads-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.download = `leads-${hojeISOBrasil()}.csv`;
   a.click();
   URL.revokeObjectURL(url);
 }

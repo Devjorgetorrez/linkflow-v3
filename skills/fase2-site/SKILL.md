@@ -72,10 +72,29 @@ Só promover automaticamente URLs com sinais TRANSACIONAIS claros: /servico-cida
 URLs ambíguas ou informacionais: registrar em '### Candidatas a blog (Fase 3)' em vez de adicionar como Money Page.
 Exemplo do erro real: /planos-de-saude-para-mei-como-usar-cnpj-economizar-ate-40/ → BLOG (sinais: "como-usar", "economizar", "40"). O correto seria criar /plano-de-saude-mei-sorocaba/ SE houver volume transacional confirmado — a URL longa informacional vai para blog, a Money Page limpa é decisão separada.
 
-Após filtro:
-- URLs TRANSACIONAIS → Adicionar como Money Page + registrar em '### Reconciliacao de Money Pages' com origem + KW provavel
+FILTRO DE SERVIÇO CONFIRMADO (obrigatório antes de promover, depois do filtro
+de intenção acima): mesmo uma URL claramente transacional só vira Money Page
+se descrever um serviço que o CLIENTE já confirmou oferecer — a lista real é
+"Servicos (priorizados...)" do `projeto.md` (Bloco 1, preenchida no
+onboarding `orq-icp`). O líder de mercado quase sempre oferece mais serviços
+que o cliente, e promover um desses sem confirmar é inventar dado sobre o
+negócio do cliente (CLAUDE.md, regra 1). Achado real: clínica odontológica
+cujo líder também vendia sedação, harmonização facial e botox — nenhum
+desses foi informado pelo cliente no onboarding, e a Fase 2 os promoveu
+como Money Page do mesmo jeito (erro 100, Relatório de Testes 6).
+
+Após os dois filtros:
+- URLs TRANSACIONAIS de um serviço já confirmado pelo cliente → Adicionar como
+  Money Page + registrar em '### Reconciliacao de Money Pages' com origem + KW provavel
+- URLs TRANSACIONAIS de um serviço que o cliente NÃO informou oferecer →
+  NUNCA adicionar como Money Page. Registrar em '### Serviços do concorrente
+  não confirmados pelo cliente' (URL + serviço aparente) — decisão de
+  oferecer ou não esse serviço é do cliente, não do agente.
 - URLs INFORMACIONAIS/AMBÍGUAS → registrar em '### Candidatas a blog (Fase 3)'
-- AVISAR depois: 'Adicionei N Money Pages e identifiquei M candidatas a blog: [listas]'
+- AVISAR depois: 'Adicionei N Money Pages (serviços já confirmados), identifiquei
+  M candidatas a blog, e encontrei P serviços do concorrente que você não
+  mencionou oferecer: [lista]. Quer que eu adicione algum deles como Money Page?'
+  — pergunta única, nunca decide sozinho por nenhum dos P.
 
 ## ETAPA 3 - Consolidar e gerar entregaveis (via bash)
 - Preencher '### Handoff para Fase 3' no projeto.md: por pagina -> KW principal (F1) + estrutura + schema recomendado

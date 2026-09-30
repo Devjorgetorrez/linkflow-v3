@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { lerUsuarios, salvarUsuarios, hashSenha, novoIdUsuario, toPublico, UsuariosIlegiveisError, type PapelUsuario, type Usuario } from "@/lib/usuarios";
 import { exigirPapel, verificarApiKey } from "@/lib/auth";
+import { hojeISOBrasil } from "@/lib/data-br";
 import { MATRIZ } from "@/lib/permissoes";
 import { PAPEIS_VALIDOS, validarNovoUsuario } from "@/lib/usuarios-regras";
 
@@ -123,7 +124,7 @@ export async function POST(req: NextRequest) {
         ...(body.autoria as Record<string, unknown> | undefined ?? {}),
       },
       senhaHash,
-      criadoEm: new Date().toISOString().split("T")[0],
+      criadoEm: hojeISOBrasil(),
     };
 
     usuarios.push(novoUsuario);

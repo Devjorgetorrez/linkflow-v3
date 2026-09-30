@@ -1,6 +1,5 @@
-import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   devIndicators: false,
   // O painel é a área administrativa do cliente — nunca pode ser indexado.
   // robots.txt sozinho não tira página do índice (o próprio Google diz que

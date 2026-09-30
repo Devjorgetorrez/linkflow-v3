@@ -146,5 +146,19 @@ if __name__ == "__main__":
     data = crawl(args.url, args.max, args.depth)
     with open(args.out, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
+    # 0 paginas nunca e sucesso — site fora do ar, dominio errado ou
+    # bloqueio total tambem terminam sem lancar excecao (cada falha de
+    # rede vira "continue" dentro do loop), entao sem isto o script
+    # imprimia "OK — 0 paginas" como se o crawl tivesse funcionado (erro
+    # 104, Relatorio de Testes 6) — quem le a saida no meio de um fluxo
+    # automatico nao tinha como distinguir "concorrente sem paginas" de
+    # "crawl falhou".
+    if data["total"] == 0:
+        print(
+            f"ERRO — 0 paginas coletadas de {args.url}. Site fora do ar, dominio "
+            f"errado, ou bloqueio total (bloqueios: {data['blocked_responses']}). "
+            f"{args.out} foi salvo vazio — nao trate como crawl concluido."
+        )
+        sys.exit(1)
     print(f"OK — {data['total']} páginas salvas em {args.out} "
           f"(bloqueios: {data['blocked_responses']})")
