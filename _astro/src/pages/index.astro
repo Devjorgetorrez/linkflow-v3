@@ -18,13 +18,13 @@ import BuscasFrequentes from '../components/blocos/BuscasFrequentes.astro'
 import { site }         from '../config/site.ts'
 import { textoCredencial, organizacaoSchema } from '../lib/schema.ts'
 import { getCollection } from 'astro:content'
-import { ehPublicado } from '../lib/publicacao.ts'
+import { ehPublicado, ehServicoListavel } from '../lib/publicacao.ts'
 import { nomeAutor } from '../lib/autores.ts'
 import { nomeCategoria } from '../lib/categorias.ts'
 import { tituloOuPadrao, metaOuPadrao } from '../lib/paginaFixa.ts'
 
 /* ── Coleções ─────────────────────────────────────────────────── */
-const todosServicos = await getCollection('servicos')
+const todosServicos = await getCollection('servicos', ehServicoListavel)
 const todosEquipe   = await getCollection('equipe')
 const todosDepoi    = await getCollection('depoimentos')
 const autores = await getCollection('autores')

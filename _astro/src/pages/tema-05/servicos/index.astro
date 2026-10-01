@@ -12,8 +12,9 @@ import Footer      from '../../../components/blocos/Footer.astro'
 import { site }    from '../../../config/tema-05.ts'
 import { textoCredencial, rotuloNav } from '../../../lib/schema.ts'
 import { getCollection } from 'astro:content'
+import { ehServicoListavel } from '../../../lib/publicacao.ts'
 
-const servicos = (await getCollection('servicosT5'))
+const servicos = (await getCollection('servicosT5', ehServicoListavel))
   .sort((a, b) => a.data.ordem - b.data.ordem)
   .map(s => ({
     titulo: s.data.titulo, descricao: s.data.resumo, icone: s.data.icone ?? '',

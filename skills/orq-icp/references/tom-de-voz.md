@@ -74,7 +74,6 @@ NUNCA usar: excelencia, solucoes, comprometidos, viabilizar, realizar, otimizar
 NUNCA prometer resultado garantido
 SEMPRE escrever pessoa falando para pessoa
 SEMPRE frase curta antes de frase longa
-SEMPRE passar pelo humanizer antes de entregar conteudo
 Regulacao presente: restricoes legais prevalecem sobre qualquer regra de tom
 
 ## Inferir perfil pelos servicos

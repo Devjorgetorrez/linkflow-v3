@@ -19,11 +19,11 @@ import { site }     from '../../config/tema-07.ts'
 import { tituloOuPadrao, metaOuPadrao } from '../../lib/paginaFixa.ts'
 import { textoCredencial, areaLista } from '../../lib/schema.ts'
 import { getCollection } from 'astro:content'
-import { ehPublicado } from '../../lib/publicacao.ts'
+import { ehPublicado, ehServicoListavel } from '../../lib/publicacao.ts'
 import { nomeAutor } from '../../lib/autores.ts'
 import { nomeCategoria } from '../../lib/categorias.ts'
 
-const planos = (await getCollection('servicosT7'))
+const planos = (await getCollection('servicosT7', ehServicoListavel))
   .sort((a, b) => a.data.ordem - b.data.ordem)
   .map(s => ({
     titulo: s.data.titulo, descricao: s.data.resumo, icone: s.data.icone ?? '',

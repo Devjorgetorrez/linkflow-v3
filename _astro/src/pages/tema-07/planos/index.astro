@@ -13,8 +13,9 @@ import Footer       from '../../../components/blocos/Footer.astro'
 import { site }     from '../../../config/tema-07.ts'
 import { textoCredencial, areaLista } from '../../../lib/schema.ts'
 import { getCollection } from 'astro:content'
+import { ehServicoListavel } from '../../../lib/publicacao.ts'
 
-const planos = (await getCollection('servicosT7'))
+const planos = (await getCollection('servicosT7', ehServicoListavel))
   .sort((a, b) => a.data.ordem - b.data.ordem)
   .map(s => ({
     titulo: s.data.titulo, descricao: s.data.resumo, icone: s.data.icone ?? '',

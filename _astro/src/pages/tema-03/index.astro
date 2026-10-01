@@ -17,12 +17,12 @@ import Footer          from '../../components/blocos/Footer.astro'
 import { site }        from '../../config/tema-03.ts'
 import { textoCredencial, organizacaoSchema } from '../../lib/schema.ts'
 import { getCollection } from 'astro:content'
-import { ehPublicado } from '../../lib/publicacao.ts'
+import { ehPublicado, ehServicoListavel } from '../../lib/publicacao.ts'
 import { nomeAutor } from '../../lib/autores.ts'
 import { nomeCategoria } from '../../lib/categorias.ts'
 import { tituloOuPadrao, metaOuPadrao } from '../../lib/paginaFixa.ts'
 
-const servicos = (await getCollection('servicosT3'))
+const servicos = (await getCollection('servicosT3', ehServicoListavel))
   .sort((a, b) => a.data.ordem - b.data.ordem)
   .map(s => ({
     titulo:    s.data.titulo,

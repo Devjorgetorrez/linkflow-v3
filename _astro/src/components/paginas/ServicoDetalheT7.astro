@@ -23,6 +23,7 @@ import Footer       from '../../components/blocos/Footer.astro'
 import { site }     from '../../config/tema-07.ts'
 import { textoCredencial, areaServida, areaLista } from '../../lib/schema.ts'
 import { getCollection, render } from 'astro:content'
+import { ehServicoListavel } from '../../lib/publicacao.ts'
 
 interface Props {
   entry: Awaited<ReturnType<typeof getCollection<'servicosT7'>>>[number]
@@ -33,7 +34,7 @@ const { Content } = await render(entry)
 const canonical   = `${site.dominio}/${entry.id}/`
 const wa          = `https://wa.me/${site.nap.whatsapp}`
 
-const outros = (await getCollection('servicosT7'))
+const outros = (await getCollection('servicosT7', ehServicoListavel))
   .filter(s => s.id !== entry.id)
   .sort((a, b) => a.data.ordem - b.data.ordem)
   .map(s => ({

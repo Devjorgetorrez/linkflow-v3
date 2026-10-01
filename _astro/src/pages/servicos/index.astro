@@ -8,8 +8,9 @@ import Footer     from '../../components/blocos/Footer.astro'
 import { site }   from '../../config/site.ts'
 import { textoCredencial } from '../../lib/schema.ts'
 import { getCollection } from 'astro:content'
+import { ehServicoListavel } from '../../lib/publicacao.ts'
 
-const todosServicos = await getCollection('servicos')
+const todosServicos = await getCollection('servicos', ehServicoListavel)
 const itens = todosServicos
   .sort((a, b) => a.data.ordem - b.data.ordem)
   .map(s => ({

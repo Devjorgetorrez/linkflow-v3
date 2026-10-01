@@ -15,6 +15,7 @@ import Tema03Base  from '../../layouts/Tema03Base.astro'
 import { site }    from '../../config/tema-03.ts'
 import { textoCredencial, areaServida } from '../../lib/schema.ts'
 import { getCollection, render } from 'astro:content'
+import { ehServicoListavel } from '../../lib/publicacao.ts'
 
 interface Props {
   entry: Awaited<ReturnType<typeof getCollection<'servicosT3'>>>[number]
@@ -24,7 +25,7 @@ const { entry }   = Astro.props
 const { Content } = await render(entry)
 const canonical   = `${site.dominio}/${entry.id}/`
 
-const outros = (await getCollection('servicosT3'))
+const outros = (await getCollection('servicosT3', ehServicoListavel))
   .filter(s => s.id !== entry.id)
   .sort((a, b) => a.data.ordem - b.data.ordem)
   .map(s => ({

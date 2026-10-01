@@ -21,6 +21,7 @@ import Footer       from '../../components/blocos/Footer.astro'
 import { site }     from '../../config/tema-05.ts'
 import { textoCredencial, areaServida, rotuloNav } from '../../lib/schema.ts'
 import { getCollection, render } from 'astro:content'
+import { ehServicoListavel } from '../../lib/publicacao.ts'
 
 interface Props {
   entry: Awaited<ReturnType<typeof getCollection<'servicosT5'>>>[number]
@@ -30,7 +31,7 @@ const { entry }   = Astro.props
 const { Content } = await render(entry)
 const canonical   = `${site.dominio}/${entry.id}/`
 
-const outros = (await getCollection('servicosT5'))
+const outros = (await getCollection('servicosT5', ehServicoListavel))
   .filter(s => s.id !== entry.id)
   .sort((a, b) => a.data.ordem - b.data.ordem)
   .map(s => ({
