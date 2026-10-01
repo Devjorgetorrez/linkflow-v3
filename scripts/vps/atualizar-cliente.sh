@@ -96,6 +96,12 @@ mv "$NOVO_ASTRO" "$CLIENTE_DIR/_astro"
 
 # ─── Build do motor — limpa o cache antes (erro 87: sem isso, conteúdo
 # apagado pelo painel pode voltar ao ar) ────────────────────────────────────
+# NUNCA publicar em $SITES_DIR aqui — só depois que o painel TAMBÉM tiver
+# buildado com sucesso (ver bloco "Publicar" abaixo). Publicar o site logo
+# após o motor e só então descobrir que o painel falhou deixava o site no
+# ar com o motor novo enquanto o painel (que administra esse mesmo site)
+# era revertido pro antigo — "nada fica pela metade" não era verdade
+# (achado real, Verificação 3009 V2, item "atualizar-cliente").
 cd "$CLIENTE_DIR/_astro"
 rm -rf .astro node_modules/.astro dist
 npm ci --silent
@@ -104,9 +110,6 @@ if [ ! -f "dist/index.html" ]; then
   echo "Erro: build do motor não gerou dist/index.html — nada foi publicado para $SLUG."
   exit 1
 fi
-mkdir -p "$SITES_DIR/$SLUG"
-# Sem --delete: nunca toca em /midia (fica fora do dist, servido por alias no Nginx).
-cp -r dist/. "$SITES_DIR/$SLUG/"
 
 # ─── Painel: código fresco da referência, mantém .env e dados do cliente ───
 echo "  Atualizando painel..."
@@ -125,6 +128,12 @@ if [ ! -f "$PAINEL_SRC/.next/BUILD_ID" ]; then
   echo "Erro: build do painel não gerou .next/BUILD_ID — nada foi publicado para $SLUG."
   exit 1
 fi
+
+# ─── Publicar — só agora que motor E painel buildaram com sucesso ─────────
+echo "  Publicando..."
+mkdir -p "$SITES_DIR/$SLUG"
+# Sem --delete: nunca toca em /midia (fica fora do dist, servido por alias no Nginx).
+cp -r "$CLIENTE_DIR/_astro/dist/." "$SITES_DIR/$SLUG/"
 
 rm -rf "$CLIENTE_DIR/painel/.next" "$CLIENTE_DIR/painel/public"
 cp -r "$PAINEL_SRC/.next" "$CLIENTE_DIR/painel/"

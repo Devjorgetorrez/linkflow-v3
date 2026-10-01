@@ -98,7 +98,14 @@ export async function GET(req: NextRequest) {
     const arquivos = listarPaginas(o.dir)
       // Artigos saem daqui: são listados por /api/posts. Sem este filtro, com
       // URL plana, cada artigo apareceria duas vezes (como página e como post).
-      .filter((p) => !posts.has(p.url.replace(/^\//, "").toLowerCase()));
+      .filter((p) => !posts.has(p.url.replace(/^\//, "").toLowerCase()))
+      // Autor sai daqui pelo mesmo motivo — gerarIndexaveis() já tem um laço
+      // próprio pra autor (tipo "autor", via /api/autores). Sem este filtro,
+      // a página /autor/<slug> aparecia duas vezes: aqui como "supporting" e
+      // lá como "autor" — a tela somava 1 URL extra no sitemap (achado real,
+      // Verificação 3009 V2, item 79 — reaparece porque esse autor passou a
+      // ter página de verdade só depois do fix anterior desta mesma rodada).
+      .filter((p) => !/^\/autor\//.test(p.url));
 
     // linksRecebidos/nível vêm do grafo REAL de links do HTML (mesma fonte da
     // auditoria de SEO — lib/links-internos.ts).

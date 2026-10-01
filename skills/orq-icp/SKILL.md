@@ -177,9 +177,7 @@ Confirmar: Projeto [nome] criado. Proximo: /link-flow planejamento.
 ## Referencias
 skills/orq-icp/references/tom-de-voz.md
 scripts/guardiao_icp.py
-agents/guardiao-icp.md
 ~/.claude/skills/humanizer/SKILL.md
-INICIO.md Regra 3
 
 ## Degradacao
 location_suggest falha: null + avisar

@@ -79,15 +79,29 @@ pm2 save
 # 3009 v2, item 105). Le o dominio real do config do cliente e casa pela
 # linha "Domains:" de cada bloco (awk, separando por "Certificate Name:").
 echo "  Removendo certificado SSL (se houver)..."
-DOMINIO_CLIENTE=$(grep -m1 -oE "dominio:\s*['\"][^'\"]+['\"]" "$CLIENTE_DIR/_astro/src/config/site.ts" 2>/dev/null | sed -E "s/.*['\"]([^'\"]+)['\"]/\1/")
+# dominio: no config/site.ts vem com o esquema ('https://odontovilagalvao...')
+# e a linha "Domains:" do certbot nunca tem esquema — a comparacao nunca
+# encontrava nada. E so' tirar o "https://" e continuar comparando por
+# SUBSTRING (index()) tambem e' perigoso: "galvao.turboblog.com.br" e'
+# literalmente uma substring de "odontovilagalvao.turboblog.com.br", ou
+# seja, remover um cliente de dominio curto apagaria por engano o
+# certificado de outro cliente cujo dominio so' tem esse texto no meio
+# (achado real, Verificacao 3009 V2, item 105). Tira o esquema/barra final
+# e compara TOKEN A TOKEN (domain exato dentro de "Domains: a b c").
+DOMINIO_CLIENTE=$(grep -m1 -oE "dominio:\s*['\"][^'\"]+['\"]" "$CLIENTE_DIR/_astro/src/config/site.ts" 2>/dev/null | sed -E "s/.*['\"]([^'\"]+)['\"]/\1/" | sed -E 's#^https?://##; s#/+$##')
 if [ -z "$DOMINIO_CLIENTE" ]; then
   echo "  Aviso: não encontrei o domínio do cliente em config/site.ts — certificado SSL não foi conferido, remova manualmente se existir."
   DOMINIOS_CERT=""
 else
   DOMINIOS_CERT=$(certbot certificates 2>/dev/null | awk -v dom="$DOMINIO_CLIENTE" '
     /Certificate Name:/ { nome = $3 }
-    /Domains:/ { if (index($0, dom) > 0) print nome }
+    /Domains:/ {
+      for (i = 2; i <= NF; i++) if ($i == dom) { print nome; next }
+    }
   ')
+  if [ -z "$DOMINIOS_CERT" ]; then
+    echo "  Aviso: nenhum certificado SSL encontrado pro domínio $DOMINIO_CLIENTE — confira manualmente com 'certbot certificates' se existe um a remover."
+  fi
 fi
 for cert in $DOMINIOS_CERT; do
   certbot delete --cert-name "$cert" --non-interactive 2>/dev/null || echo "  Aviso: não consegui remover o certificado $cert automaticamente."

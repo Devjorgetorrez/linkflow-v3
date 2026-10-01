@@ -524,6 +524,15 @@ export default function LlmsPage() {
                 <span className="text-[11.5px] font-medium text-[#d97706]">
                   ⚠ O arquivo no ar é de um deploy anterior. Publique para atualizar.
                 </span>
+              ) : !temOverrideManual && modo === "automatico" ? (
+                // Sem override salvo, o que aparece no painel à direita é uma
+                // PRÉVIA (a seleção que seria salva) — o site publica sozinho
+                // a versão automática do build, outro texto. "✓ Publicado"
+                // aqui enganava o operador a achar que a prévia é o que está
+                // no ar (achado real, Verificação 3009 V2, item 78).
+                <span className="text-[11.5px] font-medium text-[var(--ink-muted)]">
+                  Prévia — o site publica a versão automática até você salvar
+                </span>
               ) : pubStatus === 200 ? (
                 <span className="text-[11.5px] text-[var(--success)]">
                   ✓ Publicado · 200{pubData ? ` · atualizado em ${pubData}` : ""}

@@ -83,7 +83,15 @@ export function validarCamposObrigatoriosServico(fm: Record<string, unknown>): E
  * público — ficar como rascunho (noindex: true) continua livre.
  */
 export function validarPublicacaoServico(fm: Record<string, unknown>, corpo: string): ErroCampos | null {
-  if (fm.noindex !== false) return null; // segue como rascunho, sem restrição de conteúdo
+  // O schema (_astro/src/content.config.ts) declara noindex com
+  // z.boolean().default(false) — campo AUSENTE no arquivo (formato dos
+  // serviços de demonstração dos modelos) é público no site de verdade,
+  // igual a noindex: false explícito. A condição antiga só bloqueava
+  // quando noindex vinha escrito como false — serviço sem o campo (ou
+  // seja, público por padrão) passava batido com [CAMPO] no corpo
+  // (achado real, Verificação 3009 V2: PATCH sem noindex voltou 200).
+  // Só o oposto — noindex: true explícito — é rascunho de verdade.
+  if (fm.noindex === true) return null;
   const titulo = typeof fm.titulo === "string" ? fm.titulo.trim() : "";
   const meta = typeof fm.metaDescription === "string" ? fm.metaDescription : "";
   // Só conferia o título PROVISÓRIO exato ("Novo serviço") e o [CAMPO] na

@@ -340,8 +340,18 @@ export function validarConteudoSite(astroDir: string): { erros: ErroConteudo[]; 
       // marcado pra ir ao ar (noindex: false ou ausente).
       const noindexVal = campos.get("noindex");
       const ehRascunho = noindexVal?.k === "boolean" && noindexVal.v === true;
-      if (col === "servicos" && !ehRascunho && lerCorpo(raw) === "") {
-        erros.push({ arquivo, campo: "(corpo)", mensagem: "Sem texto no corpo do serviço. Abra o serviço e escreva a descrição antes de publicar." });
+      if (col === "servicos" && !ehRascunho) {
+        const corpoServico = lerCorpo(raw);
+        if (corpoServico === "") {
+          erros.push({ arquivo, campo: "(corpo)", mensagem: "Sem texto no corpo do serviço. Abra o serviço e escreva a descrição antes de publicar." });
+        } else if (corpoServico.includes("[CAMPO]")) {
+          // A API (validarPublicacaoServico) já bloqueia salvar [CAMPO] num
+          // serviço público pela tela — mas um arquivo que já tinha [CAMPO]
+          // no corpo (ex.: escrito direto pelo agente, sem passar pela API)
+          // nunca era pego aqui antes do build (achado real, Verificação
+          // 3009 V2, item 108 — "causa adicional").
+          erros.push({ arquivo, campo: "(corpo)", mensagem: "O corpo do serviço ainda tem o marcador [CAMPO]. Escreva o texto real antes de publicar." });
+        }
       }
       lidos.push({ col, arquivo, campos });
     }

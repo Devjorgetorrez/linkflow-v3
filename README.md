@@ -97,3 +97,4 @@ linkflow-completo/
 - Nunca compartilhe dados de clientes junto com o pacote.
 - Toda a lógica do sistema está em `CLAUDE.md` — os comandos são apenas atalhos que apontam para ele.
 - `painel/.env.local` é gerado pelo instalador e nunca deve ser versionado — tem os segredos de autenticação do painel.
+- **Quem for preparar um novo pacote pra distribuir:** nunca zipe uma pasta onde o instalador já rodou. `painel/.env.local`, `painel/node_modules`, `_astro/node_modules` e `painel/.next` precisam estar ausentes antes de compactar — senão todo aluno que receber o pacote fica com o MESMO segredo do painel, e o instalador nem gera um novo (`.env.local ja existe`). Empacote sempre a partir de uma cópia limpa do repositório, nunca de uma pasta onde alguém já instalou ou testou.
