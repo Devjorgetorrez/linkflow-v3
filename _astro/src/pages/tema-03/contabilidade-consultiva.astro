@@ -1,0 +1,281 @@
+---
+/**
+ * Página pilar do Tema 03 — hub de "contabilidade consultiva".
+ * Composição obrigatória (item B): Depoimentos + NAP completo + mapa embedado.
+ */
+import Tema03Base  from '../../layouts/Tema03Base.astro'
+import Header      from '../../components/blocos/Header.astro'
+import Hero        from '../../components/blocos/Hero.astro'
+import Servicos    from '../../components/blocos/Servicos.astro'
+import Abordagem   from '../../components/blocos/Abordagem.astro'
+import Prova       from '../../components/blocos/Prova.astro'
+import Depoimentos from '../../components/blocos/Depoimentos.astro'
+import Faq         from '../../components/blocos/Faq.astro'
+import Localizacao from '../../components/blocos/Localizacao.astro'
+import PostLista   from '../../components/blocos/PostLista.astro'
+import Cta         from '../../components/blocos/Cta.astro'
+import BuscasFrequentes from '../../components/blocos/BuscasFrequentes.astro'
+import Footer      from '../../components/blocos/Footer.astro'
+import { site }    from '../../config/tema-03.ts'
+import { tituloOuPadrao, metaOuPadrao } from '../../lib/paginaFixa.ts'
+import { textoCredencial } from '../../lib/schema.ts'
+import { getCollection } from 'astro:content'
+import { ehPublicado, ehServicoListavel } from '../../lib/publicacao.ts'
+import { nomeAutor } from '../../lib/autores.ts'
+import { nomeCategoria } from '../../lib/categorias.ts'
+
+const servicos = (await getCollection('servicosT3', ehServicoListavel))
+  .sort((a, b) => a.data.ordem - b.data.ordem)
+  .map(s => ({
+    titulo:    s.data.titulo,
+    descricao: s.data.resumo,
+    icone:     s.data.icone ?? '',
+    imagem:    s.data.imagem,
+    imagemAlt: s.data.imagemAlt,
+    href:      `/tema-03/${s.id}`,
+    categoria: s.data.categoria,
+  }))
+
+const depoimentos = (await getCollection('depoimentosT3'))
+  .sort((a, b) => a.data.ordem - b.data.ordem)
+  .map(d => ({
+    nome:    d.data.nome,
+    cidade:  d.data.cidade,
+    servico: d.data.servico,
+    corpo:   (d.body ?? '').trim(),
+  }))
+
+const autores = await getCollection('autoresT3')
+const categorias = await getCollection('categoriasT3')
+const posts = (await getCollection('postsT3', ehPublicado))
+  .sort((a, b) => new Date(b.data.publicadoEm).getTime() - new Date(a.data.publicadoEm).getTime())
+  .map(p => ({
+    titulo:        p.data.titulo,
+    publicadoEm:   p.data.publicadoEm,
+    categoria:     nomeCategoria(p.data.categoria, categorias),
+    imagemCapa:    p.data.imagemCapa,
+    imagemCapaAlt: p.data.imagemCapaAlt, resumo: p.data.resumo,
+    autor:         nomeAutor(p.data, autores),
+    href:          `/tema-03/${p.id}`,
+  }))
+
+const canonical = `${site.dominio}/contabilidade-consultiva/`
+
+const etapas = [
+  { n: '01', titulo: 'Diagnóstico de entrada',  corpo: 'Levantamos doze meses de faturamento, folha e apuração. Antes de propor qualquer coisa, mostramos onde a empresa está pagando a mais e por quê.' },
+  { n: '02', titulo: 'Transição sem interrupção', corpo: 'Assumimos a escrituração a partir da competência seguinte. Nenhuma entrega fica descoberta durante a troca — nem no fiscal, nem na folha.' },
+  { n: '03', titulo: 'Rotina mensal',           corpo: 'Documento até o dia 5, fechamento e relatório gerencial até o quinto dia útil, guias com cinco dias de folga sobre o vencimento.' },
+  { n: '04', titulo: 'Revisão trimestral',      corpo: 'Uma hora com o contador responsável para ler o que os números mostraram e decidir o que muda no trimestre.' },
+  { n: '05', titulo: 'Fechamento do exercício', corpo: 'Balanço, recálculo dos três regimes e definição do enquadramento do ano seguinte, sempre antes de novembro.' },
+]
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type':      'WebPage',
+      '@id':        `${canonical}#webpage`,
+      url:          canonical,
+      name:         `Contabilidade Consultiva — ${site.nome}`,
+      description:  'O que é contabilidade consultiva, como funciona a rotina mensal e o que muda em relação à contabilidade apenas obrigatória.',
+      about:        { '@id': `${site.dominio}/#organization` },
+      inLanguage:   'pt-BR',
+    },
+    {
+      '@type': 'BreadcrumbList',
+      '@id':   `${canonical}#breadcrumb`,
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home', item: `${site.dominio}/` },
+        { '@type': 'ListItem', position: 2, name: 'Contabilidade Consultiva', item: canonical },
+      ],
+    },
+    {
+      '@type': 'FAQPage',
+      '@id':   `${canonical}#faq`,
+      mainEntity: site.faq.map(f => ({
+        '@type': 'Question',
+        name: f.pergunta,
+        acceptedAnswer: { '@type': 'Answer', text: f.resposta },
+      })),
+    },
+  ],
+}
+---
+
+<Tema03Base
+  titulo={tituloOuPadrao(site, 'guia', `Contabilidade Consultiva em Londrina — ${site.nome}`)}
+  metaDescription={metaOuPadrao(site, 'guia', "O que é contabilidade consultiva na prática: relatório gerencial mensal, revisão anual de regime tributário e contador responsável com contato direto. Veja como funciona.")}
+  canonical={canonical}
+  jsonLd={jsonLd}
+  nodeId="pilar"
+>
+  <Header
+    logoSrc={site.logo?.src}
+    logoAlt={site.logo?.alt}
+    variante="padrao"
+    nomeSite={site.nome}
+    telefone={site.nap.telefone}
+    whatsapp={site.nap.whatsapp}
+    nav={site.nav}
+    ctaTexto="Falar com um contador"
+    ctaHref="/tema-03/contato"
+  />
+
+  <Hero
+    variante="editorial"
+    eyebrow="Guia completo"
+    titulo="Contabilidade consultiva: o que é, o que entrega e para quem compensa"
+    lead="A diferença entre entregar a obrigação e ajudar a decidir. Este guia reúne o que a Vértice faz, como funciona o mês a mês e o que muda no bolso de quem contrata."
+    ctaPrimTexto="Solicitar diagnóstico"
+    ctaPrimHref="/tema-03/contato"
+    ctaSecTexto="Ver os serviços"
+    ctaSecHref="/tema-03/servicos"
+  />
+
+  {/* ── Corpo editorial do pilar ──────────────────────────────────── */}
+  <section class="py-[var(--space-section)]">
+    <div class="container-prose article-body">
+      <h2>A obrigação é o piso, não o serviço</h2>
+      <p>
+        Todo escritório de contabilidade entrega guia no prazo e transmite obrigação acessória. Isso não
+        diferencia ninguém — é o mínimo para o CNPJ continuar regular. O que separa um escritório de outro
+        é o que acontece com a informação depois que ela é apurada.
+      </p>
+      <p>
+        Contabilidade consultiva é usar essa mesma escrituração para responder às perguntas que o dono da
+        empresa faz de verdade: dá para contratar mais dois? posso aumentar a retirada? esse produto
+        realmente dá lucro? qual regime me custa menos no ano que vem?
+      </p>
+
+      <h2>Os três números que entregamos todo mês</h2>
+      <p>
+        O relatório gerencial cabe em uma página e traz sempre os mesmos indicadores, para que a comparação
+        entre meses signifique alguma coisa:
+      </p>
+      <ul>
+        <li><strong>Margem por linha de receita.</strong> Quanto sobra de cada origem de faturamento, depois do custo direto dela.</li>
+        <li><strong>Ponto de equilíbrio.</strong> Quanto a empresa precisa faturar no mês para não operar no vermelho.</li>
+        <li><strong>Carga tributária efetiva.</strong> Quanto por cento do que entrou virou imposto, considerando tudo — não só a guia principal.</li>
+      </ul>
+
+      <h2>Quando a consultiva não compensa</h2>
+      <p>
+        Vale dizer o contrário também. Empresa que fatura pouco, tem uma linha só de receita e nenhum
+        funcionário costuma não extrair valor de relatório gerencial — para ela, o que resolve é escrituração
+        correta e prazo cumprido, e é isso que recomendamos.
+      </p>
+      <p>
+        O serviço passa a fazer diferença quando existe mais de uma decisão em aberto por trimestre: mix de
+        produto, contratação, investimento, retirada, mudança de regime.
+      </p>
+    </div>
+  </section>
+
+  {/* ── Como funciona, etapa a etapa ──────────────────────────────── */}
+  <section class="bg-surface-2 py-[var(--space-section)]">
+    <div class="container-wide">
+      <h2 class="font-display text-[clamp(1.375rem,2.5vw,1.875rem)] font-bold text-secondary">
+        Como funciona, do primeiro contato ao fechamento do ano
+      </h2>
+      <p class="mt-3 max-w-[62ch] text-ink-muted">
+        Cinco etapas, com prazo definido em cada uma. Nenhuma delas depende de o cliente cobrar.
+      </p>
+
+      <ol class="mt-9 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {etapas.map(e => (
+          <li class="rounded-[var(--radius-card)] border border-line bg-surface p-6">
+            <span class="font-display text-2xl font-bold text-primary/30">{e.n}</span>
+            <h3 class="mt-2 font-display text-base font-bold text-secondary">{e.titulo}</h3>
+            <p class="mt-2 text-sm leading-relaxed text-ink-muted">{e.corpo}</p>
+          </li>
+        ))}
+      </ol>
+    </div>
+  </section>
+
+  <Servicos
+    variante="grade"
+    titulo="Os serviços que compõem o acompanhamento"
+    descricao="A consultiva se apoia nas frentes obrigatórias. Não existe relatório confiável sem escrituração correta embaixo."
+    itens={servicos}
+  />
+
+  <Abordagem
+    titulo="Setores em que a consultiva muda mais o resultado"
+    descricao="Onde a margem varia muito entre linhas de receita, ou onde a folha define o enquadramento, o ganho aparece rápido."
+    itens={site.setores}
+  />
+
+  <Prova
+    titulo="O que está incluído sem custo adicional"
+    itens={site.diferenciais}
+  />
+
+  {/* Item B — depoimentos obrigatórios nesta página */}
+  <Depoimentos
+    titulo="Empresas que já passaram por essa transição"
+    itens={depoimentos}
+  />
+
+  <Faq
+    variante="duas-colunas"
+    titulo="Perguntas frequentes sobre o acompanhamento"
+    itens={site.faq}
+  />
+
+  {/* Item B — NAP completo + mapa embedado obrigatórios nesta página */}
+  <Localizacao
+    titulo="Onde estamos"
+    descricao="Reuniões trimestrais no escritório ou por vídeo, conforme a preferência do cliente."
+    logradouro={site.nap.logradouro}
+    complemento={site.nap.complemento}
+    bairro={site.nap.bairro}
+    cidade={site.nap.cidade}
+    uf={site.nap.uf}
+    cep={site.nap.cep}
+    telefone={site.nap.telefone}
+    whatsapp={site.nap.whatsapp}
+    email={site.nap.email}
+    horarios={site.horarios}
+    mapaSrc={site.mapaSrc}
+    mapaHref={`https://maps.google.com/?q=${encodeURIComponent(site.nap.enderecoFormatado)}`}
+  />
+
+  <PostLista
+    variante="grade"
+    titulo="Continue lendo"
+    posts={posts}
+    verMaisHref="/tema-03/blog"
+  />
+
+  <Cta
+    variante="padrao"
+    titulo="Comece pelo diagnóstico, não pelo contrato"
+    descricao="Analisamos os seus últimos doze meses e mostramos o que encontramos. Se não houver nada relevante para melhorar, dizemos isso também."
+    ctaPrimTexto="Solicitar diagnóstico"
+    ctaPrimHref="/tema-03/contato"
+    ctaSecTexto="Falar no WhatsApp"
+    ctaSecHref={`https://wa.me/${site.nap.whatsapp}`}
+    nota="Sem custo e sem compromisso de contratação."
+  />
+
+  <BuscasFrequentes titulo="Buscas relacionadas" itens={site.buscasFrequentes} />
+
+  <Footer
+    logoSrc={site.logo?.src}
+    logoAlt={site.logo?.alt}
+    credencial={textoCredencial(site)}
+    variante="colunas"
+    nomeSite={site.nome}
+    slogan={site.slogan}
+    telefone={site.nap.telefone}
+    email={site.nap.email}
+    endereco={`${site.nap.logradouro}, ${site.nap.complemento}`}
+    cidade={`${site.nap.bairro}, ${site.nap.cidade} — ${site.nap.uf}`}
+    cnpj={site.cnpj}
+    anoFundacao={site.anoFundacao}
+    redes={site.redes}
+    nav={site.nav}
+    colunas={site.navFooterColunas}
+  />
+</Tema03Base>

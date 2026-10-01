@@ -1,0 +1,144 @@
+---
+import Tema07Base   from '../../../layouts/Tema07Base.astro'
+import Header       from '../../../components/blocos/Header.astro'
+import PageHero     from '../../../components/blocos/PageHero.astro'
+import Servicos     from '../../../components/blocos/Servicos.astro'
+import Prova        from '../../../components/blocos/Prova.astro'
+import FormContato  from '../../../components/blocos/FormContato.astro'
+import Passos       from '../../../components/blocos/Passos.astro'
+import AreaAtendida from '../../../components/blocos/AreaAtendida.astro'
+import Faq          from '../../../components/blocos/Faq.astro'
+import Cta          from '../../../components/blocos/Cta.astro'
+import Footer       from '../../../components/blocos/Footer.astro'
+import { site }     from '../../../config/tema-07.ts'
+import { textoCredencial, areaLista } from '../../../lib/schema.ts'
+import { getCollection } from 'astro:content'
+import { ehServicoListavel } from '../../../lib/publicacao.ts'
+
+const planos = (await getCollection('servicosT7', ehServicoListavel))
+  .sort((a, b) => a.data.ordem - b.data.ordem)
+  .map(s => ({
+    titulo: s.data.titulo, descricao: s.data.resumo, icone: s.data.icone ?? '',
+    imagem: s.data.imagem, imagemAlt: s.data.imagemAlt,
+    href: `/tema-07/${s.id}`, categoria: s.data.categoria,
+  }))
+
+const wa        = `https://wa.me/${site.nap.whatsapp}`
+const canonical = `${site.dominio}/planos/`
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    { '@type': 'CollectionPage', '@id': `${canonical}#webpage`, url: canonical,
+      name: `Tipos de plano — ${site.nome}`, inLanguage: 'pt-BR' },
+    { '@type': 'BreadcrumbList', '@id': `${canonical}#breadcrumb`,
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home',   item: `${site.dominio}/` },
+        { '@type': 'ListItem', position: 2, name: 'Planos', item: canonical },
+      ] },
+  ],
+}
+---
+
+<Tema07Base
+  titulo={`Tipos de plano de saúde — ${site.nome}`}
+  metaDescription="Plano empresarial, individual, coletivo por adesão, odontológico, sênior e portabilidade de carência em Sorocaba e região, com comparativo entre operadoras."
+  canonical={canonical}
+  jsonLd={jsonLd}
+  nodeId="planos"
+>
+  <Header
+    variante="padrao"
+    nomeSite={site.nome}
+    logoSrc={site.logo?.src}
+    logoAlt={site.logo?.alt}
+    telefone={site.nap.telefone}
+    whatsapp={site.nap.whatsapp}
+    nav={site.nav}
+    ctaTexto="Solicitar cotação"
+    ctaHref="#cotacao"
+  />
+
+  <PageHero
+    variante="destaque"
+    eyebrow="Planos"
+    titulo="Qual caminho serve para o seu caso"
+    descricao="O tipo certo depende de ter CNPJ, vínculo com entidade de classe ou nenhum dos dois. Comece por aqui e a cotação fica mais precisa."
+  />
+
+  <Servicos variante="lista" itens={planos} />
+
+  <Prova variante="faixa" titulo="Vale para qualquer cotação" itens={site.selos} />
+
+  <div id="cotacao">
+    <FormContato
+      variante="cotacao"
+      eyebrow="Cotação sem compromisso"
+      titulo="Receba um comparativo entre operadoras"
+      descricao="Preencha os dados e devolvemos, em até um dia útil, as opções elegíveis ao seu perfil — com preço, rede, carência e histórico de reajuste lado a lado."
+      textoApoio={[
+        'A corretora é remunerada pela operadora. Você paga o mesmo valor de tabela, com a assessoria da escolha e o suporte depois da contratação incluídos.',
+        'Seus dados são usados apenas para elaborar a cotação. Não repassamos seu contato a terceiros.',
+      ]}
+      whatsapp={site.nap.whatsapp}
+      cidades={areaLista(site)}
+    />
+  </div>
+
+  <Passos
+    variante="cards"
+    titulo="Como funciona"
+    descricao="Do primeiro contato ao plano ativo, sem custo em nenhuma etapa."
+    itens={site.passos}
+  />
+
+  <Prova
+    variante="logos"
+    titulo="Operadoras na nossa carteira"
+    descricao="Comparação real depende de ter mais de uma opção na mão."
+    itens={site.operadoras}
+  />
+
+  <AreaAtendida
+    eyebrow="Cobertura"
+    titulo="Cidades atendidas"
+    descricao="Presencial em Sorocaba e remoto nas demais cidades da região."
+    regioes={areaLista(site)}
+    bullets={site.cidadesBullets}
+    imagem="https://images.unsplash.com/photo-1449844908441-8829872d2607?w=420&h=480&fit=crop&auto=format"
+    imagemAlt="Rua residencial arborizada"
+    selo="Sorocaba e região"
+    ctaTexto="Consultar minha cidade"
+    ctaHref={wa}
+  />
+
+  <Faq variante="duas-colunas" titulo="Dúvidas frequentes" itens={site.faq} />
+
+  <Cta
+    variante="card"
+    titulo="Não sabe em qual você se encaixa?"
+    descricao="Responda o formulário e a gente descobre. Se o melhor caminho for outro, dizemos isso — inclusive quando é ficar no plano atual."
+    ctaPrimTexto="Solicitar cotação"
+    ctaPrimHref="#cotacao"
+    ctaSecTexto="Falar no WhatsApp"
+    ctaSecHref={wa}
+  />
+
+  <Footer
+    variante="colunas"
+    nomeSite={site.nome}
+    logoSrc={site.logo?.src}
+    logoAlt={site.logo?.alt}
+    credencial={textoCredencial(site)}
+    slogan={site.slogan}
+    telefone={site.nap.telefone}
+    email={site.nap.email}
+    endereco={`${site.nap.logradouro}, ${site.nap.complemento}`}
+    cidade={`${site.nap.bairro}, ${site.nap.cidade} — ${site.nap.uf}`}
+    cnpj={site.cnpj}
+    anoFundacao={site.anoFundacao}
+    redes={site.redes}
+    nav={site.nav}
+    colunas={site.navFooterColunas}
+  />
+</Tema07Base>

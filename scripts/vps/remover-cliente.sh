@@ -1,0 +1,125 @@
+#!/bin/bash
+# remover-cliente.sh — Remove um cliente do VPS LinkFlow por completo:
+# processo PM2, configuração Nginx (site + painel), certificado SSL,
+# pasta isolada do cliente e o site publicado.
+#
+# Não existia (erro 105, Relatório de Testes 6) — feito à mão duas vezes,
+# risco real de esquecer um pedaço (processo PM2 órfão, Nginx apontando
+# pra pasta que não existe mais, certificado SSL não renovado sozinho
+# ficando pra trás).
+#
+# Uso: bash remover-cliente.sh SLUG --confirmar
+# Sem --confirmar, só mostra o que SERIA removido (dry-run) — nada é apagado.
+
+set -e
+set -o pipefail
+
+SLUG=${1:?"Erro: informe o slug do cliente a remover"}
+CONFIRMAR=${2:-""}
+
+LINKFLOW_DIR="/opt/linkflow"
+SITES_DIR="/var/www"
+CLIENTE_DIR="$LINKFLOW_DIR/clientes/$SLUG"
+BACKUPS_DIR="$LINKFLOW_DIR/backups/$SLUG"
+TS=$(date +%Y%m%d-%H%M%S)
+
+if [ ! -d "$CLIENTE_DIR" ]; then
+  echo "Erro: cliente $SLUG não encontrado em $CLIENTE_DIR — nada a remover."
+  exit 1
+fi
+
+echo "[remover-cliente] Isto vai remover PERMANENTEMENTE:"
+echo "  - Processo PM2:        painel-$SLUG"
+echo "  - Nginx:                /etc/nginx/sites-available/site-$SLUG e painel-$SLUG (+ links)"
+echo "  - Certificado SSL:      qualquer certbot para os domínios deste cliente"
+echo "  - Pasta do cliente:     $CLIENTE_DIR (painel, motor, dados, mídia)"
+echo "  - Site publicado:       $SITES_DIR/$SLUG"
+echo ""
+
+if [ "$CONFIRMAR" != "--confirmar" ]; then
+  echo "Modo consulta (dry-run) — nada foi removido."
+  echo "Pra remover de verdade: bash remover-cliente.sh $SLUG --confirmar"
+  exit 0
+fi
+
+# ─── Backup antes de apagar qualquer coisa — mesma cautela do
+# atualizar-cliente.sh. Guardado fora de clientes/, então some junto com o
+# cliente só se alguém apagar backups/ também, de proposito. ────────────────
+mkdir -p "$BACKUPS_DIR"
+BACKUP_ARQ="$BACKUPS_DIR/antes-de-remover-$TS.tar.gz"
+echo "  Fazendo backup final em $BACKUP_ARQ..."
+# --exclude precisa vir ANTES do argumento posicional ($SLUG) — o GNU tar
+# 1.35 (Ubuntu 24.04) recusa --exclude depois de um argumento não-opção e
+# sai com código 2; o "|| echo aviso" escondia essa falha real como se
+# fosse só "backup parcial" (achado real, Verificação 3009 v2, item 105 —
+# o mesmo defeito do atualizar-cliente.sh, aqui não tinha sido corrigido).
+if ! tar -czf "$BACKUP_ARQ" \
+  --exclude="$SLUG/painel/node_modules" \
+  --exclude="$SLUG/_astro/node_modules" \
+  --exclude="$SLUG/_astro/.astro" \
+  --exclude="$SLUG/_astro/dist" \
+  -C "$LINKFLOW_DIR/clientes" "$SLUG"; then
+  echo "Erro: backup falhou de verdade — nada foi removido. Confira o erro do tar acima."
+  exit 1
+fi
+
+# ─── PM2 ──────────────────────────────────────────────────────────────────
+echo "  Parando processo PM2..."
+pm2 delete "painel-$SLUG" 2>/dev/null || echo "  (processo painel-$SLUG já não existia no PM2)"
+pm2 save
+
+# ─── SSL — antes do Nginx, porque certbot precisa do bloco do site pra achar
+# os domínios corretamente em alguns casos; se falhar, segue (não bloqueia
+# o resto da remoção, só avisa) ─────────────────────────────────────────────
+# O certificado e' nomeado pelo DOMINIO real (ex. odontovilagalvao.turboblog.com.br),
+# nunca pelo slug do cliente (ex. odonto-vila-galvao) — procurar "Certificate
+# Name" contendo o slug nunca achava nada. E "grep -B2" pegava as 2 linhas
+# ANTES de "Certificate Path" (Domains, Expiry Date), nunca a linha
+# "Certificate Name:", que fica mais acima no bloco (achado real, Verificação
+# 3009 v2, item 105). Le o dominio real do config do cliente e casa pela
+# linha "Domains:" de cada bloco (awk, separando por "Certificate Name:").
+echo "  Removendo certificado SSL (se houver)..."
+# dominio: no config/site.ts vem com o esquema ('https://odontovilagalvao...')
+# e a linha "Domains:" do certbot nunca tem esquema — a comparacao nunca
+# encontrava nada. E so' tirar o "https://" e continuar comparando por
+# SUBSTRING (index()) tambem e' perigoso: "galvao.turboblog.com.br" e'
+# literalmente uma substring de "odontovilagalvao.turboblog.com.br", ou
+# seja, remover um cliente de dominio curto apagaria por engano o
+# certificado de outro cliente cujo dominio so' tem esse texto no meio
+# (achado real, Verificacao 3009 V2, item 105). Tira o esquema/barra final
+# e compara TOKEN A TOKEN (domain exato dentro de "Domains: a b c").
+DOMINIO_CLIENTE=$(grep -m1 -oE "dominio:\s*['\"][^'\"]+['\"]" "$CLIENTE_DIR/_astro/src/config/site.ts" 2>/dev/null | sed -E "s/.*['\"]([^'\"]+)['\"]/\1/" | sed -E 's#^https?://##; s#/+$##')
+if [ -z "$DOMINIO_CLIENTE" ]; then
+  echo "  Aviso: não encontrei o domínio do cliente em config/site.ts — certificado SSL não foi conferido, remova manualmente se existir."
+  DOMINIOS_CERT=""
+else
+  DOMINIOS_CERT=$(certbot certificates 2>/dev/null | awk -v dom="$DOMINIO_CLIENTE" '
+    /Certificate Name:/ { nome = $3 }
+    /Domains:/ {
+      for (i = 2; i <= NF; i++) if ($i == dom) { print nome; next }
+    }
+  ')
+  if [ -z "$DOMINIOS_CERT" ]; then
+    echo "  Aviso: nenhum certificado SSL encontrado pro domínio $DOMINIO_CLIENTE — confira manualmente com 'certbot certificates' se existe um a remover."
+  fi
+fi
+for cert in $DOMINIOS_CERT; do
+  certbot delete --cert-name "$cert" --non-interactive 2>/dev/null || echo "  Aviso: não consegui remover o certificado $cert automaticamente."
+done
+
+# ─── Nginx ────────────────────────────────────────────────────────────────
+echo "  Removendo configuração do Nginx..."
+rm -f "/etc/nginx/sites-enabled/site-$SLUG" "/etc/nginx/sites-enabled/painel-$SLUG"
+rm -f "/etc/nginx/sites-available/site-$SLUG" "/etc/nginx/sites-available/painel-$SLUG"
+nginx -t && systemctl reload nginx
+
+# ─── Pastas ───────────────────────────────────────────────────────────────
+echo "  Removendo pasta do cliente e site publicado..."
+rm -rf "$CLIENTE_DIR"
+rm -rf "$SITES_DIR/$SLUG"
+
+echo ""
+echo "  ✅ Cliente $SLUG removido."
+echo "     Backup final salvo em: $BACKUP_ARQ"
+echo "     Lembrete: remover também o registro DNS do domínio no registrador,"
+echo "     se o cliente não for reaproveitar o mesmo domínio depois."

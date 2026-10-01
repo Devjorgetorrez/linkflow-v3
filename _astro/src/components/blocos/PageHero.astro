@@ -1,0 +1,60 @@
+---
+/**
+ * PageHero — cabeçalho de página interna (não homepage)
+ *
+ * variantes:
+ *   padrao   — fundo neutro (surface-2), título em secondary. Comportamento
+ *              original; é o default, então o Tema 01 não muda.
+ *   destaque — faixa cheia em primary com texto claro, para página que abre
+ *              com bloco de cor (padrão de referência de serviço profissional).
+ *
+ * Empty state: não renderiza sem `titulo`.
+ */
+
+interface Props {
+  variante?:  'padrao' | 'destaque'
+  titulo:     string
+  descricao?: string
+  eyebrow?:   string
+}
+
+const { variante = 'padrao', titulo, descricao, eyebrow } = Astro.props
+
+if (!titulo) return
+---
+
+{variante === 'padrao' && (
+  <section class="border-b border-line bg-surface-2 py-14">
+    <div class="container-wide text-center">
+      {eyebrow && (
+        <p class="mb-3 text-xs font-semibold uppercase tracking-widest text-primary">{eyebrow}</p>
+      )}
+      <h1 class="text-[clamp(2rem,4vw,2.75rem)] font-bold text-secondary leading-tight">
+        {titulo}
+      </h1>
+      {descricao && (
+        <p class="mt-4 text-base text-ink-muted max-w-[600px] mx-auto leading-relaxed">
+          {descricao}
+        </p>
+      )}
+    </div>
+  </section>
+)}
+
+{variante === 'destaque' && (
+  <section class="bg-primary py-16">
+    <div class="container-wide text-center">
+      {eyebrow && (
+        <p class="mb-3 text-xs font-semibold uppercase tracking-widest text-primary-ink/70">{eyebrow}</p>
+      )}
+      <h1 class="font-display text-[clamp(1.875rem,4vw,2.75rem)] font-bold leading-tight text-primary-ink">
+        {titulo}
+      </h1>
+      {descricao && (
+        <p class="mx-auto mt-4 max-w-[720px] text-base leading-relaxed text-primary-ink/80">
+          {descricao}
+        </p>
+      )}
+    </div>
+  </section>
+)}

@@ -1,0 +1,324 @@
+---
+/**
+ * ConteudoLegal — corpo das duas páginas legais, compartilhado pelos 3 temas.
+ *
+ *   documento="politica" → /politica-de-privacidade
+ *   documento="termos"   → /termos-de-uso
+ *
+ * As DUAS páginas são obrigatórias em todo site (regra do Jorge — lista
+ * fechada de 4 institucionais do fase3-conteudo: sobre, contato, política,
+ * termos). Cada uma é um documento próprio: os Termos não reproduzem a
+ * Política, só remetem a ela.
+ *
+ * Os títulos de seção carregam, literalmente, as expressões que o
+ * scripts/guardiao_institucionais.py procura (SECOES_PRIVACIDADE /
+ * SECOES_TERMOS), na ordem do fase3-conteudo ETAPA 7 Passo 5. Renomear um
+ * título aqui sem atualizar o guardião faz a página reprovar.
+ *
+ * Dados do cliente vêm de site.legal (política) e site.legal.termos
+ * (termos). Campo do cliente vazio NÃO recebe texto padrão: aparece como
+ * pendência e bloqueia a publicação. Texto fixo aqui é só o que vale para
+ * qualquer negócio (lista de direitos da LGPD, uso proibido, etc.) — nunca
+ * texto de um nicho específico.
+ *
+ * Âncoras obrigatórias do §6.2: #cookies e #direitos.
+ */
+
+interface Props {
+  legal:      any
+  nomeSite:   string
+  documento?: 'politica' | 'termos'
+}
+
+const { legal, nomeSite, documento = 'politica' } = Astro.props
+
+const DISCLAIMER =
+  'Este documento foi elaborado com base nas informações fornecidas pelo titular e na ' +
+  'legislação vigente. Recomenda-se revisão por profissional jurídico antes da publicação definitiva.'
+
+const formatarData = (iso?: string) =>
+  iso
+    ? new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
+        .format(new Date(iso + 'T12:00:00'))
+    : null
+
+const atualizada = formatarData(legal.atualizadaEm)
+const termos     = legal.termos ?? {}
+const vigencia   = formatarData(termos.vigenciaDesde)
+
+/* CNPJ só entra no texto quando é válido em formato (14 dígitos, com ou sem
+   máscara). "não possui", vazio ou placeholder → a frase omite o CNPJ. */
+const cnpjValido = String(legal.controlador?.cnpj ?? '').replace(/\D/g, '').length === 14
+const cnpj       = cnpjValido ? String(legal.controlador.cnpj) : ''
+
+const direitos = [
+  'Confirmar se tratamos dados seus e acessar esses dados',
+  'Corrigir dado incompleto, inexato ou desatualizado',
+  'Pedir anonimização, bloqueio ou eliminação de dado desnecessário ou tratado fora da lei',
+  'Pedir a portabilidade dos dados para outro fornecedor',
+  'Eliminar dado tratado com base em consentimento, respeitada a guarda legal obrigatória',
+  'Saber com quem compartilhamos seus dados',
+  'Ser informado sobre a consequência de negar o consentimento',
+  'Revogar o consentimento a qualquer momento',
+  'Opor-se a tratamento feito sem consentimento, quando houver descumprimento da lei',
+  'Pedir revisão de decisão automatizada que afete seus interesses',
+]
+
+/* Campos do cliente que bloqueiam publicação quando vazios em site real —
+   cada documento só cobra os campos que ele mesmo usa. */
+const pendencias = (documento === 'politica'
+  ? [
+      !legal.canalTitular               && 'Canal de atendimento ao titular',
+      !legal.retencao?.length           && 'Prazo de retenção por finalidade',
+      !legal.basesLegais?.length        && 'Base legal por finalidade',
+      !legal.compartilhamento?.length   && 'Compartilhamento com terceiros',
+      !legal.transferenciaInternacional && 'Transferência internacional',
+      !legal.atualizadaEm               && 'Data da última revisão',
+    ]
+  : [
+      !termos.naoSubstitui   && 'Aviso de que o site não substitui o atendimento profissional (legal.termos.naoSubstitui)',
+      !termos.foro?.cidade   && 'Cidade do foro (legal.termos.foro.cidade)',
+      !termos.foro?.uf       && 'UF do foro (legal.termos.foro.uf)',
+      !termos.vigenciaDesde  && 'Data de início da vigência (legal.termos.vigenciaDesde)',
+    ]
+).filter(Boolean) as string[]
+---
+
+<div class="container-prose article-body py-[var(--space-section)]">
+
+  {/* ── Marcação de exemplo (item D / §6.2) ───────────────────────── */}
+  {legal.exemplo && (
+    <div class="not-prose mb-10 rounded-[var(--radius-card)] border-l-4 border-accent bg-accent/8 p-5">
+      <p class="text-sm font-bold text-secondary">Conteúdo de exemplo — substituir antes de publicar</p>
+      <p class="mt-2 text-sm leading-relaxed text-ink-muted">
+        Este é o tema de referência. Os campos abaixo estão preenchidos com dados fictícios
+        apenas para mostrar o formato do documento. Em site real, os campos preenchidos
+        pelo cliente não têm texto padrão, e campo vazio bloqueia a publicação — conforme §6.2
+        da especificação. Inventar é pior que deixar em branco.
+      </p>
+    </div>
+  )}
+
+  {pendencias.length > 0 && (
+    <div class="not-prose mb-10 rounded-[var(--radius-card)] border-l-4 border-danger bg-danger/8 p-5">
+      <p class="text-sm font-bold text-danger">Publicação bloqueada — campos obrigatórios vazios</p>
+      <ul class="mt-2 list-disc pl-5 text-sm text-ink-muted">
+        {pendencias.map(p => <li>{p}</li>)}
+      </ul>
+    </div>
+  )}
+
+  {documento === 'politica' ? (
+    <>
+      <p class="not-prose mb-8 text-sm text-ink-muted">
+        Versão {legal.versaoPolitica}{atualizada && ` · atualizada em ${atualizada}`}
+      </p>
+
+      <h2>1. Identificação do controlador dos dados</h2>
+      <p>
+        <strong>{legal.controlador.razaoSocial}</strong>{cnpj && `, inscrita no CNPJ sob o nº ${cnpj}`},
+        com sede em {legal.controlador.endereco}, é a controladora dos dados pessoais tratados neste site.
+      </p>
+      <p class="not-prose text-xs text-ink-muted">
+        Campo derivado do cadastro do site — somente leitura no painel.
+      </p>
+
+      <h2>2. Dados coletados e finalidade</h2>
+      <p>Os dados pessoais tratados neste site vêm dos formulários publicados nele:</p>
+      <table>
+        <thead>
+          <tr><th>Formulário</th><th>Campos</th><th>Finalidade</th></tr>
+        </thead>
+        <tbody>
+          {legal.formularios.map((f: any) => (
+            <tr><td>{f.nome}</td><td>{f.campos}</td><td>{f.finalidade}</td></tr>
+          ))}
+        </tbody>
+      </table>
+      <p class="not-prose text-xs text-ink-muted">
+        Campo derivado dos formulários existentes no site — somente leitura no painel.
+      </p>
+
+      {legal.medicao?.length > 0 && (
+        <>
+          <p>Além disso, medimos a audiência do site:</p>
+          <ul>
+            {legal.medicao.map((m: any) => <li><strong>{m.ferramenta}:</strong> {m.dado}</li>)}
+          </ul>
+        </>
+      )}
+
+      <h2>3. Base legal de cada finalidade</h2>
+      <table>
+        <thead><tr><th>Finalidade</th><th>Base legal (LGPD)</th></tr></thead>
+        <tbody>
+          {legal.basesLegais.map((b: any) => (
+            <tr><td>{b.finalidade}</td><td>{b.base}</td></tr>
+          ))}
+        </tbody>
+      </table>
+
+      <h2 id="cookies">4. Cookies e rastreadores</h2>
+      <p>
+        Esta seção é parte desta página, e não um documento separado. Cookies necessários são instalados
+        sem consentimento porque sem eles o site não funciona. Todas as demais categorias vêm desmarcadas
+        e só são instaladas depois que você aceita.
+      </p>
+      <table>
+        <thead>
+          <tr><th>Categoria</th><th>Finalidade</th><th>Retenção</th><th>Base legal</th><th>Compartilhamento</th></tr>
+        </thead>
+        <tbody>
+          {legal.cookies.map((c: any) => (
+            <tr>
+              <td><strong>{c.categoria}</strong></td>
+              <td>{c.finalidade}</td>
+              <td>{c.retencao}</td>
+              <td>{c.base}</td>
+              <td>{c.compartilhamento}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p>
+        Recusar as categorias não necessárias não limita nenhuma funcionalidade do site. Ao revogar uma
+        categoria já aceita, os cookies dela são apagados do seu navegador.
+      </p>
+      <p class="not-prose">
+        <button type="button" data-cc="show-preferencesModal"
+                class="rounded-[var(--radius-btn)] border border-primary px-5 py-2.5 text-sm font-semibold text-primary transition-colors hover:bg-primary hover:text-primary-ink">
+          Gerenciar cookies
+        </button>
+      </p>
+
+      <h2>5. Compartilhamento com terceiros</h2>
+      <table>
+        <thead><tr><th>Destinatário</th><th>Finalidade do compartilhamento</th></tr></thead>
+        <tbody>
+          {legal.compartilhamento.map((c: any) => (
+            <tr><td>{c.destinatario}</td><td>{c.finalidade}</td></tr>
+          ))}
+        </tbody>
+      </table>
+      <p>Não vendemos dados pessoais e não os cedemos para uso comercial de terceiros.</p>
+
+      <h3>Transferência internacional</h3>
+      <p>{legal.transferenciaInternacional}</p>
+
+      <h2>6. Tempo de retenção</h2>
+      <table>
+        <thead><tr><th>Finalidade</th><th>Prazo de retenção</th></tr></thead>
+        <tbody>
+          {legal.retencao.map((r: any) => (
+            <tr><td>{r.finalidade}</td><td>{r.prazo}</td></tr>
+          ))}
+        </tbody>
+      </table>
+
+      <h2 id="direitos">7. Direitos do titular</h2>
+      <p>A LGPD (art. 18) garante a você, titular dos dados, os seguintes direitos:</p>
+      <ul>
+        {direitos.map(d => <li>{d}</li>)}
+      </ul>
+
+      <h2>8. Canal de exercício dos direitos</h2>
+      <p>
+        Pelo canal de atendimento ao titular: <strong>{legal.canalTitular}</strong>. Respondemos em até
+        quinze dias. Para pedidos que envolvam eliminação de dado, informamos quais documentos precisam
+        ser mantidos por obrigação legal e por quanto tempo.
+      </p>
+
+      <h3>Como revogar um consentimento já dado</h3>
+      <p>
+        Para cookies, use o botão “Gerenciar cookies” acima — a revogação vale a partir do clique e apaga
+        os cookies da categoria. Para consentimento dado em formulário do site, basta pedir pelo canal de
+        atendimento ao titular; a revogação não afeta o tratamento feito antes dela.
+      </p>
+
+      <h3>Encarregado pelo tratamento de dados</h3>
+      <p>
+        {legal.encarregado.nomeado
+          ? `Encarregado nomeado. Contato: ${legal.encarregado.canal}.`
+          : `Não há encarregado nomeado. ${legal.encarregado.observacao} Contato: ${legal.encarregado.canal}.`}
+      </p>
+      <p>
+        Você também pode apresentar reclamação à Autoridade Nacional de Proteção de Dados (ANPD).
+      </p>
+
+      <h2>9. Data da última revisão e alterações</h2>
+      <p>
+        Última revisão: <strong>{atualizada ?? 'pendente'}</strong> (versão {legal.versaoPolitica}).
+        Toda alteração incrementa a versão. É essa versão que fica gravada no registro do seu
+        consentimento de cookies, para que seja possível saber a que texto você consentiu e quando.
+      </p>
+      <p>
+        Aceitar cookies não é aceitar este documento. São coisas separadas: o consentimento de cookies
+        vale para as categorias que você marcou, e esta página é publicada para cumprir o dever de
+        transparência — não para ser “aceita”.
+      </p>
+    </>
+  ) : (
+    <>
+      <p class="not-prose mb-8 text-sm text-ink-muted">
+        {vigencia ? `Em vigor desde ${vigencia}` : 'Vigência pendente'}
+      </p>
+
+      <h2>1. Objeto e aceite</h2>
+      <p>
+        Estes Termos de Uso regem a navegação no site de {nomeSite}, mantido por
+        <strong> {legal.controlador.razaoSocial}</strong>{cnpj && ` (CNPJ ${cnpj})`}. Ao navegar
+        no site, você declara que leu e concorda com estes termos.
+      </p>
+      <p>
+        O tratamento de dados pessoais decorrente dessa navegação é regido pela
+        <a href="/politica-de-privacidade">Política de Privacidade</a>, que é um documento à parte.
+      </p>
+
+      <h2>2. Uso permitido e uso proibido</h2>
+      <p>
+        O site pode ser usado para consultar as informações publicadas e para entrar em contato pelos
+        canais oferecidos nele. Não é permitido:
+      </p>
+      <ul>
+        <li>Copiar ou republicar o conteúdo para fins comerciais sem autorização por escrito</li>
+        <li>Coletar o conteúdo de forma automatizada em volume que prejudique o funcionamento do site</li>
+        <li>Tentar acessar áreas, sistemas ou dados não disponibilizados publicamente</li>
+        <li>Enviar pelos formulários dados de terceiros sem autorização, informações falsas ou mensagens em massa</li>
+      </ul>
+
+      <h2>3. Propriedade intelectual</h2>
+      <p>
+        Textos, imagens, marca e identidade visual do site pertencem a {legal.controlador.razaoSocial}
+        ou são usados com licença. A citação de trechos é permitida desde que acompanhada do nome do
+        site e do link para a página original.
+      </p>
+
+      <h2>4. Limitação de responsabilidade</h2>
+      <p>
+        O conteúdo é revisado com cuidado, mas pode conter imprecisões ou ficar desatualizado. Não
+        garantimos que o site ficará disponível sem interrupção, e não respondemos pelo conteúdo de
+        sites de terceiros para os quais houver link.
+      </p>
+
+      <h2>5. Este site não substitui o atendimento profissional</h2>
+      <p>{termos.naoSubstitui}</p>
+
+      <h2>6. Foro e legislação aplicável</h2>
+      <p>
+        Estes termos são regidos pela legislação brasileira. Fica eleito o foro da comarca de
+        {' '}{termos.foro?.cidade} — {termos.foro?.uf} para resolver qualquer questão decorrente deles,
+        ressalvado o direito do consumidor de propor ação no foro do seu domicílio (Código de Defesa do
+        Consumidor, art. 101, I).
+      </p>
+
+      <h2>7. Vigência</h2>
+      <p>
+        Estes termos estão em vigor desde {vigencia ?? 'data pendente'} e podem ser atualizados a qualquer
+        momento. A versão válida é sempre a publicada nesta página, com a data de vigência indicada no topo.
+      </p>
+    </>
+  )}
+
+  <hr />
+  <p class="text-sm text-ink-muted"><em>{DISCLAIMER}</em></p>
+</div>

@@ -1,0 +1,254 @@
+---
+import ThemeBase from '../layouts/ThemeBase.astro'
+import Header     from '../components/blocos/Header.astro'
+import Hero       from '../components/blocos/Hero.astro'
+import Servicos   from '../components/blocos/Servicos.astro'
+import Prova      from '../components/blocos/Prova.astro'
+import Equipe     from '../components/blocos/Equipe.astro'
+import Depoimentos from '../components/blocos/Depoimentos.astro'
+import Cta        from '../components/blocos/Cta.astro'
+import Faq        from '../components/blocos/Faq.astro'
+import PostLista  from '../components/blocos/PostLista.astro'
+import Footer     from '../components/blocos/Footer.astro'
+import Infraestrutura  from '../components/blocos/Infraestrutura.astro'
+import Tags             from '../components/blocos/Tags.astro'
+import Localizacao      from '../components/blocos/Localizacao.astro'
+import Abordagem        from '../components/blocos/Abordagem.astro'
+import BuscasFrequentes from '../components/blocos/BuscasFrequentes.astro'
+import { site }         from '../config/site.ts'
+import { textoCredencial, organizacaoSchema } from '../lib/schema.ts'
+import { getCollection } from 'astro:content'
+import { ehPublicado, ehServicoListavel } from '../lib/publicacao.ts'
+import { nomeAutor } from '../lib/autores.ts'
+import { nomeCategoria } from '../lib/categorias.ts'
+import { tituloOuPadrao, metaOuPadrao } from '../lib/paginaFixa.ts'
+
+/* ── Coleções ─────────────────────────────────────────────────── */
+const todosServicos = await getCollection('servicos', ehServicoListavel)
+const todosEquipe   = await getCollection('equipe')
+const todosDepoi    = await getCollection('depoimentos')
+const autores = await getCollection('autores')
+const categorias = await getCollection('categorias')
+const todosPosts    = await getCollection('posts', ehPublicado)
+
+const servicosOrdenados = todosServicos
+  .sort((a, b) => a.data.ordem - b.data.ordem)
+  .map(s => ({
+    titulo:    s.data.titulo,
+    descricao: (s.body ?? '').split('\n').find(l => l.trim().length > 0) ?? '',
+    icone:     s.data.icone ?? '',
+    imagem:    s.data.imagem,
+    imagemAlt: s.data.imagemAlt,
+    href:      `/${s.id}`,
+    categoria: s.data.categoria,
+  }))
+
+const equipeOrdenada = todosEquipe
+  .sort((a, b) => a.data.ordem - b.data.ordem)
+  .map(m => ({
+    nome:          m.data.nome,
+    cargo:         m.data.cargo,
+    crm:           m.data.crm,
+    especialidade: m.data.especialidade,
+    foto:          m.data.foto,
+  }))
+
+const depoimentosOrdenados = todosDepoi
+  .sort((a, b) => a.data.ordem - b.data.ordem)
+  .map(d => ({
+    nome:    d.data.nome,
+    cidade:  d.data.cidade,
+    servico: d.data.servico,
+    corpo:   (d.body ?? '').trim(),
+  }))
+
+const postsOrdenados = todosPosts
+  .sort((a, b) => new Date(b.data.publicadoEm).getTime() - new Date(a.data.publicadoEm).getTime())
+  .map(p => ({
+    titulo:        p.data.titulo,
+    publicadoEm:   p.data.publicadoEm,
+    categoria:     nomeCategoria(p.data.categoria, categorias),
+    imagemCapa:    p.data.imagemCapa,
+    imagemCapaAlt: p.data.imagemCapaAlt, resumo: p.data.resumo,
+    autor:         nomeAutor(p.data, autores),
+    href:          `/${p.id}`,
+  }))
+
+/* ── SEO / JSON-LD @graph ─────────────────────────────────────── */
+const canonical = site.dominio + '/'
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    organizacaoSchema(site, ['MedicalOrganization', 'LocalBusiness']),
+    {
+      '@type':           'WebSite',
+      '@id':             `${site.dominio}/#website`,
+      url:               site.dominio,
+      name:              site.nome,
+      publisher:         { '@id': `${site.dominio}/#organization` },
+      inLanguage:        'pt-BR',
+    },
+    {
+      '@type':           'WebPage',
+      '@id':             `${canonical}#webpage`,
+      url:               canonical,
+      name:              site.nome,
+      isPartOf:          { '@id': `${site.dominio}/#website` },
+      about:             { '@id': `${site.dominio}/#organization` },
+      inLanguage:        'pt-BR',
+    },
+    {
+      '@type':           'BreadcrumbList',
+      '@id':             `${canonical}#breadcrumb`,
+      itemListElement:   [
+        { '@type': 'ListItem', position: 1, name: 'Home', item: canonical },
+      ],
+    },
+    {
+      '@type': 'FAQPage',
+      '@id':   `${canonical}#faq`,
+      mainEntity: site.faq.map(f => ({
+        '@type':          'Question',
+        name:             f.pergunta,
+        acceptedAnswer:   { '@type': 'Answer', text: f.resposta },
+      })),
+    },
+  ],
+}
+---
+
+<ThemeBase
+  titulo={tituloOuPadrao(site, 'home', `${site.nome} — Clínica Médica em São Paulo`)}
+  metaDescription={metaOuPadrao(site, 'home', "VitalCare Saúde oferece consultas especializadas, exames, medicina preventiva e telemedicina na Av. Paulista, SP. Equipe com CRM, agendamento em 24h.")}
+  canonical={canonical}
+  jsonLd={jsonLd}
+  nodeId="home"
+>
+
+  <Header
+    logoSrc={site.logo?.src}
+    logoAlt={site.logo?.alt}
+    variante="padrao"
+    nomeSite={site.nome}
+    telefone={site.nap.telefone}
+    whatsapp={site.nap.whatsapp}
+    nav={site.nav}
+    ctaTexto="Agendar Consulta"
+    ctaHref="/contato"
+  />
+
+  <Hero
+    variante="imagem"
+    eyebrow="Clínica Médica · Av. Paulista, São Paulo"
+    titulo="Saúde com qualidade e humanidade para toda a família"
+    lead="Consultas com especialistas, exames e medicina preventiva a 5 minutos do metrô Brigadeiro. Agendamento confirmado em até 24 horas."
+    ctaPrimTexto="Agendar consulta"
+    ctaPrimHref={`https://wa.me/${site.nap.whatsapp}`}
+    ctaSecTexto="Conheça os serviços"
+    ctaSecHref="/servicos"
+    nota="Atendemos os principais convênios. Consulta particular com nota fiscal."
+    imagem="https://images.unsplash.com/photo-1582750433449-648ed127bb54?w=640&h=520&fit=crop&auto=format"
+    imagemAlt="Equipe médica da VitalCare Saúde"
+    provaNumero="+4.600"
+    provaTexto="avaliações com média 4,9 ★"
+  />
+
+  <Servicos
+    variante="grade"
+    titulo="Nossos serviços"
+    descricao="Do diagnóstico ao acompanhamento contínuo — tudo no mesmo lugar."
+    itens={servicosOrdenados}
+  />
+
+  <Prova
+    titulo="Por que escolher a VitalCare?"
+    itens={site.diferenciais}
+  />
+
+  <Equipe
+    variante="grade"
+    titulo="Nossa equipe médica"
+    descricao="Especialistas formados pelas melhores faculdades do país, com CRM ativo e experiência comprovada."
+    membros={equipeOrdenada}
+  />
+
+  <Infraestrutura
+    variante="destaque"
+    titulo="Nossa infraestrutura"
+    descricao="Espaço moderno e acolhedor, pensado para oferecer conforto e segurança em cada visita."
+    itens={site.infraestrutura}
+    verMaisHref="/sobre#infraestrutura"
+    verMaisTexto="Ver galeria completa"
+  />
+
+  <Depoimentos
+    titulo="O que nossos pacientes dizem"
+    itens={depoimentosOrdenados}
+  />
+
+  <Tags
+    titulo="Temas relacionados"
+    itens={site.tags}
+  />
+
+  <Faq
+    variante="padrao"
+    titulo="Dúvidas frequentes"
+    itens={site.faq}
+  />
+
+  <Localizacao
+    titulo="Nossa localização"
+    descricao="Fácil acesso a pé do metrô Brigadeiro. Estacionamento conveniado nas proximidades."
+    logradouro={site.nap.logradouro}
+    complemento={site.nap.complemento}
+    bairro={site.nap.bairro}
+    cidade={site.nap.cidade}
+    uf={site.nap.uf}
+    cep={site.nap.cep}
+    telefone={site.nap.telefone}
+    whatsapp={site.nap.whatsapp}
+    email={site.nap.email}
+    horarios={site.horarios}
+    mapaHref={`https://maps.google.com/?q=${encodeURIComponent(site.nap.enderecoFormatado)}`}
+  />
+
+  <Abordagem
+    titulo="Uma abordagem diferente para o seu bem-estar"
+    descricao="Combinamos tecnologia, acolhimento e equipe experiente para oferecer um cuidado verdadeiramente integral."
+    itens={site.abordagem}
+  />
+
+  <BuscasFrequentes
+    titulo={`Principais buscas — ${site.nome}`}
+    itens={site.buscasFrequentes}
+  />
+
+  <PostLista
+    variante="destaque"
+    titulo="Blog de Saúde"
+    descricao="Artigos escritos pelos nossos médicos para ajudar você a tomar melhores decisões."
+    posts={postsOrdenados}
+    verMaisHref="/blog"
+  />
+
+  <Footer
+    logoSrc={site.logo?.src}
+    logoAlt={site.logo?.alt}
+    credencial={textoCredencial(site)}
+    variante="escuro"
+    nomeSite={site.nome}
+    slogan={site.slogan}
+    telefone={site.nap.telefone}
+    email={site.nap.email}
+    endereco={`${site.nap.logradouro}, ${site.nap.complemento}`}
+    cidade={`${site.nap.bairro}, ${site.nap.cidade} — ${site.nap.uf}`}
+    cnpj={site.cnpj}
+    anoFundacao={site.anoFundacao}
+    redes={site.redes}
+    nav={site.nav}
+    colunas={site.navFooterColunas}
+  />
+
+</ThemeBase>

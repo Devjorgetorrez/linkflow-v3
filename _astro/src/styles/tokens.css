@@ -1,0 +1,187 @@
+/* Base neutra do motor de blocos.
+   Nao e um tema: e o conjunto de tokens que o Tailwind usa para gerar as
+   utilidades. Cada tema sobrescreve os 11 papeis dentro do proprio escopo
+   (html[data-tema="..."]), definido mais abaixo neste arquivo. */
+@theme {
+  --color-primary:     #334155;
+  --color-primary-ink: #FFFFFF;
+  --color-secondary:   #1E293B;
+  --color-accent:      #475569;
+  --color-ink:         #0F172A;
+  --color-ink-muted:   #64748B;
+  --color-surface:     #FFFFFF;
+  --color-surface-2:   #F1F5F9;
+  --color-line:        #E2E8F0;
+  --color-success:     #15803D;
+  --color-danger:      #DC2626;
+
+  --font-display: 'Inter', system-ui, sans-serif;
+  --font-sans:    'Inter', system-ui, sans-serif;
+
+  --radius-card: 12px;
+  --radius-btn:  8px;
+  --radius-pill: 999px;
+}
+
+:root {
+  --space-section: 4.5rem;
+  --space-hero:    7rem;
+  --space-block:   2rem;
+  --max-prose:     720px;
+  --max-wide:      1200px;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Tema 03 — Vértice Institucional (serviço profissional)
+   Escopo: html[data-tema="tema-03"] (especificidade 0,1,1 > :root).
+   O Tema 01 não é afetado — nenhum token global é sobrescrito.
+   ───────────────────────────────────────────────────────────────── */
+html[data-tema="tema-03"] {
+  --color-primary:     #1B4B8F;
+  --color-primary-ink: #FFFFFF;
+  --color-secondary:   #0F2942;
+  --color-accent:      #B5762F;
+  --color-ink:         #1C2634;
+  --color-ink-muted:   #5A6675;
+  --color-surface:     #FFFFFF;
+  --color-surface-2:   #F1F4F8;
+  --color-line:        #DDE3EB;
+  --color-success:     #157347;
+  --color-danger:      #C62828;
+
+  --font-display: 'Source Serif 4', Georgia, serif;
+  --font-sans:    'Inter', system-ui, sans-serif;
+
+  --radius-card: 8px;
+  --radius-btn:  6px;
+  --radius-pill: 999px;
+
+  --space-section: 4.5rem;
+  --space-hero:    6rem;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Tema 04 — Renovar Serviço Local (serviço local com resultado visual)
+   Nichos: higienização, desentupidora, dedetização, pintura, jardinagem.
+   Escopo: html[data-tema="tema-04"]. Não afeta Tema 01 nem Tema 03.
+   Azul mais saturado, verde de ação, cantos mais arredondados e
+   tipografia geométrica — deliberadamente distinto do Tema 03.
+   ───────────────────────────────────────────────────────────────── */
+html[data-tema="tema-04"] {
+  --color-primary:     #0B5FD0;
+  --color-primary-ink: #FFFFFF;
+  --color-secondary:   #0A3B7D;
+  --color-accent:      #16A34A;
+  --color-ink:         #16202E;
+  --color-ink-muted:   #566274;
+  --color-surface:     #FFFFFF;
+  --color-surface-2:   #EFF5FC;
+  --color-line:        #D8E4F2;
+  --color-success:     #16A34A;
+  --color-danger:      #DC2626;
+
+  --font-display: 'Poppins', 'Inter', system-ui, sans-serif;
+  --font-sans:    'Inter', system-ui, sans-serif;
+
+  --radius-card: 14px;
+  --radius-btn:  10px;
+  --radius-pill: 999px;
+
+  --space-section: 4.5rem;
+  --space-hero:    5.5rem;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Tema 05 — Rangel & Vidal (advocacia e profissão regulamentada)
+   Nichos: advocacia, contabilidade de porte, medicina, odontologia,
+   engenharia consultiva — onde credencial e autoridade pesam mais
+   que preço. Escopo: html[data-tema="tema-05"].
+   Petróleo profundo + ouro envelhecido, cantos quase retos e
+   grotesca de peso alto — distinto do azul institucional do Tema 03
+   e do azul saturado do Tema 04.
+   ───────────────────────────────────────────────────────────────── */
+html[data-tema="tema-05"] {
+  --color-primary:     #16324F;
+  --color-primary-ink: #FFFFFF;
+  --color-secondary:   #0E2338;
+  --color-accent:      #A8823C;
+  --color-ink:         #1A222C;
+  --color-ink-muted:   #5C6672;
+  --color-surface:     #FFFFFF;
+  --color-surface-2:   #F2F4F6;
+  --color-line:        #DFE4E9;
+  --color-success:     #1B7A4B;
+  --color-danger:      #C0392B;
+
+  --font-display: 'Archivo', 'Inter', system-ui, sans-serif;
+  --font-sans:    'Inter', system-ui, sans-serif;
+
+  --radius-card: 4px;
+  --radius-btn:  3px;
+  --radius-pill: 999px;
+
+  --space-section: 5rem;
+  --space-hero:    6rem;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Tema 06 — Hidroponto (serviço técnico de emergência)
+   Nichos: caça vazamento, desentupidora, elétrica, refrigeração,
+   climatização, manutenção predial. Escopo: html[data-tema="tema-06"].
+   Turquesa profundo + verde-limão de ação. A cor da água separa este
+   tema dos azuis do 03 e do 04; a limão marca o botão de urgência.
+   ───────────────────────────────────────────────────────────────── */
+html[data-tema="tema-06"] {
+  --color-primary:     #0E7490;
+  --color-primary-ink: #FFFFFF;
+  --color-secondary:   #0B3B4A;
+  --color-accent:      #5C930C;
+  --color-ink:         #14202A;
+  --color-ink-muted:   #55636E;
+  --color-surface:     #FFFFFF;
+  --color-surface-2:   #EFF6F8;
+  --color-line:        #D5E4E9;
+  --color-success:     #5C930C;
+  --color-danger:      #C62828;
+
+  --font-display: 'Rubik', 'Inter', system-ui, sans-serif;
+  --font-sans:    'Inter', system-ui, sans-serif;
+
+  --radius-card: 10px;
+  --radius-btn:  6px;
+  --radius-pill: 999px;
+
+  --space-section: 4.5rem;
+  --space-hero:    5.5rem;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Tema 07 — Vereda Corretora (intermediação e corretagem)
+   Nichos: corretora de planos de saúde, seguros, consórcio, câmbio,
+   crédito. Escopo: html[data-tema="tema-07"].
+   Índigo profundo + laranja de ação. Sai da família azul/turquesa dos
+   temas 03 a 06 de propósito: o catálogo já tinha quatro azuis.
+   ───────────────────────────────────────────────────────────────── */
+html[data-tema="tema-07"] {
+  --color-primary:     #4338CA;
+  --color-primary-ink: #FFFFFF;
+  --color-secondary:   #312A8C;
+  --color-accent:      #EA580C;
+  --color-ink:         #1B1B2B;
+  --color-ink-muted:   #5E5E70;
+  --color-surface:     #FFFFFF;
+  --color-surface-2:   #F3F2FB;
+  --color-line:        #E0DEF2;
+  --color-success:     #15803D;
+  --color-danger:      #DC2626;
+
+  --font-display: 'Manrope', 'Inter', system-ui, sans-serif;
+  --font-sans:    'Inter', system-ui, sans-serif;
+
+  --radius-card: 12px;
+  --radius-btn:  8px;
+  --radius-pill: 999px;
+
+  --space-section: 4.5rem;
+  --space-hero:    5rem;
+}

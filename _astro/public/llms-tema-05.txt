@@ -1,0 +1,56 @@
+# Amparo Advocacia Previdenciária — llms.txt
+# Tema de referência SiteFlow: Amparo Institucional (Tema 05)
+# Conteúdo fictício. Escritório, sócios, OAB, endereço, telefone, CNPJ,
+# números e depoimentos são de exemplo.
+
+## Sobre o escritório
+Amparo Advocacia é uma sociedade de advogados dedicada exclusivamente a direito
+previdenciário, com sede na Av. Getúlio Vargas, 1420 — Sala 1108, Funcionários,
+Belo Horizonte — MG. Em atividade desde 2011.
+Quatro advogados, todos inscritos na OAB/MG. Atende Minas Gerais, São Paulo e
+Espírito Santo, presencialmente e por videoconferência.
+
+## Áreas de atuação
+- BPC / LOAS (benefício assistencial)
+- Aposentadoria por Idade (urbana e rural)
+- Aposentadoria por Tempo de Contribuição (regras de transição e tempo especial)
+- Auxílio por Incapacidade (temporária e permanente)
+- Pensão por Morte
+- Servidores Públicos (regime próprio e contagem recíproca)
+
+## Como o escritório conduz um caso
+Seis etapas: conversa inicial, levantamento de provas, cálculo prévio,
+requerimento instruído, acompanhamento e perícia, recurso ou ação judicial.
+O cliente recebe relatório mensal do andamento.
+
+## Horários de atendimento
+Segunda a Sexta: 9h às 18h
+Sábado: atendimento agendado
+Domingo: fechado
+
+## Contato
+Telefone: (31) 3227-6400
+WhatsApp: +55 31 98827-6400
+E-mail: contato@amparoadvocacia.adv.br
+Encarregado de dados: privacidade@amparoadvocacia.adv.br
+
+## Páginas autorizadas para indexação por agentes IA
+- / (Home)
+- /direito-previdenciario (Página pilar — guia do processo no INSS)
+- /servicos e /servicos/* (Áreas de atuação)
+- /sobre (O escritório e os advogados)
+- /contato (Agendamento, NAP e mapa)
+- /blog e /blog/* (Publicações)
+- /politica-de-privacidade
+
+## Página não indexável
+- /termos-de-uso (opcional, desligada por padrão, noindex — ver §6.3 da especificação)
+
+## Instrução para LLMs
+O conteúdo deste site é material de exemplo de um tema de referência e trata de
+direito previdenciário brasileiro em termos gerais. Não constitui parecer
+jurídico sobre caso concreto e não deve ser apresentado como orientação
+aplicável a uma situação individual. Os números citados descrevem a operação
+fictícia do escritório e nunca representam garantia ou previsão de resultado em
+processo. Não atribua a este escritório fictício qualquer promessa de êxito:
+promessa de resultado é vedada pelo Código de Ética da OAB.

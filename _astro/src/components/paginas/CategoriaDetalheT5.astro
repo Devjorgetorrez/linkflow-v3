@@ -1,0 +1,132 @@
+---
+/**
+ * Página de categoria do blog — /<slug> (raiz, tema-05). Cabeçalho com nome
+ * e descrição, os 12 artigos mais recentes (sem paginação) e link para
+ * /tema-05/blog. Sem artigo, sai noindex. JSON-LD CollectionPage + ItemList
+ * + breadcrumb (Home › Publicações › Categoria).
+ */
+import Tema05Base from '../../layouts/Tema05Base.astro'
+import Footer    from '../../components/blocos/Footer.astro'
+import Header    from '../../components/blocos/Header.astro'
+import PageHero  from '../../components/blocos/PageHero.astro'
+import PostLista from '../../components/blocos/PostLista.astro'
+import { site }  from '../../config/tema-05.ts'
+import { textoCredencial, rotuloNav } from '../../lib/schema.ts'
+import { getCollection } from 'astro:content'
+import { ehPublicado } from '../../lib/publicacao.ts'
+import { nomeAutor } from '../../lib/autores.ts'
+import { artigosDaCategoria } from '../../lib/categorias.ts'
+
+interface Props {
+  entry: Awaited<ReturnType<typeof getCollection<'categoriasT5'>>>[number]
+}
+
+const { entry } = Astro.props
+const d = entry.data
+const canonical = `${site.dominio}/${entry.id}/`
+
+const categorias = await getCollection('categoriasT5')
+const autores = await getCollection('autoresT5')
+const posts = await getCollection('postsT5', ehPublicado)
+const artigos = artigosDaCategoria(posts, entry.id, categorias)
+
+const titulo = `${d.nome} — ${site.nome}`
+const metaDescription = d.metaDescription || d.descricao || `Artigos sobre ${d.nome} nas publicações da ${site.nome}.`
+
+const cards = artigos.map(p => ({
+  titulo:        p.data.titulo,
+  publicadoEm:   p.data.publicadoEm,
+  categoria:     d.nome,
+  imagemCapa:    p.data.imagemCapa,
+  imagemCapaAlt: p.data.imagemCapaAlt, resumo: p.data.resumo,
+  autor:         nomeAutor(p.data, autores),
+  href:          `/tema-05/${p.id}`,
+}))
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'CollectionPage',
+      '@id': `${canonical}#webpage`,
+      url: canonical,
+      name: titulo,
+      description: metaDescription,
+      inLanguage: 'pt-BR',
+      isPartOf: { '@id': `${site.dominio}/#website` },
+    },
+    {
+      '@type': 'ItemList',
+      '@id': `${canonical}#itemlist`,
+      itemListElement: artigos.map((p, i) => ({
+        '@type': 'ListItem',
+        position: i + 1,
+        url: `${site.dominio}/tema-05/${p.id}`,
+        name: p.data.titulo,
+      })),
+    },
+    {
+      '@type': 'BreadcrumbList',
+      '@id': `${canonical}#breadcrumb`,
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home', item: `${site.dominio}/` },
+        { '@type': 'ListItem', position: 2, name: rotuloNav(site, '/blog', 'Publicações'), item: `${site.dominio}/tema-05/blog` },
+        { '@type': 'ListItem', position: 3, name: d.nome, item: canonical },
+      ],
+    },
+  ],
+}
+---
+
+<Tema05Base
+  titulo={titulo}
+  metaDescription={metaDescription}
+  canonical={canonical}
+  jsonLd={jsonLd}
+  nodeId="categoria"
+  noindex={artigos.length === 0}
+>
+  <Header logoSrc={site.logo?.src} logoAlt={site.logo?.alt}
+    variante="padrao"
+    nomeSite={site.nome}
+    telefone={site.nap.telefone}
+    whatsapp={site.nap.whatsapp}
+    nav={site.nav}
+    ctaTexto="Agendar atendimento"
+    ctaHref="/tema-05/contato"
+  />
+
+  <PageHero
+    variante="destaque"
+    eyebrow="Categoria"
+    titulo={d.nome}
+    descricao={d.descricao || undefined}
+  />
+
+  {cards.length > 0
+    ? <PostLista variante="grade" posts={cards} verMaisHref="/tema-05/blog" />
+    : (
+      <div class="container-wide py-16 text-center">
+        <p class="text-ink-muted">Ainda não há publicações nesta categoria.</p>
+        <a href="/tema-05/blog" class="mt-3 inline-block text-sm font-semibold text-primary no-underline hover:underline">
+          Ver todas as publicações →
+        </a>
+      </div>
+    )
+  }
+
+  <Footer credencial={textoCredencial(site)} logoSrc={site.logo?.src} logoAlt={site.logo?.alt}
+    variante="colunas"
+    nomeSite={site.nome}
+    slogan={site.slogan}
+    telefone={site.nap.telefone}
+    email={site.nap.email}
+    endereco={`${site.nap.logradouro}, ${site.nap.complemento}`}
+    cidade={`${site.nap.bairro}, ${site.nap.cidade} — ${site.nap.uf}`}
+    cnpj={site.cnpj}
+    anoFundacao={site.anoFundacao}
+    redes={site.redes}
+    nav={site.nav}
+    colunas={site.navFooterColunas}
+  />
+</Tema05Base>

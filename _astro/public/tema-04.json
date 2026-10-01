@@ -1,0 +1,158 @@
+{
+  "id": "renovar-servico-local",
+  "nome": "Renovar Serviço Local",
+  "versao": "1.0.0",
+  "descricao": "Tema de referência SiteFlow para serviço local com resultado visual — higienização, desentupidora, dedetização, pintura, jardinagem. Azul saturado com verde de ação, tipografia Poppins + Inter, 10 tipos de página.",
+  "para_nichos": ["higienizacao", "desentupidora", "dedetizacao", "pintura", "jardinagem", "limpeza", "servico-local"],
+  "rota_base": "/tema-04",
+  "escopo_tokens": "html[data-tema=\"tema-04\"]",
+
+  "tokens": {
+    "primary":     "#0B5FD0",
+    "primary-ink": "#FFFFFF",
+    "secondary":   "#0A3B7D",
+    "accent":      "#16A34A",
+    "ink":         "#16202E",
+    "ink-muted":   "#566274",
+    "surface":     "#FFFFFF",
+    "surface-2":   "#EFF5FC",
+    "line":        "#D8E4F2",
+    "success":     "#16A34A",
+    "danger":      "#DC2626"
+  },
+
+  "tipografia": {
+    "display": "Poppins",
+    "body":    "Inter",
+    "pesos":   { "display": [600, 700], "body": [400, 500, 600, 700] }
+  },
+
+  "radius":    { "card": "14px", "btn": "10px", "pill": "999px" },
+  "densidade": "confortavel",
+
+  "chrome": { "header": "padrao", "footer": "colunas" },
+
+  "logica_do_modelo": {
+    "resumo": "O visitante chega de busca com um problema concreto e três dúvidas: resolve? atende meu bairro? quanto custa? A composição responde nessa ordem e repete a ação de WhatsApp a cada dobra.",
+    "diferencas_para_o_tema_institucional": [
+      "Prova é visual (foto antes/depois), não textual",
+      "Cobertura geográfica é bloco de primeira dobra, não rodapé",
+      "Preço e prazo aparecem na página de serviço, não só sob consulta",
+      "CTA em verde repetido, porque a conversão é por WhatsApp e não por formulário",
+      "Processo passo a passo substitui o texto institucional longo"
+    ]
+  },
+
+  "composicoes_obrigatorias": {
+    "descricao": "Regra de composição deste tema: home, pilar e servico carregam sempre prova visual, prova social, cobertura geográfica e NAP com mapa embedado.",
+    "paginas": ["home", "pilar", "servico"],
+    "blocos":  ["AntesDepois", "Depoimentos", "Localizacao:mapa-embed"]
+  },
+
+  "paginas": {
+    "home": {
+      "rota": "/tema-04",
+      "blocos": [
+        "Header:padrao",
+        "Hero:destaque",
+        "Prova",
+        "Servicos:grade",
+        "AntesDepois",
+        "AreaAtendida",
+        "Depoimentos:com-nota",
+        "Cta:padrao",
+        "Proposito",
+        "Abordagem",
+        "PostLista:destaque",
+        "BuscasFrequentes",
+        "Footer:colunas"
+      ]
+    },
+    "servico": {
+      "rota": "/tema-04/servicos/[id]",
+      "blocos": [
+        "Header:padrao",
+        "PageHero:destaque",
+        "AntesDepois",
+        "Passos:numerado",
+        "Servicos:grade",
+        "Depoimentos:com-nota",
+        "Faq:com-imagem",
+        "Localizacao:mapa-embed",
+        "Cta:padrao",
+        "Footer:colunas"
+      ],
+      "observacao": "Traz ficha de preço a partir de, duração, prazo de agendamento e garantia logo abaixo da foto grande — é o que o visitante de serviço local procura antes de qualquer texto."
+    },
+    "servicos-listagem": {
+      "rota": "/tema-04/servicos",
+      "blocos": ["Header:padrao", "PageHero:destaque", "Servicos:lista", "Prova", "Passos:cards", "AntesDepois", "AreaAtendida", "Faq:duas-colunas", "Cta:card", "Footer:colunas"]
+    },
+    "pilar": {
+      "rota": "/tema-04/higienizacao-de-estofados",
+      "blocos": ["Header:padrao", "Hero:editorial", "Passos:numerado", "Servicos:grade", "AntesDepois", "Prova", "AreaAtendida", "Depoimentos:com-nota", "Faq:com-imagem", "Localizacao:mapa-embed", "PostLista:grade", "Cta:padrao", "BuscasFrequentes", "Footer:colunas"]
+    },
+    "sobre": {
+      "rota": "/tema-04/sobre",
+      "blocos": ["Header:padrao", "PageHero:destaque", "Proposito", "Prova", "Equipe:grade", "Abordagem", "AntesDepois", "Depoimentos:com-nota", "Cta:card", "Footer:colunas"]
+    },
+    "contato": {
+      "rota": "/tema-04/contato",
+      "blocos": ["Header:padrao", "PageHero:destaque", "FormContato:institucional", "AreaAtendida", "Localizacao:mapa-embed", "Depoimentos:com-nota", "Cta:padrao", "Footer:colunas"]
+    },
+    "blog-listagem": {
+      "rota": "/tema-04/blog",
+      "blocos": ["Header:padrao", "PageHero:destaque", "PostLista:grade", "Tags", "Cta:card", "Footer:colunas"]
+    },
+    "artigo": {
+      "rota": "/tema-04/blog/[id]",
+      "blocos": ["Header:padrao", "Autor:byline", "PostLista:grade", "Autor:assinatura", "Cta:padrao", "Footer:colunas"],
+      "regra_autor": "Autor:byline abaixo do H1 e antes do corpo. Autor:assinatura fecha o artigo com foto, nome, cargo, bio e canais."
+    },
+    "politica-de-privacidade": {
+      "rota": "/tema-04/politica-de-privacidade",
+      "blocos": ["Header:padrao", "PageHero:destaque", "ConteudoLegal:politica", "Footer:colunas"],
+      "ancoras_obrigatorias": ["#cookies", "#direitos"],
+      "campos_cliente_preenchidos_com_exemplo": true,
+      "observacao": "§6.2 — em site real os cinco campos preenchidos pelo cliente não têm texto padrão e campo vazio bloqueia a publicação. Aqui estão preenchidos com exemplo, marcado na própria página."
+    },
+    "termos-de-uso": {
+      "rota": "/tema-04/termos-de-uso",
+      "blocos": ["Header:padrao", "PageHero:destaque", "ConteudoLegal:termos", "Footer:colunas"],
+      "observacao": "Obrigatória (regra do Jorge — uma das 4 institucionais da lista fechada do fase3-conteudo). Indexável. Documento próprio com as 7 seções do guardiao_institucionais (objeto e aceite, uso permitido e proibido, propriedade intelectual, limitação de responsabilidade, não substitui o atendimento profissional, foro, vigência); remete à política sem reproduzi-la. Campos do cliente em site.legal.termos — campo vazio bloqueia a publicação."
+    }
+  },
+
+  "blocos_novos_criados": [
+    {
+      "nome": "Passos",
+      "variantes": ["numerado", "cards"],
+      "motivo": "Bloco já previsto no §3.2 do MD e que ainda não existia no repositório. Em serviço local, mostrar o processo é o que separa quem faz do que improvisa."
+    },
+    {
+      "nome": "AntesDepois",
+      "variantes": ["padrao"],
+      "motivo": "Cumpre o papel de Prova:midia do §3.2. Prova visual é o que mais converte neste nicho. Sem JavaScript: grade de pares, não carrossel.",
+      "nao_usar_em": "Tema institucional sem resultado visual — foi deliberadamente omitido do Tema 03 por isso."
+    },
+    {
+      "nome": "AreaAtendida",
+      "variantes": ["padrao"],
+      "motivo": "Corresponde ao tipo de página area-atendida do §3.3, aqui como bloco. 'Vocês atendem meu bairro?' é a primeira pergunta do visitante de serviço local.",
+      "decisao": "Sem campo de busca. A referência tem select + botão que consultaria um back-end inexistente; controle morto é armadilha listada no handoff do projeto. As regiões aparecem como lista real."
+    }
+  ],
+
+  "variantes_novas_em_blocos_existentes": [
+    { "bloco": "Hero",        "variante": "destaque",      "default_inalterado": "texto",  "motivo": "Faixa escura com texto à esquerda e imagem à direita. Nenhuma das 6 variantes existentes fazia fundo escuro com imagem lateral." },
+    { "bloco": "Faq",         "variante": "com-imagem",    "default_inalterado": "padrao", "motivo": "Acordeão à esquerda e foto do serviço à direita, como na referência da página de serviço." },
+    { "bloco": "Depoimentos", "variante": "selo de nota",  "default_inalterado": "sem selo", "motivo": "Props opcionais notaMedia/totalAvaliacoes/fonteAvaliacoes. Omitidas, o bloco renderiza como antes — Temas 01 e 03 não mudam. Não emite aggregateRating em JSON-LD: quem decide isso é a página, conforme o nicho." },
+    { "bloco": "PageHero",    "variante": "destaque",      "default_inalterado": "padrao", "motivo": "Criada no Tema 03, reaproveitada aqui." },
+    { "bloco": "FormContato", "variante": "institucional", "default_inalterado": "padrao", "motivo": "Criada no Tema 03, reaproveitada aqui." }
+  ],
+
+  "secoes_omitidas": [
+    { "secao": "Carrossel com setas de navegação", "motivo": "Exigiria JavaScript. Os mesmos itens cabem em grade, que funciona sem script e não esconde conteúdo do rastreador." },
+    { "secao": "Busca de região com select e botão", "motivo": "Não há back-end para consultar. Substituída pela lista real de regiões atendidas." }
+  ]
+}

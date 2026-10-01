@@ -1,0 +1,72 @@
+---
+import Tema07Base    from '../../layouts/Tema07Base.astro'
+import Header        from '../../components/blocos/Header.astro'
+import PageHero      from '../../components/blocos/PageHero.astro'
+import ConteudoLegal from '../../components/blocos/ConteudoLegal.astro'
+import Footer        from '../../components/blocos/Footer.astro'
+import { site }      from '../../config/tema-07.ts'
+
+import { textoCredencial } from '../../lib/schema.ts'
+const canonical = `${site.dominio}/politica-de-privacidade/`
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    { '@type': 'WebPage', '@id': `${canonical}#webpage`, url: canonical,
+      name: `Política de Privacidade — ${site.nome}`, inLanguage: 'pt-BR',
+      isPartOf: { '@id': `${site.dominio}/#website` } },
+    { '@type': 'BreadcrumbList', '@id': `${canonical}#breadcrumb`,
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home', item: `${site.dominio}/` },
+        { '@type': 'ListItem', position: 2, name: 'Política de Privacidade', item: canonical },
+      ] },
+  ],
+}
+---
+
+<Tema07Base
+  titulo={`Política de Privacidade — ${site.nome}`}
+  metaDescription={`Como a ${site.nome} trata os dados do formulário de cotação e da declaração de saúde: controlador, encarregado, bases legais, retenção e direitos do titular.`}
+  canonical={canonical}
+  jsonLd={jsonLd}
+  nodeId="politica-de-privacidade"
+>
+  <Header
+    variante="padrao"
+    nomeSite={site.nome}
+    logoSrc={site.logo?.src}
+    logoAlt={site.logo?.alt}
+    telefone={site.nap.telefone}
+    whatsapp={site.nap.whatsapp}
+    nav={site.nav}
+    ctaTexto="Solicitar cotação"
+    ctaHref="#cotacao"
+  />
+
+  <PageHero
+    variante="destaque"
+    eyebrow="Privacidade"
+    titulo="Política de Privacidade"
+    descricao="A corretagem trata dado de saúde na declaração exigida pela operadora. Esta página descreve com que base, por quanto tempo e com quem esses dados são compartilhados."
+  />
+
+  <ConteudoLegal legal={site.legal} nomeSite={site.nome} documento="politica" />
+
+  <Footer
+    variante="colunas"
+    nomeSite={site.nome}
+    logoSrc={site.logo?.src}
+    logoAlt={site.logo?.alt}
+    credencial={textoCredencial(site)}
+    slogan={site.slogan}
+    telefone={site.nap.telefone}
+    email={site.nap.email}
+    endereco={`${site.nap.logradouro}, ${site.nap.complemento}`}
+    cidade={`${site.nap.bairro}, ${site.nap.cidade} — ${site.nap.uf}`}
+    cnpj={site.cnpj}
+    anoFundacao={site.anoFundacao}
+    redes={site.redes}
+    nav={site.nav}
+    colunas={site.navFooterColunas}
+  />
+</Tema07Base>

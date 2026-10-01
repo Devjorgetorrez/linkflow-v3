@@ -1,0 +1,109 @@
+---
+import Tema03Base  from '../../../layouts/Tema03Base.astro'
+import Header      from '../../../components/blocos/Header.astro'
+import PageHero    from '../../../components/blocos/PageHero.astro'
+import PostLista   from '../../../components/blocos/PostLista.astro'
+import Tags        from '../../../components/blocos/Tags.astro'
+import Cta         from '../../../components/blocos/Cta.astro'
+import Footer      from '../../../components/blocos/Footer.astro'
+import { site }    from '../../../config/tema-03.ts'
+import { textoCredencial } from '../../../lib/schema.ts'
+import { getCollection } from 'astro:content'
+import { ehPublicado } from '../../../lib/publicacao.ts'
+import { nomeAutor } from '../../../lib/autores.ts'
+import { nomeCategoria } from '../../../lib/categorias.ts'
+
+const autores = await getCollection('autoresT3')
+const categorias = await getCollection('categoriasT3')
+const posts = (await getCollection('postsT3', ehPublicado))
+  .sort((a, b) => new Date(b.data.publicadoEm).getTime() - new Date(a.data.publicadoEm).getTime())
+  .map(p => ({
+    titulo:        p.data.titulo,
+    publicadoEm:   p.data.publicadoEm,
+    categoria:     nomeCategoria(p.data.categoria, categorias),
+    imagemCapa:    p.data.imagemCapa,
+    imagemCapaAlt: p.data.imagemCapaAlt, resumo: p.data.resumo,
+    autor:         nomeAutor(p.data, autores),
+    href:          `/tema-03/${p.id}`,
+  }))
+
+const canonical = `${site.dominio}/blog/`
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type':    'Blog',
+      '@id':      `${canonical}#blog`,
+      url:        canonical,
+      name:       `Blog — ${site.nome}`,
+      publisher:  { '@id': `${site.dominio}/#organization` },
+      inLanguage: 'pt-BR',
+    },
+    {
+      '@type': 'BreadcrumbList',
+      '@id':   `${canonical}#breadcrumb`,
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home', item: `${site.dominio}/` },
+        { '@type': 'ListItem', position: 2, name: 'Blog', item: canonical },
+      ],
+    },
+  ],
+}
+---
+
+<Tema03Base
+  titulo={`Blog — ${site.nome}`}
+  metaDescription="Artigos sobre regime tributário, fluxo de caixa, folha de pagamento e retirada de sócios, escritos pelos contadores da Vértice sem jargão e sem promessa milagrosa."
+  canonical={canonical}
+  jsonLd={jsonLd}
+  nodeId="blog"
+>
+  <Header
+    logoSrc={site.logo?.src}
+    logoAlt={site.logo?.alt}
+    variante="padrao"
+    nomeSite={site.nome}
+    telefone={site.nap.telefone}
+    whatsapp={site.nap.whatsapp}
+    nav={site.nav}
+    ctaTexto="Falar com um contador"
+    ctaHref="/tema-03/contato"
+  />
+
+  <PageHero
+    eyebrow="Blog"
+    titulo="Contabilidade explicada em português"
+    descricao="Textos escritos pelos contadores do escritório, com a conta feita e a fonte da regra. Quando a resposta é 'depende', o texto diz de que depende."
+  />
+
+  <PostLista variante="grade" posts={posts} />
+
+  <Tags titulo="Assuntos" itens={site.tags} />
+
+  <Cta
+    variante="card"
+    titulo="Tem uma dúvida que nenhum texto respondeu?"
+    descricao="Mande a pergunta. Se ela for útil para outras empresas, vira artigo — e você recebe a resposta antes da publicação."
+    ctaPrimTexto="Enviar pergunta"
+    ctaPrimHref="/tema-03/contato"
+  />
+
+  <Footer
+    logoSrc={site.logo?.src}
+    logoAlt={site.logo?.alt}
+    credencial={textoCredencial(site)}
+    variante="colunas"
+    nomeSite={site.nome}
+    slogan={site.slogan}
+    telefone={site.nap.telefone}
+    email={site.nap.email}
+    endereco={`${site.nap.logradouro}, ${site.nap.complemento}`}
+    cidade={`${site.nap.bairro}, ${site.nap.cidade} — ${site.nap.uf}`}
+    cnpj={site.cnpj}
+    anoFundacao={site.anoFundacao}
+    redes={site.redes}
+    nav={site.nav}
+    colunas={site.navFooterColunas}
+  />
+</Tema03Base>

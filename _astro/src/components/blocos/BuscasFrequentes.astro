@@ -1,0 +1,41 @@
+---
+/**
+ * BuscasFrequentes — grade de links de palavras-chave relacionadas (SEO interno)
+ * Empty state: não renderiza se itens.length === 0.
+ */
+
+interface Item {
+  label: string
+  href?: string
+}
+
+interface Props {
+  titulo?:    string
+  itens:      Item[]
+}
+
+const { titulo, itens = [] } = Astro.props
+
+if (itens.length === 0) return
+---
+
+<section class="bg-surface-2 py-10 border-y border-line">
+  <div class="container-wide">
+    {titulo && (
+      <p class="mb-4 text-xs font-semibold text-ink-muted">{titulo}</p>
+    )}
+    <ul class="flex flex-wrap gap-x-6 gap-y-2 list-none p-0 m-0">
+      {itens.map(item => (
+        <li>
+          {item.href
+            ? <a href={item.href}
+                 class="text-sm text-ink-muted no-underline hover:text-primary hover:underline transition-colors">
+                {item.label}
+              </a>
+            : <span class="text-sm text-ink-muted">{item.label}</span>
+          }
+        </li>
+      ))}
+    </ul>
+  </div>
+</section>

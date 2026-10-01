@@ -1,0 +1,53 @@
+---
+/**
+ * Proposito — seção "Por Trás do Jaleco" / propósito da clínica
+ * Fundo escuro (secondary), layout 2 colunas: imagem esquerda, texto direita.
+ */
+
+interface Props {
+  eyebrow?:   string
+  titulo:     string
+  paragrafos: string[]
+  imagemSrc?: string
+  imagemAlt?: string
+}
+
+const { eyebrow, titulo, paragrafos = [], imagemSrc, imagemAlt = '' } = Astro.props
+if (!titulo) return
+---
+
+<section class="bg-secondary py-[var(--space-section)]">
+  <div class="container-wide">
+    <div class="grid gap-10 lg:grid-cols-2 lg:items-center">
+
+      {/* Imagem */}
+      <div class="overflow-hidden rounded-[var(--radius-card)] bg-primary-ink/10">
+        {imagemSrc
+          ? <img src={imagemSrc} alt={imagemAlt} class="h-full w-full object-cover aspect-[4/3]" loading="lazy" />
+          : <div class="aspect-[4/3] flex items-center justify-center">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-primary-ink/25" aria-hidden="true">
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <path d="m21 15-5-5L5 21"/>
+              </svg>
+            </div>
+        }
+      </div>
+
+      {/* Texto */}
+      <div>
+        {eyebrow && (
+          <p class="mb-3 text-xs font-semibold uppercase tracking-widest text-accent">{eyebrow}</p>
+        )}
+        <h2 class="text-[clamp(1.625rem,3vw,2.25rem)] font-bold text-primary-ink leading-tight">
+          {titulo}
+        </h2>
+        <div class="mt-5 space-y-4">
+          {paragrafos.map(p => (
+            <p class="text-base text-primary-ink/75 leading-relaxed">{p}</p>
+          ))}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

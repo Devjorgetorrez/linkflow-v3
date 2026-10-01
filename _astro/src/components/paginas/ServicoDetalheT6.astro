@@ -1,0 +1,350 @@
+---
+/**
+ * Página de serviço do Tema 06 — renderizada pela rota unificada
+ * pages/tema-06/[slug].astro (URL plana /tema-06/<slug>).
+ *
+ * Estrutura da referência: hero, corpo com barra lateral de contato (o NAP
+ * fica ali, não só no rodapé), faixa de CTA, diferenciais, galeria de
+ * trabalhos e dúvidas. Depoimentos e mapa entram pelo padrão do catálogo.
+ */
+import Tema06Base    from '../../layouts/Tema06Base.astro'
+import Header        from '../../components/blocos/Header.astro'
+import Hero          from '../../components/blocos/Hero.astro'
+import Prova         from '../../components/blocos/Prova.astro'
+import Infraestrutura from '../../components/blocos/Infraestrutura.astro'
+import Passos        from '../../components/blocos/Passos.astro'
+import Depoimentos   from '../../components/blocos/Depoimentos.astro'
+import Faq           from '../../components/blocos/Faq.astro'
+import Localizacao   from '../../components/blocos/Localizacao.astro'
+import Servicos      from '../../components/blocos/Servicos.astro'
+import Cta           from '../../components/blocos/Cta.astro'
+import Footer        from '../../components/blocos/Footer.astro'
+import { site }      from '../../config/tema-06.ts'
+import { textoCredencial, areaServida } from '../../lib/schema.ts'
+import { getCollection, render } from 'astro:content'
+import { ehServicoListavel } from '../../lib/publicacao.ts'
+
+interface Props {
+  entry: Awaited<ReturnType<typeof getCollection<'servicosT6'>>>[number]
+}
+
+const { entry }   = Astro.props
+const { Content } = await render(entry)
+const canonical   = `${site.dominio}/${entry.id}/`
+const wa          = `https://wa.me/${site.nap.whatsapp}`
+
+const outros = (await getCollection('servicosT6', ehServicoListavel))
+  .filter(s => s.id !== entry.id)
+  .sort((a, b) => a.data.ordem - b.data.ordem)
+  .map(s => ({
+    titulo: s.data.titulo, descricao: s.data.resumo, icone: s.data.icone ?? '',
+    imagem: s.data.imagem, imagemAlt: s.data.imagemAlt,
+    href: `/tema-06/${s.id}`, categoria: s.data.categoria,
+  }))
+
+const depoimentos = (await getCollection('depoimentosT6'))
+  .sort((a, b) => a.data.ordem - b.data.ordem)
+  .map(d => ({ nome: d.data.nome, cidade: d.data.cidade, servico: d.data.servico, corpo: (d.body ?? '').trim() }))
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'Service', '@id': `${canonical}#service`,
+      name: entry.data.titulo, description: entry.data.metaDescription,
+      serviceType: entry.data.categoria,
+      provider: { '@id': `${site.dominio}/#organization` },
+      areaServed: areaServida(site).length ? areaServida(site) : undefined,
+    },
+    {
+      '@type': 'WebPage', '@id': `${canonical}#webpage`,
+      url: canonical, name: `${entry.data.titulo} — ${site.nome}`, inLanguage: 'pt-BR',
+    },
+    {
+      '@type': 'BreadcrumbList', '@id': `${canonical}#breadcrumb`,
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home',     item: `${site.dominio}/` },
+        { '@type': 'ListItem', position: 2, name: 'Serviços', item: `${site.dominio}/servicos` },
+        { '@type': 'ListItem', position: 3, name: entry.data.titulo, item: canonical },
+      ],
+    },
+    {
+      '@type': 'FAQPage', '@id': `${canonical}#faq`,
+      mainEntity: site.faq.map(f => ({
+        '@type': 'Question', name: f.pergunta,
+        acceptedAnswer: { '@type': 'Answer', text: f.resposta },
+      })),
+    },
+  ],
+}
+---
+
+<Tema06Base
+  titulo={`${entry.data.titulo} em ${site.nap.cidade} — ${site.nome}`}
+  metaDescription={entry.data.metaDescription}
+  canonical={canonical}
+  jsonLd={jsonLd}
+  nodeId="servico"
+  noindex={entry.data.noindex ?? false}
+>
+  <Header
+    variante="padrao"
+    nomeSite={site.nome}
+    logoSrc={site.logo?.src}
+    logoAlt={site.logo?.alt}
+    telefone={site.nap.telefone}
+    whatsapp={site.nap.whatsapp}
+    nav={site.nav}
+    ctaTexto="Quero um orçamento"
+    ctaHref={wa}
+  />
+
+  <Hero
+    variante="destaque"
+    eyebrow={entry.data.categoria}
+    titulo={`${entry.data.titulo} em ${site.nap.cidade}`}
+    lead={entry.data.resumo}
+    ctaPrimTexto="Falar com um técnico"
+    ctaPrimHref={wa}
+    ctaSecTexto="Ver todos os serviços"
+    ctaSecHref="/tema-06/servicos"
+    imagem={entry.data.imagem}
+    imagemAlt={entry.data.imagemAlt}
+  />
+
+  {/* Faixa de destaques */}
+  {entry.data.destaques.length > 0 && (
+    <section class="border-b border-line bg-surface-2 py-8">
+      <div class="container-wide">
+        <ul class="m-0 grid list-none gap-4 p-0 sm:grid-cols-3">
+          {entry.data.destaques.map(d => (
+            <li class="flex gap-3 text-sm leading-snug text-ink">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="2.5" class="mt-0.5 shrink-0 text-accent" aria-hidden="true">
+                <path d="m5 13 4 4L19 7"/>
+              </svg>
+              <span>{d}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  )}
+
+  {/* Corpo + barra lateral de contato, como na referência */}
+  <section class="py-[var(--space-section)]">
+    <div class="container-wide grid gap-12 lg:grid-cols-[340px_1fr] lg:items-start">
+
+      <aside class="flex flex-col gap-4 lg:sticky lg:top-6">
+        <div class="rounded-[var(--radius-card)] border border-line bg-surface p-6">
+          <p class="font-display text-base font-bold uppercase tracking-wide text-secondary">
+            Entre em contato
+          </p>
+
+          <dl class="mt-5 flex flex-col gap-5">
+            <div class="flex items-start gap-3.5">
+              <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-ink" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1A19.5 19.5 0 0 1 4.7 12 19.8 19.8 0 0 1 1.6 3.4 2 2 0 0 1 3.6 1.2h3a2 2 0 0 1 2 1.7 12.8 12.8 0 0 0 .7 2.8 2 2 0 0 1-.5 2.1L7.9 8.7a16 16 0 0 0 6 6l.9-.9a2 2 0 0 1 2.1-.5 12.8 12.8 0 0 0 2.8.7 2 2 0 0 1 1.7 2z"/>
+                </svg>
+              </span>
+              <div>
+                <dt class="text-xs font-semibold uppercase tracking-wide text-ink-muted">Telefone</dt>
+                <dd class="m-0 mt-0.5 text-sm">
+                  <a href={`tel:${site.nap.telefone.replace(/\D/g,'')}`} class="text-ink no-underline hover:text-primary">{site.nap.telefone}</a>
+                </dd>
+              </div>
+            </div>
+
+            <div class="flex items-start gap-3.5">
+              <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-ink" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"/><path d="M12 7v5l3 2"/>
+                </svg>
+              </span>
+              <div>
+                <dt class="text-xs font-semibold uppercase tracking-wide text-ink-muted">Horário</dt>
+                <dd class="m-0 mt-0.5 text-sm text-ink">
+                  {site.horarios.map(h => (
+                    <span class="block"><strong class="font-semibold">{h.dia}:</strong> {h.hora}</span>
+                  ))}
+                </dd>
+              </div>
+            </div>
+
+            <div class="flex items-start gap-3.5">
+              <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-ink" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+                </svg>
+              </span>
+              <div>
+                <dt class="text-xs font-semibold uppercase tracking-wide text-ink-muted">Endereço</dt>
+                <dd class="m-0 mt-0.5 text-sm leading-snug text-ink">
+                  {site.nap.logradouro}, {site.nap.complemento}
+                  <span class="block text-ink-muted">{site.nap.bairro}, {site.nap.cidade} — {site.nap.uf}</span>
+                  <span class="block text-ink-muted">CEP {site.nap.cep}</span>
+                </dd>
+              </div>
+            </div>
+
+            <div class="flex items-start gap-3.5">
+              <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-ink" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/>
+                </svg>
+              </span>
+              <div class="min-w-0">
+                <dt class="text-xs font-semibold uppercase tracking-wide text-ink-muted">E-mail</dt>
+                <dd class="m-0 mt-0.5 text-sm">
+                  <a href={`mailto:${site.nap.email}`} class="break-all text-ink no-underline hover:text-primary">{site.nap.email}</a>
+                </dd>
+              </div>
+            </div>
+          </dl>
+
+          <a href={wa} target="_blank" rel="noopener noreferrer"
+             class="mt-6 flex w-full items-center justify-center gap-2 rounded-[var(--radius-btn)] bg-accent px-5 py-3 text-sm font-bold uppercase tracking-wide text-white no-underline transition-opacity hover:opacity-90">
+            Solicitar orçamento
+          </a>
+        </div>
+
+        {entry.data.tecnologias.length > 0 && (
+          <div class="rounded-[var(--radius-card)] border border-line bg-surface-2 p-6">
+            <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-primary">Equipamento utilizado</p>
+            <ul class="m-0 flex list-none flex-col gap-2.5 p-0">
+              {entry.data.tecnologias.map(t => (
+                <li class="flex gap-2.5 text-sm leading-snug text-ink">
+                  <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" aria-hidden="true"></span>
+                  <span>{t}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </aside>
+
+      <div>
+        <nav class="mb-6 text-xs text-ink-muted" aria-label="Breadcrumb">
+          <a href="/tema-06" class="no-underline hover:text-primary">Home</a>
+          <span class="mx-1.5 text-ink-muted/50">›</span>
+          <a href="/tema-06/servicos" class="no-underline hover:text-primary">Serviços</a>
+          <span class="mx-1.5 text-ink-muted/50">›</span>
+          <span>{entry.data.titulo}</span>
+        </nav>
+
+        <div class="article-body"><Content /></div>
+
+        {entry.data.entregas.length > 0 && (
+          <div class="mt-8 rounded-[var(--radius-card)] border border-line bg-surface-2 p-6">
+            <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-primary">O que está incluído</p>
+            <ul class="m-0 grid list-none gap-2.5 p-0 sm:grid-cols-2">
+              {entry.data.entregas.map(e => (
+                <li class="flex gap-2.5 text-sm leading-snug text-ink">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                       stroke-width="2.5" class="mt-0.5 shrink-0 text-accent" aria-hidden="true">
+                    <path d="m5 13 4 4L19 7"/>
+                  </svg>
+                  <span>{e}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    </div>
+  </section>
+
+  <Cta
+    variante="card"
+    titulo="Está com esse problema agora?"
+    descricao="Mande uma foto no WhatsApp. Dizemos o que provavelmente é e se dá para inspecionar ainda hoje."
+    ctaPrimTexto="Chamar no WhatsApp"
+    ctaPrimHref={wa}
+    ctaSecTexto="Ver como funciona"
+    ctaSecHref="/tema-06/caca-vazamento"
+  />
+
+  {/* Sinais que indicam o problema */}
+  {entry.data.sinais.length > 0 && (
+    <Prova
+      titulo="Sinais de que é hora de chamar"
+      descricao="Situações que aparecem antes do problema virar obra. Qualquer uma delas já justifica uma inspeção."
+      itens={entry.data.sinais}
+    />
+  )}
+
+  <Passos
+    variante="cards"
+    titulo="Como conduzimos o atendimento"
+    descricao="A mesma ordem em qualquer chamado, do primeiro contato à entrega do laudo."
+    itens={site.passos}
+  />
+
+  {/* Galeria de trabalhos */}
+  <Infraestrutura
+    variante="grade"
+    titulo="Alguns dos nossos trabalhos"
+    descricao="Serviços executados pela equipe em Goiânia e região."
+    itens={site.trabalhos}
+    verMaisHref={wa}
+    verMaisTexto="Falar com um técnico"
+  />
+
+  <Depoimentos
+    titulo="Quem já contratou este serviço"
+    itens={depoimentos}
+    notaMedia={site.avaliacao.nota}
+    totalAvaliacoes={site.avaliacao.total}
+    fonteAvaliacoes={site.avaliacao.fonte}
+  />
+
+  <Faq
+    variante="com-imagem"
+    titulo={`Dúvidas sobre ${entry.data.titulo.toLowerCase()}`}
+    descricao="As perguntas que mais chegam antes do agendamento."
+    itens={site.faq}
+    imagem="https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=400&h=520&fit=crop&auto=format"
+    imagemAlt="Técnico em atendimento hidráulico"
+  />
+
+  <Localizacao
+    titulo="Onde estamos"
+    descricao="Base em Goiânia, atendimento em domicílio em toda a região metropolitana."
+    logradouro={site.nap.logradouro} complemento={site.nap.complemento}
+    bairro={site.nap.bairro} cidade={site.nap.cidade} uf={site.nap.uf} cep={site.nap.cep}
+    telefone={site.nap.telefone} whatsapp={site.nap.whatsapp} email={site.nap.email}
+    horarios={site.horarios} mapaSrc={site.mapaSrc}
+    mapaHref={`https://maps.google.com/?q=${encodeURIComponent(site.nap.enderecoFormatado)}`}
+  />
+
+  <Servicos variante="lista" titulo="Outros serviços" itens={outros} />
+
+  <Cta
+    variante="padrao"
+    titulo={`Precisa de ${entry.data.titulo.toLowerCase()}?`}
+    descricao="Orçamento apresentado depois da inspeção e antes de qualquer intervenção. Sem surpresa no fim."
+    ctaPrimTexto="Pedir orçamento"
+    ctaPrimHref={wa}
+    ctaSecTexto="Ver todos os serviços"
+    ctaSecHref="/tema-06/servicos"
+  />
+
+  <Footer
+    variante="colunas"
+    nomeSite={site.nome}
+    logoSrc={site.logo?.src}
+    logoAlt={site.logo?.alt}
+    credencial={textoCredencial(site)}
+    slogan={site.slogan}
+    telefone={site.nap.telefone}
+    email={site.nap.email}
+    endereco={`${site.nap.logradouro}, ${site.nap.complemento}`}
+    cidade={`${site.nap.bairro}, ${site.nap.cidade} — ${site.nap.uf}`}
+    cnpj={site.cnpj}
+    anoFundacao={site.anoFundacao}
+    redes={site.redes}
+    nav={site.nav}
+    colunas={site.navFooterColunas}
+  />
+</Tema06Base>

@@ -1,0 +1,192 @@
+{
+  "id": "vertice-institucional",
+  "nome": "Vértice Institucional",
+  "versao": "1.0.0",
+  "descricao": "Tema de referência SiteFlow para serviço profissional — contabilidade, consultoria, advocacia e escritórios técnicos. Paleta azul institucional com acento âmbar, tipografia Source Serif 4 + Inter, 9 tipos de página.",
+  "para_nichos": ["contabilidade", "consultoria", "advocacia", "engenharia", "arquitetura", "servico-profissional"],
+  "rota_base": "/tema-03",
+  "escopo_tokens": "html[data-tema=\"tema-03\"]",
+
+  "tokens": {
+    "primary":     "#1B4B8F",
+    "primary-ink": "#FFFFFF",
+    "secondary":   "#0F2942",
+    "accent":      "#B5762F",
+    "ink":         "#1C2634",
+    "ink-muted":   "#5A6675",
+    "surface":     "#FFFFFF",
+    "surface-2":   "#F1F4F8",
+    "line":        "#DDE3EB",
+    "success":     "#157347",
+    "danger":      "#C62828"
+  },
+
+  "tipografia": {
+    "display": "Source Serif 4",
+    "body":    "Inter",
+    "pesos":   { "display": [600, 700], "body": [400, 500, 600, 700] }
+  },
+
+  "radius":    { "card": "8px", "btn": "6px", "pill": "999px" },
+  "densidade": "confortavel",
+
+  "chrome": { "header": "padrao", "footer": "colunas" },
+
+  "composicoes_obrigatorias": {
+    "descricao": "Regra de composição deste tema: home, pilar e servico carregam sempre Depoimentos + NAP completo + mapa embedado. Não é opcional.",
+    "paginas": ["home", "pilar", "servico"],
+    "blocos":  ["Depoimentos", "Localizacao:mapa-embed"]
+  },
+
+  "paginas": {
+    "home": {
+      "rota": "/tema-03",
+      "blocos": [
+        "Header:padrao",
+        "Hero:split",
+        "Servicos:grade",
+        "Proposito",
+        "Prova",
+        "Abordagem",
+        "Depoimentos",
+        "Faq:duas-colunas",
+        "Localizacao:mapa-embed",
+        "PostLista:destaque",
+        "Cta:padrao",
+        "Tags",
+        "BuscasFrequentes",
+        "Footer:colunas"
+      ]
+    },
+    "pilar": {
+      "rota": "/tema-03/contabilidade-consultiva",
+      "blocos": [
+        "Header:padrao",
+        "Hero:editorial",
+        "Servicos:grade",
+        "Abordagem",
+        "Prova",
+        "Depoimentos",
+        "Faq:duas-colunas",
+        "Localizacao:mapa-embed",
+        "PostLista:grade",
+        "Cta:padrao",
+        "BuscasFrequentes",
+        "Footer:colunas"
+      ]
+    },
+    "servicos-listagem": {
+      "rota": "/tema-03/servicos",
+      "blocos": [
+        "Header:padrao",
+        "PageHero",
+        "Servicos:lista",
+        "Prova",
+        "Abordagem",
+        "Faq:padrao",
+        "Cta:card",
+        "Footer:colunas"
+      ]
+    },
+    "servico": {
+      "rota": "/tema-03/servicos/[id]",
+      "blocos": [
+        "Header:padrao",
+        "Hero:split",
+        "Servicos:grade",
+        "Depoimentos",
+        "Faq:padrao",
+        "Localizacao:mapa-embed",
+        "Cta:padrao",
+        "Footer:colunas"
+      ]
+    },
+    "sobre": {
+      "rota": "/tema-03/sobre",
+      "blocos": [
+        "Header:padrao",
+        "PageHero",
+        "Proposito",
+        "Pilares",
+        "Trajetoria",
+        "Equipe:grade",
+        "Prova",
+        "Depoimentos",
+        "Cta:card",
+        "Footer:colunas"
+      ]
+    },
+    "contato": {
+      "rota": "/tema-03/contato",
+      "blocos": [
+        "Header:padrao",
+        "PageHero:destaque",
+        "FormContato:institucional",
+        "Localizacao:mapa-embed",
+        "Depoimentos",
+        "Cta:padrao",
+        "Footer:colunas"
+      ],
+      "observacao": "Composição derivada de referência visual de serviço profissional: faixa de cor com H1, card de formulário com campos pill à esquerda, bloco 'Nossos contatos' em grade 2x2 de ícones circulares com botão de WhatsApp à direita, prova social e CTA. O mapa embedado é acréscimo nosso — a referência não tem mapa, mas o tema é de negócio local e a página de contato é onde ele mais rende."
+    },
+    "blog-listagem": {
+      "rota": "/tema-03/blog",
+      "blocos": [
+        "Header:padrao",
+        "PageHero",
+        "PostLista:grade",
+        "Tags",
+        "Cta:card",
+        "Footer:colunas"
+      ]
+    },
+    "artigo": {
+      "rota": "/tema-03/blog/[id]",
+      "blocos": [
+        "Header:padrao",
+        "Autor:byline",
+        "PostLista:grade",
+        "Autor:assinatura",
+        "Cta:padrao",
+        "Footer:colunas"
+      ],
+      "regra_autor": "Autor:byline vai abaixo do H1 e antes do corpo. Autor:assinatura fecha o artigo com foto, nome, cargo/credencial, bio e redes."
+    },
+    "politica-de-privacidade": {
+      "rota": "/tema-03/politica-de-privacidade",
+      "blocos": ["Header:padrao", "PageHero", "ConteudoLegal:politica", "Footer:colunas"],
+      "ancoras_obrigatorias": ["#cookies", "#direitos"],
+      "campos_cliente_preenchidos_com_exemplo": true,
+      "observacao": "§6.2 — em site real os cinco campos preenchidos pelo cliente não têm texto padrão e campo vazio bloqueia a publicação. Aqui estão preenchidos com exemplo, marcado na própria página."
+    },
+    "termos-de-uso": {
+      "rota": "/tema-03/termos-de-uso",
+      "blocos": ["Header:padrao", "PageHero", "ConteudoLegal:termos", "Footer:colunas"],
+      "observacao": "Obrigatória (regra do Jorge — uma das 4 institucionais da lista fechada do fase3-conteudo). Indexável. Documento próprio com as 7 seções do guardiao_institucionais (objeto e aceite, uso permitido e proibido, propriedade intelectual, limitação de responsabilidade, não substitui o atendimento profissional, foro, vigência); remete à política sem reproduzi-la. Campos do cliente em site.legal.termos — campo vazio bloqueia a publicação."
+    }
+  },
+
+  "blocos_novos_criados": [
+    { "nome": "Autor",         "variantes": ["byline", "assinatura"], "motivo": "O padrão existia inline em pages/blog/[id].astro do Tema 01. Extraído para bloco reusável, agora com cargo, bio e redes como props." },
+    { "nome": "ConteudoLegal", "variantes": ["politica", "termos"],   "motivo": "Corpo compartilhado das duas páginas legais, montado a partir dos campos do §6.2." }
+  ],
+
+  "variantes_novas_em_blocos_existentes": [
+    {
+      "bloco": "PageHero",
+      "variante": "destaque",
+      "default_inalterado": "padrao",
+      "motivo": "A referência abre a página interna com faixa cheia de cor e texto claro. O default segue 'padrao' (fundo neutro), então o Tema 01 não muda."
+    },
+    {
+      "bloco": "FormContato",
+      "variante": "institucional",
+      "default_inalterado": "padrao",
+      "motivo": "Estrutura diferente da 'padrao', não só uma prop booleana: campos pill com label em sr-only, sem campo de assunto, e canais em grade 2x2 de ícones circulares cheios com botão de WhatsApp em largura total. O default segue 'padrao', então o Tema 01 não muda."
+    }
+  ],
+
+  "secoes_omitidas": [
+    { "secao": "Aplicativos parceiros", "motivo": "Peculiar do nicho contábil na referência visual e não generaliza para outros temas. Nenhum bloco novo foi criado para isso." }
+  ]
+}

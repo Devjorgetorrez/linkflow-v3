@@ -1,0 +1,88 @@
+---
+/**
+ * Página de categoria do blog — /<slug> (raiz, junto com serviços e
+ * artigos — decisão do Jorge: sem /categoria/ no caminho).
+ * Cabeçalho com nome e descrição, os 12 artigos mais recentes (sem
+ * paginação) e link para /blog. Renderizada a partir de [slug].astro.
+ */
+import Footer    from '../../components/blocos/Footer.astro'
+import Header    from '../../components/blocos/Header.astro'
+import PageHero  from '../../components/blocos/PageHero.astro'
+import PostLista from '../../components/blocos/PostLista.astro'
+import { site }  from '../../config/site.ts'
+import { textoCredencial } from '../../lib/schema.ts'
+import { getCollection } from 'astro:content'
+import { ehPublicado } from '../../lib/publicacao.ts'
+import { nomeAutor } from '../../lib/autores.ts'
+import { artigosDaCategoria } from '../../lib/categorias.ts'
+
+interface Props {
+  entry: Awaited<ReturnType<typeof getCollection<'categorias'>>>[number]
+}
+
+const { entry } = Astro.props
+const d = entry.data
+
+const categorias = await getCollection('categorias')
+const autores = await getCollection('autores')
+const posts = await getCollection('posts', ehPublicado)
+const artigos = artigosDaCategoria(posts, entry.id, categorias)
+
+const cards = artigos.map(p => ({
+  titulo:        p.data.titulo,
+  publicadoEm:   p.data.publicadoEm,
+  categoria:     d.nome,
+  imagemCapa:    p.data.imagemCapa,
+  imagemCapaAlt: p.data.imagemCapaAlt, resumo: p.data.resumo,
+  autor:         nomeAutor(p.data, autores),
+  href:          `/${p.id}`,
+}))
+---
+
+<Header
+  logoSrc={site.logo?.src}
+  logoAlt={site.logo?.alt}
+  variante="padrao"
+  nomeSite={site.nome}
+  telefone={site.nap.telefone}
+  whatsapp={site.nap.whatsapp}
+  nav={site.nav}
+  ctaTexto="Agendar Consulta"
+  ctaHref="/contato"
+/>
+
+<PageHero
+  eyebrow="Categoria"
+  titulo={d.nome}
+  descricao={d.descricao || undefined}
+/>
+
+{cards.length > 0
+  ? <PostLista variante="grade" posts={cards} verMaisHref="/blog" />
+  : (
+    <div class="container-wide py-16 text-center">
+      <p class="text-ink-muted">Ainda não há artigos publicados nesta categoria.</p>
+      <a href="/blog" class="mt-3 inline-block text-sm font-semibold text-primary no-underline hover:underline">
+        Ver todos os artigos do blog →
+      </a>
+    </div>
+  )
+}
+
+<Footer
+  logoSrc={site.logo?.src}
+  logoAlt={site.logo?.alt}
+  credencial={textoCredencial(site)}
+  variante="escuro"
+  nomeSite={site.nome}
+  slogan={site.slogan}
+  telefone={site.nap.telefone}
+  email={site.nap.email}
+  endereco={`${site.nap.logradouro}, ${site.nap.complemento}`}
+  cidade={`${site.nap.bairro}, ${site.nap.cidade} — ${site.nap.uf}`}
+  cnpj={site.cnpj}
+  anoFundacao={site.anoFundacao}
+  redes={site.redes}
+  nav={site.nav}
+  colunas={site.navFooterColunas}
+/>

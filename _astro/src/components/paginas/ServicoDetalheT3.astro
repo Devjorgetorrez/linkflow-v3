@@ -1,0 +1,231 @@
+---
+/**
+ * Página de serviço interno do Tema 03.
+ * Composição obrigatória (item B): Depoimentos + NAP completo + mapa embedado.
+ */
+import Cta         from '../../components/blocos/Cta.astro'
+import Depoimentos from '../../components/blocos/Depoimentos.astro'
+import Faq         from '../../components/blocos/Faq.astro'
+import Footer      from '../../components/blocos/Footer.astro'
+import Header      from '../../components/blocos/Header.astro'
+import Hero        from '../../components/blocos/Hero.astro'
+import Localizacao from '../../components/blocos/Localizacao.astro'
+import Servicos    from '../../components/blocos/Servicos.astro'
+import Tema03Base  from '../../layouts/Tema03Base.astro'
+import { site }    from '../../config/tema-03.ts'
+import { textoCredencial, areaServida } from '../../lib/schema.ts'
+import { getCollection, render } from 'astro:content'
+import { ehServicoListavel } from '../../lib/publicacao.ts'
+
+interface Props {
+  entry: Awaited<ReturnType<typeof getCollection<'servicosT3'>>>[number]
+}
+
+const { entry }   = Astro.props
+const { Content } = await render(entry)
+const canonical   = `${site.dominio}/${entry.id}/`
+
+const outros = (await getCollection('servicosT3', ehServicoListavel))
+  .filter(s => s.id !== entry.id)
+  .sort((a, b) => a.data.ordem - b.data.ordem)
+  .map(s => ({
+    titulo:    s.data.titulo,
+    descricao: s.data.resumo,
+    icone:     s.data.icone ?? '',
+    href:      `/tema-03/${s.id}`,
+    categoria: s.data.categoria,
+  }))
+
+const depoimentos = (await getCollection('depoimentosT3'))
+  .sort((a, b) => a.data.ordem - b.data.ordem)
+  .map(d => ({
+    nome:    d.data.nome,
+    cidade:  d.data.cidade,
+    servico: d.data.servico,
+    corpo:   (d.body ?? '').trim(),
+  }))
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type':       'Service',
+      '@id':         `${canonical}#service`,
+      name:          entry.data.titulo,
+      description:   entry.data.metaDescription,
+      serviceType:   entry.data.categoria,
+      provider:      { '@id': `${site.dominio}/#organization` },
+      areaServed:    areaServida(site).length ? areaServida(site) : undefined,
+    },
+    {
+      '@type':    'WebPage',
+      '@id':      `${canonical}#webpage`,
+      url:        canonical,
+      name:       `${entry.data.titulo} — ${site.nome}`,
+      inLanguage: 'pt-BR',
+    },
+    {
+      '@type': 'BreadcrumbList',
+      '@id':   `${canonical}#breadcrumb`,
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home',     item: `${site.dominio}/` },
+        { '@type': 'ListItem', position: 2, name: 'Serviços', item: `${site.dominio}/servicos` },
+        { '@type': 'ListItem', position: 3, name: entry.data.titulo, item: canonical },
+      ],
+    },
+  ],
+}
+---
+
+<Tema03Base
+  titulo={`${entry.data.titulo} — ${site.nome}`}
+  metaDescription={entry.data.metaDescription}
+  canonical={canonical}
+  jsonLd={jsonLd}
+  nodeId="servico"
+  noindex={entry.data.noindex ?? false}
+>
+  <Header
+    logoSrc={site.logo?.src}
+    logoAlt={site.logo?.alt}
+    variante="padrao"
+    nomeSite={site.nome}
+    telefone={site.nap.telefone}
+    whatsapp={site.nap.whatsapp}
+    nav={site.nav}
+    ctaTexto="Falar com um contador"
+    ctaHref="/tema-03/contato"
+  />
+
+  <Hero
+    variante="split"
+    eyebrow={entry.data.categoria}
+    titulo={entry.data.titulo}
+    lead={entry.data.resumo}
+    ctaPrimTexto="Solicitar proposta"
+    ctaPrimHref="/tema-03/contato"
+    ctaSecTexto="Ver todos os serviços"
+    ctaSecHref="/tema-03/servicos"
+    imagem={entry.data.imagem}
+    imagemAlt={entry.data.imagemAlt}
+  />
+
+  {/* ── Para quem é + o que está incluído ─────────────────────────── */}
+  <section class="py-[var(--space-section)]">
+    <div class="container-wide grid gap-10 lg:grid-cols-[1fr_360px] lg:items-start">
+
+      <div class="article-body">
+        <nav class="mb-6 text-xs text-ink-muted" aria-label="Breadcrumb">
+          <a href="/tema-03" class="no-underline hover:text-primary">Home</a>
+          <span class="mx-1.5 text-ink-muted/50">›</span>
+          <a href="/tema-03/servicos" class="no-underline hover:text-primary">Serviços</a>
+          <span class="mx-1.5 text-ink-muted/50">›</span>
+          <span>{entry.data.titulo}</span>
+        </nav>
+        <Content />
+      </div>
+
+      <aside class="lg:sticky lg:top-6 flex flex-col gap-4">
+        {entry.data.paraQuem && (
+          <div class="rounded-[var(--radius-card)] border border-line bg-surface-2 p-6">
+            <p class="mb-2 text-xs font-semibold uppercase tracking-wider text-primary">Para quem é</p>
+            <p class="text-sm leading-relaxed text-ink-muted">{entry.data.paraQuem}</p>
+          </div>
+        )}
+
+        {entry.data.entregas.length > 0 && (
+          <div class="rounded-[var(--radius-card)] border border-line bg-surface p-6">
+            <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-primary">O que está incluído</p>
+            <ul class="flex flex-col gap-2.5">
+              {entry.data.entregas.map(item => (
+                <li class="flex gap-2.5 text-sm leading-snug text-ink">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                       stroke-width="2.5" class="mt-0.5 shrink-0 text-primary" aria-hidden="true">
+                    <path d="m5 13 4 4L19 7"/>
+                  </svg>
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <div class="rounded-[var(--radius-card)] bg-secondary p-6 text-surface">
+          <p class="font-display text-base font-bold leading-snug">Quer um valor para o seu caso?</p>
+          <p class="mt-2 text-sm leading-relaxed text-surface/75">
+            A proposta é montada sobre o seu volume real de notas, funcionários e regime — não sobre tabela fechada.
+          </p>
+          <a href="/tema-03/contato"
+             class="mt-4 inline-block rounded-[var(--radius-btn)] bg-surface px-5 py-2.5 text-sm font-semibold text-secondary no-underline transition-opacity hover:opacity-90">
+            Solicitar proposta
+          </a>
+        </div>
+      </aside>
+
+    </div>
+  </section>
+
+  <Servicos
+    variante="grade"
+    titulo="Outros serviços do escritório"
+    itens={outros}
+  />
+
+  {/* Item B — depoimentos obrigatórios nesta página */}
+  <Depoimentos
+    titulo="Clientes atendidos nesse serviço"
+    itens={depoimentos}
+  />
+
+  <Faq
+    variante="padrao"
+    titulo="Perguntas frequentes"
+    itens={site.faq}
+  />
+
+  {/* Item B — NAP completo + mapa embedado obrigatórios nesta página */}
+  <Localizacao
+    titulo="Onde estamos"
+    descricao="Atendimento presencial com hora marcada e atendimento remoto para empresas de fora de Londrina."
+    logradouro={site.nap.logradouro}
+    complemento={site.nap.complemento}
+    bairro={site.nap.bairro}
+    cidade={site.nap.cidade}
+    uf={site.nap.uf}
+    cep={site.nap.cep}
+    telefone={site.nap.telefone}
+    whatsapp={site.nap.whatsapp}
+    email={site.nap.email}
+    horarios={site.horarios}
+    mapaSrc={site.mapaSrc}
+    mapaHref={`https://maps.google.com/?q=${encodeURIComponent(site.nap.enderecoFormatado)}`}
+  />
+
+  <Cta
+    variante="padrao"
+    titulo={`Vamos falar sobre ${entry.data.titulo.toLowerCase()}?`}
+    descricao="Uma conversa de trinta minutos costuma bastar para dizer se o serviço resolve o seu problema — e quanto custa."
+    ctaPrimTexto="Agendar conversa"
+    ctaPrimHref="/tema-03/contato"
+    ctaSecTexto="Falar no WhatsApp"
+    ctaSecHref={`https://wa.me/${site.nap.whatsapp}`}
+  />
+
+  <Footer
+    logoSrc={site.logo?.src}
+    logoAlt={site.logo?.alt}
+    credencial={textoCredencial(site)}
+    variante="colunas"
+    nomeSite={site.nome}
+    slogan={site.slogan}
+    telefone={site.nap.telefone}
+    email={site.nap.email}
+    endereco={`${site.nap.logradouro}, ${site.nap.complemento}`}
+    cidade={`${site.nap.bairro}, ${site.nap.cidade} — ${site.nap.uf}`}
+    cnpj={site.cnpj}
+    anoFundacao={site.anoFundacao}
+    redes={site.redes}
+    nav={site.nav}
+    colunas={site.navFooterColunas}
+  />
+</Tema03Base>

@@ -1,0 +1,119 @@
+---
+import Tema04Base   from '../../../layouts/Tema04Base.astro'
+import Header       from '../../../components/blocos/Header.astro'
+import PageHero     from '../../../components/blocos/PageHero.astro'
+import Servicos     from '../../../components/blocos/Servicos.astro'
+import Prova        from '../../../components/blocos/Prova.astro'
+import Passos       from '../../../components/blocos/Passos.astro'
+import AntesDepois  from '../../../components/blocos/AntesDepois.astro'
+import AreaAtendida from '../../../components/blocos/AreaAtendida.astro'
+import Faq          from '../../../components/blocos/Faq.astro'
+import Cta          from '../../../components/blocos/Cta.astro'
+import Footer       from '../../../components/blocos/Footer.astro'
+import { site }     from '../../../config/tema-04.ts'
+import { textoCredencial, areaLista } from '../../../lib/schema.ts'
+import { getCollection } from 'astro:content'
+import { ehServicoListavel } from '../../../lib/publicacao.ts'
+
+const servicos = (await getCollection('servicosT4', ehServicoListavel))
+  .sort((a, b) => a.data.ordem - b.data.ordem)
+  .map(s => ({
+    titulo: s.data.titulo, descricao: s.data.resumo, icone: s.data.icone ?? '',
+    imagem: s.data.imagem, imagemAlt: s.data.imagemAlt,
+    href: `/tema-04/${s.id}`, categoria: s.data.categoria,
+  }))
+
+const wa        = `https://wa.me/${site.nap.whatsapp}`
+const canonical = `${site.dominio}/servicos/`
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    { '@type': 'CollectionPage', '@id': `${canonical}#webpage`, url: canonical,
+      name: `Serviços — ${site.nome}`, inLanguage: 'pt-BR' },
+    { '@type': 'BreadcrumbList', '@id': `${canonical}#breadcrumb`,
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home',     item: `${site.dominio}/` },
+        { '@type': 'ListItem', position: 2, name: 'Serviços', item: canonical },
+      ] },
+  ],
+}
+---
+
+<Tema04Base
+  titulo={`Serviços de higienização em ${site.nap.cidade} — ${site.nome}`}
+  metaDescription="Higienização de sofás, colchões, tapetes, cadeiras e interior de veículo em Campinas e região. Preço fechado antes de começar e garantia de 90 dias."
+  canonical={canonical}
+  jsonLd={jsonLd}
+  nodeId="servicos"
+>
+  <Header logoSrc={site.logo?.src} logoAlt={site.logo?.alt} variante="padrao" nomeSite={site.nome} telefone={site.nap.telefone}
+          whatsapp={site.nap.whatsapp} nav={site.nav}
+          ctaTexto="Peça seu orçamento" ctaHref={wa} />
+
+  <PageHero
+    variante="destaque"
+    eyebrow="Serviços"
+    titulo="Tudo que higienizamos, com preço fechado antes de começar"
+    descricao="Atendimento em domicílio em Campinas e região. Manda a foto da peça no WhatsApp e recebe o valor, sem visita técnica cobrada."
+  />
+
+  <Servicos variante="lista" itens={servicos} />
+
+  <Prova titulo="Vale para todos os serviços" itens={site.selos} />
+
+  <Passos
+    variante="cards"
+    titulo="Como funciona, do orçamento à entrega"
+    descricao="O mesmo processo para qualquer peça. Muda o produto e a umidade aplicada, não a ordem."
+    itens={site.processo}
+  />
+
+  <AntesDepois
+    titulo="Resultados recentes"
+    descricao="Peças atendidas pela equipe em Campinas e região."
+    itens={site.antesDepois}
+    ctaTexto="Pedir orçamento"
+    ctaHref={wa}
+  />
+
+  <AreaAtendida
+    eyebrow="Cobertura"
+    titulo="Onde atendemos"
+    descricao="Se o seu bairro não estiver na lista, pergunte mesmo assim — a rota muda conforme a semana."
+    regioes={areaLista(site)}
+    bullets={site.regioesBullets}
+    imagem="https://images.unsplash.com/photo-1449844908441-8829872d2607?w=420&h=480&fit=crop&auto=format"
+    imagemAlt="Rua residencial arborizada"
+    selo="Campinas e região metropolitana"
+    ctaTexto="Consultar meu bairro"
+    ctaHref={wa}
+  />
+
+  <Faq variante="duas-colunas" titulo="Dúvidas frequentes" itens={site.faq} />
+
+  <Cta
+    variante="card"
+    titulo="Não sabe de qual serviço precisa?"
+    descricao="Descreva a peça e o problema. Dizemos o que resolve — inclusive quando a resposta é que não compensa."
+    ctaPrimTexto="Falar no WhatsApp"
+    ctaPrimHref={wa}
+    ctaSecTexto="Ver como funciona"
+    ctaSecHref="/tema-04/higienizacao-de-estofados"
+  />
+
+  <Footer credencial={textoCredencial(site)} logoSrc={site.logo?.src} logoAlt={site.logo?.alt}
+    variante="colunas"
+    nomeSite={site.nome}
+    slogan={site.slogan}
+    telefone={site.nap.telefone}
+    email={site.nap.email}
+    endereco={`${site.nap.logradouro}, ${site.nap.complemento}`}
+    cidade={`${site.nap.bairro}, ${site.nap.cidade} — ${site.nap.uf}`}
+    cnpj={site.cnpj}
+    anoFundacao={site.anoFundacao}
+    redes={site.redes}
+    nav={site.nav}
+    colunas={site.navFooterColunas}
+  />
+</Tema04Base>

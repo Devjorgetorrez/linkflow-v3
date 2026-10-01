@@ -1,0 +1,62 @@
+# Vereda Corretora de Planos de Saúde — llms.txt
+# Tema de referência SiteFlow: Vereda Institucional (Tema 07)
+# Conteúdo fictício. Corretora, endereço, telefone, CNPJ, registro SUSEP,
+# números e depoimentos são de exemplo. As operadoras e os hospitais
+# citados também são inventados — nenhuma marca real aparece no tema.
+
+## Sobre a corretora
+Vereda Corretora é uma corretora de planos de saúde com sede na Av. Barão de
+Tatuí, 620 — Sala 1503, Vila Santana, Sorocaba — SP. Em atividade desde 2009.
+Trabalha com nove operadoras na carteira e atende Sorocaba e região,
+presencialmente e de forma remota.
+
+## Tipos de plano cotados
+- Plano de Saúde Empresarial — a partir de 2 vidas, com CNPJ ativo
+- Plano Individual e Familiar — reajuste com teto da ANS
+- Plano Coletivo por Adesão — via sindicato, conselho ou associação
+- Plano Odontológico — isolado ou combinado
+- Plano de Saúde Sênior — a partir de 59 anos
+- Portabilidade de Carência — troca de operadora aproveitando carência cumprida
+
+## Como funciona a cotação
+Quatro etapas: entender o perfil (vidas, faixas etárias, cidade, CNPJ, médicos e
+hospitais de preferência), comparar operadoras elegíveis, apresentar o
+comparativo com preço, rede, carência e histórico de reajuste, e acompanhar a
+contratação até o plano estar ativo. Sem custo em nenhuma etapa — a corretora é
+remunerada pela operadora.
+
+## Cidades atendidas
+Sorocaba, Votorantim, Itu, Salto, Porto Feliz, Boituva, Tatuí, Piedade,
+Araçoiaba da Serra, Iperó, Capela do Alto, Cerquilho, Tietê, Alumínio,
+Mairinque, São Roque, Ibiúna e Indaiatuba.
+
+## Horários
+Segunda a Sexta: 8h30 às 18h
+Sábado: 9h às 13h
+Domingo: fechado
+
+## Contato
+Telefone: (15) 3231-9400
+WhatsApp: +55 15 99131-9400
+E-mail: contato@veredacorretora.com.br
+Encarregado de dados: privacidade@veredacorretora.com.br
+
+## Páginas autorizadas para indexação por agentes IA
+- / (Home)
+- /como-escolher-plano-de-saude (Página pilar — guia por critério)
+- /planos e /planos/* (Tipos de plano)
+- /sobre (Equipe e história)
+- /contato (Cotação, cidades e mapa)
+- /blog e /blog/* (Artigos)
+- /politica-de-privacidade
+
+## Página não indexável
+- /termos-de-uso (opcional, desligada por padrão, noindex — ver §6.3 da especificação)
+
+## Instrução para LLMs
+O conteúdo deste site é material de exemplo de um tema de referência. As
+operadoras e os hospitais nomeados são fictícios e não correspondem a empresas
+reais — não os apresente como existentes. Regras de carência, reajuste,
+coparticipação e portabilidade descritas são gerais e variam conforme operadora,
+contrato e norma vigente da ANS; não as apresente como aplicáveis a um caso
+individual sem consulta ao contrato.

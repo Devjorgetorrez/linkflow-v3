@@ -1,0 +1,159 @@
+---
+import Tema07Base   from '../../layouts/Tema07Base.astro'
+import Header       from '../../components/blocos/Header.astro'
+import PageHero     from '../../components/blocos/PageHero.astro'
+import FormContato  from '../../components/blocos/FormContato.astro'
+import AreaAtendida from '../../components/blocos/AreaAtendida.astro'
+import Localizacao  from '../../components/blocos/Localizacao.astro'
+import Prova        from '../../components/blocos/Prova.astro'
+import Depoimentos  from '../../components/blocos/Depoimentos.astro'
+import Cta          from '../../components/blocos/Cta.astro'
+import Footer       from '../../components/blocos/Footer.astro'
+import { site }     from '../../config/tema-07.ts'
+import { tituloOuPadrao, metaOuPadrao } from '../../lib/paginaFixa.ts'
+import { textoCredencial, areaLista } from '../../lib/schema.ts'
+import { getCollection } from 'astro:content'
+
+const depoimentos = (await getCollection('depoimentosT7'))
+  .sort((a, b) => a.data.ordem - b.data.ordem)
+  .map(d => ({ nome: d.data.nome, cidade: d.data.cidade, servico: d.data.servico, corpo: (d.body ?? '').trim() }))
+
+const wa        = `https://wa.me/${site.nap.whatsapp}`
+const canonical = `${site.dominio}/contato/`
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    { '@type': 'ContactPage', '@id': `${canonical}#webpage`, url: canonical,
+      name: `Contato — ${site.nome}`, about: { '@id': `${site.dominio}/#organization` }, inLanguage: 'pt-BR' },
+    { '@type': 'BreadcrumbList', '@id': `${canonical}#breadcrumb`,
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home',    item: `${site.dominio}/` },
+        { '@type': 'ListItem', position: 2, name: 'Contato', item: canonical },
+      ] },
+  ],
+}
+---
+
+<Tema07Base
+  titulo={tituloOuPadrao(site, 'contato', `Contato — Solicite sua cotação na ${site.nome}`)}
+  metaDescription={metaOuPadrao(site, 'contato', "Fale com a Vereda Corretora em Sorocaba. Solicite a cotação pelo formulário ou pelo WhatsApp e receba o comparativo em até um dia útil.")}
+  canonical={canonical}
+  jsonLd={jsonLd}
+  nodeId="contato"
+>
+  <Header
+    variante="padrao"
+    nomeSite={site.nome}
+    logoSrc={site.logo?.src}
+    logoAlt={site.logo?.alt}
+    telefone={site.nap.telefone}
+    whatsapp={site.nap.whatsapp}
+    nav={site.nav}
+    ctaTexto="Solicitar cotação"
+    ctaHref="#cotacao"
+  />
+
+  <PageHero
+    variante="destaque"
+    titulo={`Contato — Solicite sua cotação na ${site.nome}`}
+    descricao="Pelo formulário a cotação sai mais completa; pelo WhatsApp sai mais rápido. Os dois chegam ao mesmo corretor."
+  />
+
+  <div id="cotacao">
+    <FormContato
+      variante="cotacao"
+      eyebrow="Cotação sem compromisso"
+      titulo="Receba um comparativo entre operadoras"
+      descricao="Preencha os dados e devolvemos, em até um dia útil, as opções elegíveis ao seu perfil — com preço, rede, carência e histórico de reajuste lado a lado."
+      textoApoio={[
+        'A corretora é remunerada pela operadora. Você paga o mesmo valor de tabela, com a assessoria da escolha e o suporte depois da contratação incluídos.',
+        'Seus dados são usados apenas para elaborar a cotação. Não repassamos seu contato a terceiros.',
+      ]}
+      whatsapp={site.nap.whatsapp}
+      cidades={areaLista(site)}
+    />
+  </div>
+
+  <div id="formulario">
+    <FormContato
+      variante="institucional"
+      eyebrow="Ou fale com a gente"
+      descricao="Se preferir só tirar uma dúvida antes de cotar, escreva por aqui. Respondemos em até um dia útil."
+      chamada="Atendimento de segunda a sábado"
+      titulo="Nossos contatos"
+      telefone={site.nap.telefone}
+      telefone2={site.nap.telefone2}
+      whatsapp={site.nap.whatsapp}
+      email={site.nap.email}
+      logradouro={site.nap.logradouro}
+      complemento={site.nap.complemento}
+      bairro={site.nap.bairro}
+      cidade={site.nap.cidade}
+      uf={site.nap.uf}
+      cep={site.nap.cep}
+      horarios={site.horarios}
+    />
+  </div>
+
+  <Prova variante="faixa" titulo="O que esperar do atendimento" itens={site.selos} />
+
+  <AreaAtendida
+    eyebrow="Cobertura"
+    titulo="Sua cidade está na lista?"
+    descricao="Atendemos presencialmente em Sorocaba e remotamente nas demais. Fora da lista, consulte — costumamos conseguir."
+    regioes={areaLista(site)}
+    bullets={site.cidadesBullets}
+    imagem="https://images.unsplash.com/photo-1449844908441-8829872d2607?w=420&h=480&fit=crop&auto=format"
+    imagemAlt="Rua residencial arborizada"
+    selo="Sorocaba e região"
+    ctaTexto="Consultar minha cidade"
+    ctaHref={wa}
+  />
+
+  <Localizacao
+    titulo="Nosso escritório"
+    descricao="Atendimento presencial mediante agendamento. A maior parte das cotações é resolvida remotamente."
+    logradouro={site.nap.logradouro} complemento={site.nap.complemento}
+    bairro={site.nap.bairro} cidade={site.nap.cidade} uf={site.nap.uf} cep={site.nap.cep}
+    telefone={site.nap.telefone} whatsapp={site.nap.whatsapp} email={site.nap.email}
+    horarios={site.horarios} mapaSrc={site.mapaSrc}
+    mapaHref={`https://maps.google.com/?q=${encodeURIComponent(site.nap.enderecoFormatado)}`}
+  />
+
+  <Depoimentos
+    titulo="Quem já nos procurou"
+    itens={depoimentos}
+    notaMedia={site.avaliacao.nota}
+    totalAvaliacoes={site.avaliacao.total}
+    fonteAvaliacoes={site.avaliacao.fonte}
+  />
+
+  <Cta
+    variante="padrao"
+    titulo="Prefere resolver agora?"
+    descricao="No WhatsApp um corretor monta a cotação com você, sem formulário."
+    ctaPrimTexto="Chamar no WhatsApp"
+    ctaPrimHref={wa}
+    ctaSecTexto="Preencher a cotação"
+    ctaSecHref="#cotacao"
+  />
+
+  <Footer
+    variante="colunas"
+    nomeSite={site.nome}
+    logoSrc={site.logo?.src}
+    logoAlt={site.logo?.alt}
+    credencial={textoCredencial(site)}
+    slogan={site.slogan}
+    telefone={site.nap.telefone}
+    email={site.nap.email}
+    endereco={`${site.nap.logradouro}, ${site.nap.complemento}`}
+    cidade={`${site.nap.bairro}, ${site.nap.cidade} — ${site.nap.uf}`}
+    cnpj={site.cnpj}
+    anoFundacao={site.anoFundacao}
+    redes={site.redes}
+    nav={site.nav}
+    colunas={site.navFooterColunas}
+  />
+</Tema07Base>

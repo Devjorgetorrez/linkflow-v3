@@ -1,0 +1,83 @@
+---
+/**
+ * Tema06Base — layout do Tema 06 (Hidroponto).
+ * data-tema="tema-06" ativa o escopo de tokens do fim de src/styles/tokens.css.
+ * Os demais temas não são afetados.
+ */
+import '../styles/global.css'
+import { site } from '../config/tema-06.ts'
+import { urlAbsoluta } from '../lib/schema.ts'
+import BotaoWhatsApp from '../components/blocos/BotaoWhatsApp.astro'
+import BannerCookies from '../components/blocos/BannerCookies.astro'
+
+interface Props {
+  titulo:          string
+  metaDescription: string
+  canonical:       string
+  jsonLd?:         object | object[]
+  nodeId?:         string
+  noindex?:        boolean
+}
+
+const {
+  titulo,
+  metaDescription,
+  canonical,
+  jsonLd,
+  nodeId  = 'page',
+  noindex = false,
+} = Astro.props
+
+const ogImagem = urlAbsoluta(site, site.ogImagem)
+const ogDescricao = metaDescription || site.descricao
+---
+
+<!doctype html>
+<html lang="pt-BR" data-tema="tema-06">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{titulo}</title>
+  <meta name="description" content={metaDescription} />
+  <link rel="canonical" href={canonical} />
+  <link rel="sitemap" href="/sitemap.xml" />
+  {site.favicon && <link rel="icon" href={site.favicon} />}
+  {site.googleVerificacao && <meta name="google-site-verification" content={site.googleVerificacao} />}
+  {site.bingVerificacao && <meta name="msvalidate.01" content={site.bingVerificacao} />}
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content={titulo} />
+  {ogDescricao && <meta property="og:description" content={ogDescricao} />}
+  <meta property="og:url" content={canonical} />
+  {ogImagem && <meta property="og:image" content={ogImagem} />}
+  <meta property="og:locale" content="pt_BR" />
+  <meta property="og:site_name" content={site.nome} />
+  <meta name="twitter:card" content={ogImagem ? 'summary_large_image' : 'summary'} />
+  <meta name="twitter:title" content={titulo} />
+  {ogDescricao && <meta name="twitter:description" content={ogDescricao} />}
+  {ogImagem && <meta name="twitter:image" content={ogImagem} />}
+  {noindex && <meta name="robots" content="noindex, follow" />}
+
+  {/* Fontes do tema: Rubik (display) + Inter (corpo) */}
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Rubik:wght@600;700&family=Inter:wght@400;500;600;700&display=swap"
+    rel="stylesheet"
+  />
+
+  {/* URL do painel (envio do formulário de contato); sem ela o formulário não envia */}
+  {site.painelUrl && <meta name="lf-painel-url" content={site.painelUrl} />}
+
+  {jsonLd && (
+    <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+  )}
+</head>
+<body class="bg-surface font-sans text-ink antialiased">
+  <main data-node-id={nodeId}>
+    <slot />
+  </main>
+  <script>import '../scripts/utm.ts'</script>
+  <BotaoWhatsApp whatsapp={site.nap?.whatsapp} ativo={site.whatsappFlutuante !== false} mensagem={site.whatsappMensagem} />
+  <BannerCookies site={site} />
+</body>
+</html>

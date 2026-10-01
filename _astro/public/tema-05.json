@@ -1,0 +1,162 @@
+{
+  "id": "amparo-institucional",
+  "nome": "Amparo Institucional",
+  "versao": "1.0.0",
+  "descricao": "Tema de referência SiteFlow para advocacia e profissão regulamentada. Petróleo profundo com ouro envelhecido, tipografia Archivo + Inter, cantos quase retos, 10 tipos de página.",
+  "para_nichos": ["advocacia", "medicina", "odontologia", "engenharia-consultiva", "contabilidade-de-porte", "profissao-regulamentada"],
+  "rota_base": "/tema-05",
+  "escopo_tokens": "html[data-tema=\"tema-05\"]",
+
+  "tokens": {
+    "primary":     "#16324F",
+    "primary-ink": "#FFFFFF",
+    "secondary":   "#0E2338",
+    "accent":      "#A8823C",
+    "ink":         "#1A222C",
+    "ink-muted":   "#5C6672",
+    "surface":     "#FFFFFF",
+    "surface-2":   "#F2F4F6",
+    "line":        "#DFE4E9",
+    "success":     "#1B7A4B",
+    "danger":      "#C0392B"
+  },
+
+  "tipografia": {
+    "display": "Archivo",
+    "body":    "Inter",
+    "pesos":   { "display": [600, 700], "body": [400, 500, 600, 700] }
+  },
+
+  "radius":    { "card": "4px", "btn": "3px", "pill": "999px" },
+  "densidade": "confortavel",
+
+  "chrome": { "header": "padrao", "footer": "colunas" },
+
+  "logica_do_modelo": {
+    "resumo": "O visitante está escolhendo a quem confiar um processo que dura anos. A página vende autoridade e método, não preço nem urgência.",
+    "diferencas_para_os_outros_temas": [
+      "Sem preço em lugar nenhum — divulgação de honorário é vedada ao advogado",
+      "Sem promessa de resultado: o texto diz o que o caso comporta, não o que se vai conseguir",
+      "Números descrevem a operação do escritório, nunca o êxito do cliente",
+      "Credencial (OAB) visível em cada advogado da equipe",
+      "CTA é agendar conversa, não contratar",
+      "A página de serviço explica o benefício antes de falar do escritório"
+    ],
+    "conformidade": "Conteúdo escrito considerando o Provimento 205/2021 da OAB, que veda captação de clientela, mercantilização e promessa de resultado. Ao adaptar este tema para outra profissão regulamentada (medicina, odontologia), conferir a norma do conselho correspondente."
+  },
+
+  "composicoes_obrigatorias": {
+    "descricao": "Regra de composição deste tema: home, pilar e servico carregam sempre prova social, equipe ou credencial visível e NAP com mapa embedado.",
+    "paginas": ["home", "pilar", "servico"],
+    "blocos":  ["Depoimentos", "Localizacao:mapa-embed"]
+  },
+
+  "paginas": {
+    "home": {
+      "rota": "/tema-05",
+      "blocos": [
+        "Header:padrao",
+        "Hero:destaque",
+        "Prova",
+        "Servicos:grade",
+        "Proposito",
+        "Abordagem",
+        "Numeros:claro",
+        "Depoimentos:com-nota",
+        "Equipe:grade",
+        "Cta:padrao",
+        "Localizacao:mapa-embed",
+        "PostLista:destaque",
+        "BuscasFrequentes",
+        "Footer:colunas"
+      ]
+    },
+    "servico": {
+      "rota": "/tema-05/servicos/[id]",
+      "blocos": [
+        "Header:padrao",
+        "Hero:destaque",
+        "Servicos:grade",
+        "Prova",
+        "Passos:numerado",
+        "Depoimentos:com-nota",
+        "Faq:com-imagem",
+        "Localizacao:mapa-embed",
+        "Servicos:lista",
+        "Cta:padrao",
+        "Footer:colunas"
+      ],
+      "observacao": "Segue a sequência da referência — hero com destaques, entenda o benefício, quem pode solicitar, situações que geram direito, passo a passo e dúvidas. Depoimentos e NAP com mapa foram acrescentados a pedido: a referência não os tinha na página de serviço.",
+      "mapeamento_da_referencia": {
+        "Quem pode solicitar": "Servicos:grade alimentado pelo campo quemPode do frontmatter",
+        "Situações que podem gerar o benefício": "Prova alimentado pelo campo situacoes do frontmatter",
+        "Como funciona passo a passo": "Passos:numerado alimentado por site.passos"
+      }
+    },
+    "servicos-listagem": {
+      "rota": "/tema-05/servicos",
+      "blocos": ["Header:padrao", "PageHero:destaque", "Servicos:lista", "Prova", "Passos:cards", "Numeros:escuro", "Faq:duas-colunas", "Cta:card", "Footer:colunas"]
+    },
+    "pilar": {
+      "rota": "/tema-05/direito-previdenciario",
+      "blocos": ["Header:padrao", "Hero:editorial", "Passos:numerado", "Servicos:grade", "Prova", "Numeros:claro", "Depoimentos:com-nota", "Faq:com-imagem", "Localizacao:mapa-embed", "PostLista:grade", "Cta:padrao", "BuscasFrequentes", "Footer:colunas"]
+    },
+    "sobre": {
+      "rota": "/tema-05/sobre",
+      "blocos": ["Header:padrao", "PageHero:destaque", "Proposito", "Prova", "Equipe:grade", "Numeros:escuro", "Abordagem", "Depoimentos:com-nota", "Cta:card", "Footer:colunas"]
+    },
+    "contato": {
+      "rota": "/tema-05/contato",
+      "blocos": ["Header:padrao", "PageHero:destaque", "FormContato:institucional", "Prova", "Localizacao:mapa-embed", "Depoimentos:com-nota", "Cta:padrao", "Footer:colunas"]
+    },
+    "blog-listagem": {
+      "rota": "/tema-05/blog",
+      "blocos": ["Header:padrao", "PageHero:destaque", "PostLista:grade", "Tags", "Cta:card", "Footer:colunas"]
+    },
+    "artigo": {
+      "rota": "/tema-05/blog/[id]",
+      "blocos": ["Header:padrao", "Autor:byline", "Autor:assinatura", "PostLista:grade", "Cta:padrao", "Footer:colunas"],
+      "observacao": "Traz aviso fixo ao fim do corpo informando que o texto não constitui parecer jurídico — exigência prática em conteúdo de profissão regulamentada."
+    },
+    "politica-de-privacidade": {
+      "rota": "/tema-05/politica-de-privacidade",
+      "blocos": ["Header:padrao", "PageHero:destaque", "ConteudoLegal:politica", "Footer:colunas"],
+      "ancoras_obrigatorias": ["#cookies", "#direitos"],
+      "campos_cliente_preenchidos_com_exemplo": true,
+      "observacao": "§6.2 — único dos três temas com encarregado nomeado, por tratar dado sensível de saúde na atividade."
+    },
+    "termos-de-uso": {
+      "rota": "/tema-05/termos-de-uso",
+      "opcional": true,
+      "ligado_por_padrao": false,
+      "noindex": true,
+      "blocos": ["Header:padrao", "PageHero:destaque", "ConteudoLegal:termos", "Footer:colunas"],
+      "observacao": "§6.3 — opcional e desligado por padrão. Usa o mesmo conteúdo-base da política."
+    }
+  },
+
+  "blocos_novos_criados": [
+    {
+      "nome": "Numeros",
+      "variantes": ["escuro", "claro"],
+      "motivo": "Cumpre o Prova:numeros do §3.2 do MD, que ainda não existia. Em profissão regulamentada o número substitui a promessa: descreve a escala da operação sem prometer resultado.",
+      "decisao": "Sem contador animado — exigiria JavaScript e o número final é o que importa. O campo `nota` é obrigatório na prática: número solto em site de profissão regulamentada vira promessa implícita."
+    }
+  ],
+
+  "blocos_reaproveitados_sem_alteracao": [
+    "Hero:destaque e Faq:com-imagem, criados no Tema 04",
+    "PageHero:destaque e FormContato:institucional, criados no Tema 03",
+    "Passos:numerado e Passos:cards, criados no Tema 04",
+    "Autor:byline e Autor:assinatura, criados no Tema 03",
+    "Depoimentos com selo de nota, criado no Tema 04",
+    "ConteudoLegal:politica e ConteudoLegal:termos, criados no Tema 03"
+  ],
+
+  "secoes_omitidas": [
+    { "secao": "Vídeo incorporado do YouTube", "motivo": "Decisão do operador. Carregaria iframe de terceiro com cookie e peso em toda página de serviço." },
+    { "secao": "Feed do Instagram", "motivo": "Integração de terceiro específica do site de referência, como o widget de chat já omitido antes." },
+    { "secao": "Selo de entidade parceira", "motivo": "Decisão do operador. O papel de credencial ficou com o bloco Equipe, que já exibe o registro na OAB de cada advogado." },
+    { "secao": "Carrossel com setas", "motivo": "Exigiria JavaScript. Os mesmos itens cabem em grade, sem esconder conteúdo do rastreador." }
+  ]
+}

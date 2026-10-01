@@ -1,0 +1,77 @@
+---
+import ThemeBase  from '../../layouts/ThemeBase.astro'
+import Header     from '../../components/blocos/Header.astro'
+import PageHero   from '../../components/blocos/PageHero.astro'
+import PostLista  from '../../components/blocos/PostLista.astro'
+import Footer     from '../../components/blocos/Footer.astro'
+import { site }   from '../../config/site.ts'
+import { textoCredencial } from '../../lib/schema.ts'
+import { getCollection } from 'astro:content'
+import { ehPublicado } from '../../lib/publicacao.ts'
+import { nomeAutor } from '../../lib/autores.ts'
+import { nomeCategoria } from '../../lib/categorias.ts'
+
+const autores = await getCollection('autores')
+const categorias = await getCollection('categorias')
+const todosPosts = await getCollection('posts', ehPublicado)
+const posts = todosPosts
+  .sort((a, b) => new Date(b.data.publicadoEm).getTime() - new Date(a.data.publicadoEm).getTime())
+  .map(p => ({
+    titulo:        p.data.titulo,
+    publicadoEm:   p.data.publicadoEm,
+    categoria:     nomeCategoria(p.data.categoria, categorias),
+    imagemCapa:    p.data.imagemCapa,
+    imagemCapaAlt: p.data.imagemCapaAlt, resumo: p.data.resumo,
+    autor:         nomeAutor(p.data, autores),
+    href:          `/${p.id}`,
+  }))
+
+const canonical = `${site.dominio}/blog/`
+---
+
+<ThemeBase
+  titulo={`Blog de Saúde — ${site.nome}`}
+  metaDescription="Artigos escritos pelos nossos médicos sobre saúde, prevenção e bem-estar. Conteúdo baseado em evidências para ajudar você a tomar melhores decisões."
+  canonical={canonical}
+  nodeId="blog"
+>
+  <Header
+    logoSrc={site.logo?.src}
+    logoAlt={site.logo?.alt}
+    variante="padrao"
+    nomeSite={site.nome}
+    telefone={site.nap.telefone}
+    whatsapp={site.nap.whatsapp}
+    nav={site.nav}
+    ctaTexto="Agendar Consulta"
+    ctaHref="/contato"
+  />
+
+  <PageHero
+    titulo="Blog de Saúde"
+    descricao="Artigos escritos pelos nossos médicos para ajudar você a tomar melhores decisões de saúde."
+  />
+
+  <PostLista
+    variante="grade"
+    posts={posts}
+  />
+
+  <Footer
+    logoSrc={site.logo?.src}
+    logoAlt={site.logo?.alt}
+    credencial={textoCredencial(site)}
+    variante="escuro"
+    nomeSite={site.nome}
+    slogan={site.slogan}
+    telefone={site.nap.telefone}
+    email={site.nap.email}
+    endereco={`${site.nap.logradouro}, ${site.nap.complemento}`}
+    cidade={`${site.nap.bairro}, ${site.nap.cidade} — ${site.nap.uf}`}
+    cnpj={site.cnpj}
+    anoFundacao={site.anoFundacao}
+    redes={site.redes}
+    nav={site.nav}
+    colunas={site.navFooterColunas}
+  />
+</ThemeBase>

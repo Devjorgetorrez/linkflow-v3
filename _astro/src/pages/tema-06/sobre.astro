@@ -1,0 +1,144 @@
+---
+import Tema06Base   from '../../layouts/Tema06Base.astro'
+import Header       from '../../components/blocos/Header.astro'
+import PageHero     from '../../components/blocos/PageHero.astro'
+import Proposito    from '../../components/blocos/Proposito.astro'
+import Prova        from '../../components/blocos/Prova.astro'
+import Equipe       from '../../components/blocos/Equipe.astro'
+import Numeros      from '../../components/blocos/Numeros.astro'
+import Abordagem    from '../../components/blocos/Abordagem.astro'
+import Infraestrutura from '../../components/blocos/Infraestrutura.astro'
+import Depoimentos  from '../../components/blocos/Depoimentos.astro'
+import Cta          from '../../components/blocos/Cta.astro'
+import Footer       from '../../components/blocos/Footer.astro'
+import { site }     from '../../config/tema-06.ts'
+import { tituloOuPadrao, metaOuPadrao } from '../../lib/paginaFixa.ts'
+import { textoCredencial } from '../../lib/schema.ts'
+import { getCollection } from 'astro:content'
+
+const equipe = (await getCollection('equipeT6'))
+  .sort((a, b) => a.data.ordem - b.data.ordem)
+  .map(m => ({ nome: m.data.nome, cargo: m.data.cargo, crm: m.data.registro,
+               especialidade: m.data.especialidade, foto: m.data.foto }))
+
+const depoimentos = (await getCollection('depoimentosT6'))
+  .sort((a, b) => a.data.ordem - b.data.ordem)
+  .map(d => ({ nome: d.data.nome, cidade: d.data.cidade, servico: d.data.servico, corpo: (d.body ?? '').trim() }))
+
+const anos      = site.anoFundacao ? new Date().getFullYear() - site.anoFundacao : null
+const wa        = `https://wa.me/${site.nap.whatsapp}`
+const canonical = `${site.dominio}/sobre/`
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    { '@type': 'AboutPage', '@id': `${canonical}#webpage`, url: canonical,
+      name: `Quem somos — ${site.nome}`, about: { '@id': `${site.dominio}/#organization` }, inLanguage: 'pt-BR' },
+    { '@type': 'BreadcrumbList', '@id': `${canonical}#breadcrumb`,
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home',       item: `${site.dominio}/` },
+        { '@type': 'ListItem', position: 2, name: 'Quem somos', item: canonical },
+      ] },
+  ],
+}
+---
+
+<Tema06Base
+  titulo={tituloOuPadrao(site, 'sobre', `Quem somos — ${site.nomeLongo}`)}
+  metaDescription={metaOuPadrao(site, 'sobre', "Conheça a Hidroponto: treze anos de detecção de vazamento em Goiânia, equipe própria com responsável técnico e mais de 90% dos casos localizados sem quebra.")}
+  canonical={canonical}
+  jsonLd={jsonLd}
+  nodeId="sobre"
+>
+  <Header
+    variante="padrao"
+    nomeSite={site.nome}
+    logoSrc={site.logo?.src}
+    logoAlt={site.logo?.alt}
+    telefone={site.nap.telefone}
+    whatsapp={site.nap.whatsapp}
+    nav={site.nav}
+    ctaTexto="Quero um orçamento"
+    ctaHref={wa}
+  />
+
+  <PageHero
+    variante="destaque"
+    eyebrow="Quem somos"
+    titulo={anos ? `${anos} anos achando o ponto exato` : 'Achando o ponto exato'}
+    descricao="Equipe própria, uniformizada e com responsável técnico identificado na ordem de serviço. Quem localiza é quem repara."
+  />
+
+  <Proposito
+    eyebrow="Como começou"
+    titulo="Um geofone emprestado e um condomínio desesperado"
+    paragrafos={[
+      `A Hidroponto abriu${site.anoFundacao ? ` em ${site.anoFundacao}` : ''}. O primeiro cliente foi um condomínio que já tinha aberto trinta metros de piso atrás de um vazamento e não tinha achado nada — o ponto estava a quatro metros do primeiro buraco.`,
+      'Aquele caso definiu o método da casa: equipamento serve para localizar antes de abrir, não para justificar preço. Câmera, geofone e gás traçador resolvem situações diferentes, e usar o errado só gasta o tempo do cliente.',
+      'Hoje são três equipes em rota e plantão de emergência até as 22h. O número que acompanhamos de perto não é faturamento: é a taxa de localização sem quebra, que segue acima de 90%.',
+    ]}
+    imagemSrc="https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=760&h=620&fit=crop&auto=format"
+    imagemAlt="Técnico em serviço de manutenção hidráulica"
+  />
+
+  <Prova variante="faixa" titulo="O que garantimos em todo chamado" itens={site.selos} />
+
+  <Equipe
+    variante="grade"
+    titulo="Quem vai até o seu imóvel"
+    descricao="Funcionários registrados e uniformizados. Você sabe o nome de quem vai atender antes de a equipe chegar."
+    membros={equipe}
+  />
+
+  <Numeros variante="escuro" titulo="A operação em números" itens={site.numeros} nota={site.numerosNota} />
+
+  <Abordagem
+    titulo="Como trabalhamos"
+    descricao="Seis decisões que explicam por que o serviço é conduzido dessa forma."
+    itens={site.diferenciais}
+  />
+
+  <Infraestrutura
+    variante="grade"
+    titulo="Alguns dos nossos trabalhos"
+    itens={site.trabalhos}
+    verMaisHref={wa}
+    verMaisTexto="Falar com um técnico"
+  />
+
+  <Depoimentos
+    titulo="O que dizem os clientes"
+    itens={depoimentos}
+    notaMedia={site.avaliacao.nota}
+    totalAvaliacoes={site.avaliacao.total}
+    fonteAvaliacoes={site.avaliacao.fonte}
+  />
+
+  <Cta
+    variante="card"
+    titulo="Quer falar com a equipe antes de contratar?"
+    descricao="Descreva o problema e mande uma foto. Dizemos o que provavelmente é, sem compromisso."
+    ctaPrimTexto="Chamar no WhatsApp"
+    ctaPrimHref={wa}
+    ctaSecTexto="Ver os serviços"
+    ctaSecHref="/tema-06/servicos"
+  />
+
+  <Footer
+    variante="colunas"
+    nomeSite={site.nome}
+    logoSrc={site.logo?.src}
+    logoAlt={site.logo?.alt}
+    credencial={textoCredencial(site)}
+    slogan={site.slogan}
+    telefone={site.nap.telefone}
+    email={site.nap.email}
+    endereco={`${site.nap.logradouro}, ${site.nap.complemento}`}
+    cidade={`${site.nap.bairro}, ${site.nap.cidade} — ${site.nap.uf}`}
+    cnpj={site.cnpj}
+    anoFundacao={site.anoFundacao}
+    redes={site.redes}
+    nav={site.nav}
+    colunas={site.navFooterColunas}
+  />
+</Tema06Base>

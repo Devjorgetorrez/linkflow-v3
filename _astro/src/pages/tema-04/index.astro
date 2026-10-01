@@ -1,0 +1,240 @@
+---
+/**
+ * Home do Tema 04 — serviço local com resultado visual.
+ *
+ * A lógica da página é diferente do tema institucional: o visitante chega com
+ * um problema concreto e três dúvidas — resolve? atende meu bairro? quanto
+ * custa? A composição responde nessa ordem, com ação de WhatsApp a cada dobra.
+ */
+import Tema04Base   from '../../layouts/Tema04Base.astro'
+import Header       from '../../components/blocos/Header.astro'
+import Hero         from '../../components/blocos/Hero.astro'
+import Prova        from '../../components/blocos/Prova.astro'
+import Servicos     from '../../components/blocos/Servicos.astro'
+import AntesDepois  from '../../components/blocos/AntesDepois.astro'
+import AreaAtendida from '../../components/blocos/AreaAtendida.astro'
+import Localizacao  from '../../components/blocos/Localizacao.astro'
+import Depoimentos  from '../../components/blocos/Depoimentos.astro'
+import Cta          from '../../components/blocos/Cta.astro'
+import Proposito    from '../../components/blocos/Proposito.astro'
+import Abordagem    from '../../components/blocos/Abordagem.astro'
+import PostLista    from '../../components/blocos/PostLista.astro'
+import BuscasFrequentes from '../../components/blocos/BuscasFrequentes.astro'
+import Footer       from '../../components/blocos/Footer.astro'
+import { site }     from '../../config/tema-04.ts'
+import { tituloOuPadrao, metaOuPadrao } from '../../lib/paginaFixa.ts'
+import { textoCredencial, organizacaoSchema, areaLista } from '../../lib/schema.ts'
+import { getCollection } from 'astro:content'
+import { ehPublicado, ehServicoListavel } from '../../lib/publicacao.ts'
+import { nomeAutor } from '../../lib/autores.ts'
+import { nomeCategoria } from '../../lib/categorias.ts'
+
+const servicos = (await getCollection('servicosT4', ehServicoListavel))
+  .sort((a, b) => a.data.ordem - b.data.ordem)
+  .map(s => ({
+    titulo:    s.data.titulo,
+    descricao: s.data.resumo,
+    icone:     s.data.icone ?? '',
+    imagem:    s.data.imagem,
+    imagemAlt: s.data.imagemAlt,
+    href:      `/tema-04/${s.id}`,
+    categoria: s.data.categoria,
+  }))
+
+const depoimentos = (await getCollection('depoimentosT4'))
+  .sort((a, b) => a.data.ordem - b.data.ordem)
+  .map(d => ({ nome: d.data.nome, cidade: d.data.cidade, servico: d.data.servico, corpo: (d.body ?? '').trim() }))
+
+const autores = await getCollection('autoresT4')
+const categorias = await getCollection('categoriasT4')
+const posts = (await getCollection('postsT4', ehPublicado))
+  .sort((a, b) => new Date(b.data.publicadoEm).getTime() - new Date(a.data.publicadoEm).getTime())
+  .map(p => ({
+    titulo: p.data.titulo, publicadoEm: p.data.publicadoEm, categoria: nomeCategoria(p.data.categoria, categorias),
+    imagemCapa: p.data.imagemCapa, imagemCapaAlt: p.data.imagemCapaAlt, resumo: p.data.resumo,
+    autor: nomeAutor(p.data, autores), href: `/tema-04/${p.id}`,
+  }))
+
+const anos      = site.anoFundacao ? new Date().getFullYear() - site.anoFundacao : null
+const wa        = `https://wa.me/${site.nap.whatsapp}`
+const canonical = `${site.dominio}/`
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    organizacaoSchema(site, ['HomeAndConstructionBusiness', 'LocalBusiness']),
+    {
+      '@type': 'WebSite', '@id': `${site.dominio}/#website`,
+      url: site.dominio, name: site.nome,
+      publisher: { '@id': `${site.dominio}/#organization` }, inLanguage: 'pt-BR',
+    },
+    {
+      '@type': 'WebPage', '@id': `${canonical}#webpage`,
+      url: canonical, name: `${site.nome} — Higienização de Estofados em ${site.nap.cidade}`,
+      isPartOf: { '@id': `${site.dominio}/#website` },
+      about: { '@id': `${site.dominio}/#organization` }, inLanguage: 'pt-BR',
+    },
+    {
+      '@type': 'FAQPage', '@id': `${canonical}#faq`,
+      mainEntity: site.faq.map(f => ({
+        '@type': 'Question', name: f.pergunta,
+        acceptedAnswer: { '@type': 'Answer', text: f.resposta },
+      })),
+    },
+  ],
+}
+---
+
+<Tema04Base
+  titulo={tituloOuPadrao(site, 'home', `${site.nome} — Higienização de Sofás e Colchões em ${site.nap.cidade}`)}
+  metaDescription={metaOuPadrao(site, 'home', "Higienização de sofás, colchões, tapetes e estofados em domicílio em Campinas e região. Extratora profissional, produtos seguros e garantia de 90 dias.")}
+  canonical={canonical}
+  jsonLd={jsonLd}
+  nodeId="home"
+>
+
+  <Header logoSrc={site.logo?.src} logoAlt={site.logo?.alt}
+    variante="padrao"
+    nomeSite={site.nome}
+    telefone={site.nap.telefone}
+    whatsapp={site.nap.whatsapp}
+    nav={site.nav}
+    ctaTexto="Peça seu orçamento"
+    ctaHref={wa}
+  />
+
+  {/* 1 — promessa, prova e ação na primeira dobra */}
+  <Hero
+    variante="destaque"
+    eyebrow={`Higienização de estofados · ${site.nap.cidade} e região`}
+    titulo="Seu sofá limpo por dentro, não só por cima"
+    lead="Extração profissional que retira ácaros, manchas e odor de dentro da espuma. Serviço em domicílio, com secagem em 8 a 12 horas e garantia de 90 dias."
+    ctaPrimTexto="Orçamento no WhatsApp"
+    ctaPrimHref={wa}
+    ctaSecTexto="Ver os serviços"
+    ctaSecHref="/tema-04/servicos"
+    nota="Mande a foto da peça e receba o valor fechado. Sem visita técnica cobrada."
+    imagem="https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?w=560&h=460&fit=crop&auto=format"
+    imagemAlt="Sofá claro higienizado em sala de estar"
+    provaNumero={anos ? `+${anos} anos` : undefined}
+    provaTexto={`atendendo ${site.nap.cidade} e região`}
+  />
+
+  {/* 2 — as três objeções imediatas */}
+  <Prova itens={site.selos} />
+
+  {/* 3 — o que resolvemos */}
+  <Servicos
+    variante="grade"
+    titulo="O que higienizamos"
+    descricao="Atendimento em domicílio, com preço fechado antes de começar."
+    itens={servicos}
+  />
+
+  {/* 4 — a prova que mais converte no nicho: o resultado visível */}
+  <AntesDepois
+    titulo="O resultado em peças reais"
+    descricao="Fotos de serviços feitos por nós, sem retoque. O que muda é o que estava dentro da fibra."
+    itens={site.antesDepois}
+    ctaTexto="Quero esse resultado"
+    ctaHref={wa}
+  />
+
+  {/* 5 — "vocês atendem meu bairro?" respondido antes de virar contato perdido */}
+  <AreaAtendida
+    eyebrow="Cobertura"
+    titulo={`Atendemos ${site.nap.cidade} e toda a região`}
+    descricao="Equipe própria, uniformizada e com hora marcada. Se o seu bairro não estiver na lista, pergunte: a rota muda conforme a semana."
+    regioes={areaLista(site)}
+    bullets={site.regioesBullets}
+    imagem="https://images.unsplash.com/photo-1449844908441-8829872d2607?w=420&h=480&fit=crop&auto=format"
+    imagemAlt="Rua residencial arborizada em Campinas"
+    selo={`${site.nap.cidade} e região metropolitana`}
+    ctaTexto="Consultar meu bairro"
+    ctaHref={wa}
+  />
+
+  {/* 6 — NAP completo e mapa: regra de composição do tema para home, pilar e serviço */}
+  <Localizacao
+    titulo="Nossa base em Campinas"
+    descricao="O serviço é feito na sua casa. A base recebe só peça que precisa de secagem controlada, como tapete de fibra natural."
+    logradouro={site.nap.logradouro}
+    complemento={site.nap.complemento}
+    bairro={site.nap.bairro}
+    cidade={site.nap.cidade}
+    uf={site.nap.uf}
+    cep={site.nap.cep}
+    telefone={site.nap.telefone}
+    whatsapp={site.nap.whatsapp}
+    email={site.nap.email}
+    horarios={site.horarios}
+    mapaSrc={site.mapaSrc}
+    mapaHref={`https://maps.google.com/?q=${encodeURIComponent(site.nap.enderecoFormatado)}`}
+  />
+
+  {/* 7 — prova social com nota agregada, padrão do nicho */}
+  <Depoimentos
+    titulo="Quem já contratou"
+    descricao="Clientes atendidos em Campinas e região."
+    itens={depoimentos}
+    notaMedia={site.avaliacao.nota}
+    totalAvaliacoes={site.avaliacao.total}
+    fonteAvaliacoes={site.avaliacao.fonte}
+  />
+
+  <Cta
+    variante="padrao"
+    titulo="Renove seus estofados esta semana"
+    descricao="Manda uma foto da peça no WhatsApp. Devolvemos o valor fechado e a primeira data livre, sem compromisso."
+    ctaPrimTexto="Pedir orçamento agora"
+    ctaPrimHref={wa}
+    ctaSecTexto="Ver perguntas frequentes"
+    ctaSecHref="/tema-04/higienizacao-de-estofados#duvidas"
+  />
+
+  {/* 8 — quem somos, depois de já ter mostrado resultado */}
+  <Proposito
+    eyebrow="Sobre a Renovar"
+    titulo={anos ? `${anos} anos higienizando estofado em ${site.nap.cidade}` : `Higienização de estofado em ${site.nap.cidade}`}
+    paragrafos={[
+      `A Renovar começou ${site.anoFundacao ? `em ${site.anoFundacao}` : 'há alguns anos'} com uma extratora e uma van. O que sustentou o crescimento não foi anúncio: foi cliente que chamou de novo seis meses depois e indicou o vizinho.`,
+      'Trabalhamos com equipe própria, não terceirizada. Quem entra na sua casa é funcionário registrado, uniformizado e treinado internamente — inclusive para dizer quando uma mancha não vai sair.',
+      'Já passamos de nove mil peças higienizadas na região. O número que acompanhamos de perto, porém, é outro: a taxa de retorno em garantia, que segue abaixo de 2%.',
+    ]}
+    imagemSrc="https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=760&h=620&fit=crop&auto=format"
+    imagemAlt="Equipe de higienização trabalhando em um estofado"
+  />
+
+  {/* 9 — diferenciais em faixa escura */}
+  <Abordagem
+    titulo="Por que a Renovar e não o mais barato"
+    descricao="Higienização mal feita não é neutra: encharca a espuma, deixa odor de mofo e cobra de novo em três meses."
+    itens={site.diferenciais}
+  />
+
+  <PostLista
+    variante="destaque"
+    titulo="Do blog"
+    descricao="O que a gente explica na porta do cliente, escrito aqui."
+    posts={posts}
+    verMaisHref="/tema-04/blog"
+  />
+
+  <BuscasFrequentes titulo={`Buscas frequentes — ${site.nome}`} itens={site.buscasFrequentes} />
+
+  <Footer credencial={textoCredencial(site)} logoSrc={site.logo?.src} logoAlt={site.logo?.alt}
+    variante="colunas"
+    nomeSite={site.nome}
+    slogan={site.slogan}
+    telefone={site.nap.telefone}
+    email={site.nap.email}
+    endereco={`${site.nap.logradouro}, ${site.nap.complemento}`}
+    cidade={`${site.nap.bairro}, ${site.nap.cidade} — ${site.nap.uf}`}
+    cnpj={site.cnpj}
+    anoFundacao={site.anoFundacao}
+    redes={site.redes}
+    nav={site.nav}
+    colunas={site.navFooterColunas}
+  />
+
+</Tema04Base>

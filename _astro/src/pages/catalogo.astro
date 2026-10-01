@@ -1,0 +1,85 @@
+---
+/**
+ * Capa do catálogo de layouts — só existe no motor de referência.
+ *
+ * Serve para o usuário ESCOLHER olhando: cada cartão abre uma demonstração
+ * navegável com conteúdo fictício. É servida pelo agente enquanto o usuário
+ * decide o layout (localhost) e some do site do cliente quando o layout é
+ * promovido (promover_tema.py remove tudo que não pertence ao layout escolhido).
+ *
+ * Fonte dos dados: config/catalogo-layouts.json (a mesma que gera o catálogo
+ * da tela Layout do painel).
+ */
+import '../styles/global.css'
+import layouts from '../config/catalogo-layouts.json'
+---
+
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Catálogo de layouts — Link Flow</title>
+  <meta name="description" content="Layouts disponíveis para o seu site. Abra cada demonstração e escolha olhando." />
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+</head>
+<body class="bg-surface-2 font-sans text-ink antialiased">
+  <main class="container-wide py-16">
+
+    <header class="mb-12 max-w-[64ch]">
+      <p class="mb-3 text-xs font-semibold uppercase tracking-widest text-ink-muted">Link Flow</p>
+      <h1 class="text-[clamp(1.75rem,4vw,2.5rem)] font-bold leading-tight text-secondary">
+        Catálogo de layouts
+      </h1>
+      <p class="mt-4 text-base leading-relaxed text-ink-muted">
+        Cada layout tem paleta, tipografia e organização de páginas próprias. Abra a demonstração
+        de cada um, navegue como um visitante e escolha o que combina com o seu negócio.
+      </p>
+      <p class="mt-3 text-sm leading-relaxed text-ink-muted">
+        As demonstrações usam conteúdo fictício: empresa, endereço, telefone, registros e
+        depoimentos são de exemplo. No seu site entram os dados reais do seu negócio.
+      </p>
+    </header>
+
+    <ul class="m-0 grid list-none gap-6 p-0 lg:grid-cols-2 xl:grid-cols-3">
+      {layouts.map(t => (
+        <li class="flex flex-col overflow-hidden rounded-[12px] border border-line bg-surface">
+          <div class="flex h-2" aria-hidden="true">
+            <span class="flex-1" style={`background:${t.cor}`}></span>
+            <span class="w-1/4" style={`background:${t.acento}`}></span>
+          </div>
+
+          <div class="flex flex-1 flex-col p-7">
+            <p class="text-xs font-semibold uppercase tracking-widest" style={`color:${t.cor}`}>{t.nicho}</p>
+            <h2 class="mt-1.5 text-lg font-bold text-secondary">{t.nome}</h2>
+            <p class="mt-3 text-sm leading-relaxed text-ink-muted">{t.resumo}</p>
+
+            <dl class="mt-5 space-y-2 text-sm">
+              <div>
+                <dt class="text-xs uppercase tracking-wide text-ink-muted">Indicado para</dt>
+                <dd class="m-0 mt-0.5 text-ink">{t.exemplos}</dd>
+              </div>
+              <div>
+                <dt class="text-xs uppercase tracking-wide text-ink-muted">Tipografia</dt>
+                <dd class="m-0 mt-0.5 text-ink">{t.fonteTitulo} + {t.fonteCorpo}</dd>
+              </div>
+            </dl>
+
+            <div class="mt-auto pt-7">
+              <a href={t.rota}
+                 class="inline-block rounded-[8px] px-6 py-3 text-sm font-semibold text-white no-underline transition-opacity hover:opacity-90"
+                 style={`background:${t.cor}`}>
+                Ver demonstração
+              </a>
+            </div>
+          </div>
+        </li>
+      ))}
+    </ul>
+
+  </main>
+</body>
+</html>

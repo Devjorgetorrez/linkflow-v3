@@ -1,0 +1,246 @@
+---
+/**
+ * Header — variantes: padrao | minimal | centrado | transparente
+ *
+ * Campos: todos do store (marca.* + negocio.*). Nenhum campo de editor.
+ *
+ * transparente: envolve a seção seguinte (via <slot>) num <div class="relative">.
+ *   A variante cria o contexto de posicionamento de que ela própria depende.
+ *   Define --header-offset: 4rem para que os heróis filhos apliquem a folga interna.
+ *
+ * Mobile nav: CSS-only via input[checkbox] + peer-checked. Zero JS.
+ * Empty state: nomeSite fallback "Nome do site"; logo ausente → texto.
+ */
+
+interface NavItem { label: string; href: string; filhos?: NavItem[]; oculto?: boolean }
+
+interface Props {
+  variante?:  'padrao' | 'minimal' | 'centrado' | 'transparente'
+  nomeSite?:  string
+  logoSrc?:   string
+  logoAlt?:   string
+  telefone?:  string
+  whatsapp?:  string
+  nav?:       NavItem[]
+  ctaTexto?:  string
+  ctaHref?:   string
+}
+
+const {
+  variante  = 'padrao',
+  nomeSite  = 'Nome do site',
+  logoSrc,
+  logoAlt   = nomeSite,
+  telefone,
+  whatsapp,
+  nav       = [],
+  ctaTexto,
+  ctaHref:  ctaHrefProp,
+} = Astro.props
+
+const transp   = variante === 'transparente'
+const centrado = variante === 'centrado'
+const comCta   = variante === 'padrao' || variante === 'transparente'
+
+const ctaHref  = ctaHrefProp ?? (whatsapp
+  ? `https://wa.me/55${whatsapp.replace(/\D/g, '')}`
+  : telefone ? `tel:${telefone.replace(/\D/g, '')}` : null)
+const ctaLabel = ctaTexto ?? (whatsapp ? 'WhatsApp' : telefone ?? null)
+
+const toggleId = `hdr-toggle-${variante}`
+
+// Item marcado oculto no painel (Menus > "Ocultar item") continua no config
+// mas nunca chega ao HTML — erro 91, Relatório de Testes 6: antes disso o
+// toggle só mudava o estado da tela do painel, nunca o que o site publicava.
+const navVisivel = nav
+  .filter(item => !item.oculto)
+  .map(item => ({ ...item, filhos: item.filhos?.filter(f => !f.oculto) }))
+---
+
+{/* ── centrado: logo + nav em coluna, sem hamburger ─────────────── */}
+{centrado && (
+  <header class="w-full border-b border-line bg-surface">
+    <div class="container-wide flex flex-col items-center gap-3 py-4">
+      <a href="/" class="no-underline" aria-label={`Início — ${nomeSite}`}>
+        {logoSrc
+          ? <img src={logoSrc} alt={logoAlt} width="160" height="36" class="h-9 w-auto" />
+          : <span class="font-display text-2xl font-semibold text-primary">{nomeSite}</span>
+        }
+      </a>
+      {navVisivel.length > 0 && (
+        <nav class="flex flex-wrap justify-center gap-x-6 gap-y-1 text-sm font-medium"
+             aria-label="Navegação principal">
+          {navVisivel.map(item => (
+            <a href={item.href}
+               class="text-ink no-underline transition-colors hover:text-primary">
+              {item.label}
+            </a>
+          ))}
+        </nav>
+      )}
+    </div>
+  </header>
+)}
+
+{/* ── transparente: gerencia o relative + slot internamente ─────── */}
+{transp && (
+  <div class="relative" style="--header-offset: 4rem">
+    <input type="checkbox" id={toggleId} class="sr-only peer" />
+
+    <header class="absolute top-0 left-0 right-0 z-50 bg-transparent">
+      <div class="container-wide flex items-center justify-between gap-4 h-16">
+        <a href="/" class="shrink-0 no-underline" aria-label={`Início — ${nomeSite}`}>
+          {logoSrc
+            ? <img src={logoSrc} alt={logoAlt} width="130" height="32" class="h-8 w-auto" loading="lazy" />
+            : <span class="font-display text-xl font-semibold text-surface">{nomeSite}</span>
+          }
+        </a>
+
+        {navVisivel.length > 0 && (
+          <nav class="hidden md:flex items-center gap-5 text-sm font-medium flex-1 justify-center"
+               aria-label="Navegação principal">
+            {navVisivel.map(item => (
+              <a href={item.href}
+                 class="text-surface/80 no-underline transition-colors hover:text-surface">
+                {item.label}
+              </a>
+            ))}
+          </nav>
+        )}
+
+        <div class="flex items-center gap-2 shrink-0">
+          {ctaHref && ctaLabel && (
+            <a href={ctaHref}
+               class="hidden sm:inline-flex items-center rounded-btn bg-surface px-4 py-2 text-sm font-semibold text-primary no-underline transition-opacity hover:opacity-90">
+              {ctaLabel}
+            </a>
+          )}
+          <label for={toggleId}
+                 class="md:hidden cursor-pointer p-1.5 rounded text-surface"
+                 aria-label="Abrir menu">
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+              <path d="M3 6h16M3 11h16M3 16h16"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </label>
+        </div>
+      </div>
+    </header>
+
+    {/* Nav mobile — absolute, sobrepõe o hero */}
+    {navVisivel.length > 0 && (
+      <div class="absolute top-16 left-0 right-0 z-40 hidden peer-checked:block bg-secondary">
+        <nav class="container-wide py-2 flex flex-col" aria-label="Navegação mobile">
+          {navVisivel.map(item => (
+            <a href={item.href}
+               class="py-2.5 border-b border-surface/10 last:border-0 text-sm font-medium text-surface no-underline transition-colors hover:text-accent">
+              {item.label}
+            </a>
+          ))}
+        </nav>
+      </div>
+    )}
+
+    {/* Slot: recebe o bloco hero que virá sob o header transparente */}
+    <slot />
+  </div>
+)}
+
+{/* ── padrao / minimal: barra horizontal sticky ─────────────────── */}
+{!transp && !centrado && (
+  <Fragment>
+    <input type="checkbox" id={toggleId} class="sr-only peer" />
+
+    <header class="w-full sticky top-0 z-40 bg-surface/90 backdrop-blur-sm border-b border-line">
+      <div class="container-wide flex items-center justify-between gap-4 h-20">
+        <a href="/" class="shrink-0 no-underline" aria-label={`Início — ${nomeSite}`}>
+          {logoSrc
+            ? <img src={logoSrc} alt={logoAlt} width="130" height="32" class="h-8 w-auto" loading="lazy" />
+            : <span class="font-display text-xl font-semibold text-primary">{nomeSite}</span>
+          }
+        </a>
+
+        {navVisivel.length > 0 && (
+          <nav class="hidden md:flex items-center gap-5 text-sm font-medium flex-1 justify-center"
+               aria-label="Navegação principal">
+            {navVisivel.map(item => (
+              item.filhos && item.filhos.length > 0 ? (
+                <div class="group relative">
+                  <a href={item.href}
+                     class="inline-flex items-center gap-1 text-ink no-underline transition-colors hover:text-primary">
+                    {item.label}
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true" class="mt-0.5">
+                      <path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" stroke-width="1.5"
+                            stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </a>
+                  {/* Dropdown CSS-only — abre no hover (mouse) e no focus (teclado) */}
+                  <div class="invisible absolute left-1/2 top-full -translate-x-1/2 pt-2 opacity-0
+                              transition-opacity duration-150 group-hover:visible group-hover:opacity-100
+                              group-focus-within:visible group-focus-within:opacity-100">
+                    <div class="flex min-w-[220px] flex-col rounded-lg border border-line bg-surface py-2 shadow-lg">
+                      {item.filhos.map(filho => (
+                        <a href={filho.href}
+                           class="px-4 py-2 text-sm text-ink no-underline transition-colors hover:bg-secondary hover:text-primary">
+                          {filho.label}
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <a href={item.href}
+                   class="text-ink no-underline transition-colors hover:text-primary">
+                  {item.label}
+                </a>
+              )
+            ))}
+          </nav>
+        )}
+
+        <div class="flex items-center gap-2 shrink-0">
+          {comCta && ctaHref && ctaLabel && (
+            <a href={ctaHref}
+               class="hidden sm:inline-flex items-center rounded-btn bg-primary px-4 py-2 text-sm font-semibold text-primary-ink no-underline transition-opacity hover:opacity-90">
+              {ctaLabel}
+            </a>
+          )}
+          <label for={toggleId}
+                 class="md:hidden cursor-pointer p-1.5 rounded text-ink transition-colors hover:bg-line/40"
+                 aria-label="Abrir menu">
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+              <path d="M3 6h16M3 11h16M3 16h16"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </label>
+        </div>
+      </div>
+    </header>
+
+    {/* Nav mobile */}
+    {navVisivel.length > 0 && (
+      <div class="sticky top-20 z-30 hidden peer-checked:block bg-surface border-b border-line md:hidden">
+        <nav class="container-wide py-2 flex flex-col" aria-label="Navegação mobile">
+          {navVisivel.map(item => (
+            <Fragment>
+              <a href={item.href}
+                 class="py-2.5 border-b border-line/40 last:border-0 text-sm font-medium text-ink no-underline transition-colors hover:text-primary">
+                {item.label}
+              </a>
+              {item.filhos && item.filhos.length > 0 && (
+                <div class="flex flex-col border-b border-line/40 pb-1">
+                  {item.filhos.map(filho => (
+                    <a href={filho.href}
+                       class="py-2 pl-4 text-sm text-ink-muted no-underline transition-colors hover:text-primary">
+                      {filho.label}
+                    </a>
+                  ))}
+                </div>
+              )}
+            </Fragment>
+          ))}
+        </nav>
+      </div>
+    )}
+  </Fragment>
+)}

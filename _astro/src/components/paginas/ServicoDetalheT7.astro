@@ -1,0 +1,292 @@
+---
+/**
+ * Página de tipo de plano interno do Tema 07 (renderizada por pages/tema-07/[slug].astro,
+ * em /<slug> — URL plana; o pilar é /planos).
+ *
+ * Estrutura da referência: apresentação do produto, formulário de cotação
+ * logo no topo, texto explicativo, números e prova social, e a cotação
+ * repetida ao fim — porque nesse modelo a página inteira serve ao lead.
+ */
+import Tema07Base   from '../../layouts/Tema07Base.astro'
+import Header       from '../../components/blocos/Header.astro'
+import Hero         from '../../components/blocos/Hero.astro'
+import FormContato  from '../../components/blocos/FormContato.astro'
+import Prova        from '../../components/blocos/Prova.astro'
+import Passos       from '../../components/blocos/Passos.astro'
+import Numeros      from '../../components/blocos/Numeros.astro'
+import Depoimentos  from '../../components/blocos/Depoimentos.astro'
+import Faq          from '../../components/blocos/Faq.astro'
+import Localizacao  from '../../components/blocos/Localizacao.astro'
+import Servicos     from '../../components/blocos/Servicos.astro'
+import Cta          from '../../components/blocos/Cta.astro'
+import Footer       from '../../components/blocos/Footer.astro'
+import { site }     from '../../config/tema-07.ts'
+import { textoCredencial, areaServida, areaLista } from '../../lib/schema.ts'
+import { getCollection, render } from 'astro:content'
+import { ehServicoListavel } from '../../lib/publicacao.ts'
+
+interface Props {
+  entry: Awaited<ReturnType<typeof getCollection<'servicosT7'>>>[number]
+}
+
+const { entry }   = Astro.props
+const { Content } = await render(entry)
+const canonical   = `${site.dominio}/${entry.id}/`
+const wa          = `https://wa.me/${site.nap.whatsapp}`
+
+const outros = (await getCollection('servicosT7', ehServicoListavel))
+  .filter(s => s.id !== entry.id)
+  .sort((a, b) => a.data.ordem - b.data.ordem)
+  .map(s => ({
+    titulo: s.data.titulo, descricao: s.data.resumo, icone: s.data.icone ?? '',
+    imagem: s.data.imagem, imagemAlt: s.data.imagemAlt,
+    href: `/tema-07/${s.id}`, categoria: s.data.categoria,
+  }))
+
+const depoimentos = (await getCollection('depoimentosT7'))
+  .sort((a, b) => a.data.ordem - b.data.ordem)
+  .map(d => ({ nome: d.data.nome, cidade: d.data.cidade, servico: d.data.servico, corpo: (d.body ?? '').trim() }))
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'Service', '@id': `${canonical}#service`,
+      name: entry.data.titulo, description: entry.data.metaDescription,
+      serviceType: entry.data.categoria,
+      provider: { '@id': `${site.dominio}/#organization` },
+      areaServed: areaServida(site).length ? areaServida(site) : undefined,
+    },
+    {
+      '@type': 'WebPage', '@id': `${canonical}#webpage`,
+      url: canonical, name: `${entry.data.titulo} — ${site.nome}`, inLanguage: 'pt-BR',
+    },
+    {
+      '@type': 'BreadcrumbList', '@id': `${canonical}#breadcrumb`,
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home',   item: `${site.dominio}/` },
+        { '@type': 'ListItem', position: 2, name: 'Planos', item: `${site.dominio}/planos` },
+        { '@type': 'ListItem', position: 3, name: entry.data.titulo, item: canonical },
+      ],
+    },
+    {
+      '@type': 'FAQPage', '@id': `${canonical}#faq`,
+      mainEntity: site.faq.map(f => ({
+        '@type': 'Question', name: f.pergunta,
+        acceptedAnswer: { '@type': 'Answer', text: f.resposta },
+      })),
+    },
+  ],
+}
+---
+
+<Tema07Base
+  titulo={`${entry.data.titulo} em ${site.nap.cidade} — ${site.nome}`}
+  metaDescription={entry.data.metaDescription}
+  canonical={canonical}
+  jsonLd={jsonLd}
+  nodeId="plano"
+  noindex={entry.data.noindex ?? false}
+>
+  <Header
+    variante="padrao"
+    nomeSite={site.nome}
+    logoSrc={site.logo?.src}
+    logoAlt={site.logo?.alt}
+    telefone={site.nap.telefone}
+    whatsapp={site.nap.whatsapp}
+    nav={site.nav}
+    ctaTexto="Solicitar cotação"
+    ctaHref="#cotacao"
+  />
+
+  <Hero
+    variante="destaque"
+    eyebrow={entry.data.categoria}
+    titulo={`${entry.data.titulo} em ${site.nap.cidade}`}
+    lead={entry.data.resumo}
+    ctaPrimTexto="Solicitar cotação"
+    ctaPrimHref="#cotacao"
+    ctaSecTexto="Ver todos os planos"
+    ctaSecHref="/tema-07/planos"
+    imagem={entry.data.imagem}
+    imagemAlt={entry.data.imagemAlt}
+    provaNumero={entry.data.vidasMin}
+    provaTexto="para contratar"
+  />
+
+  {/* Faixa de destaques */}
+  {entry.data.destaques.length > 0 && (
+    <section class="border-b border-line bg-surface-2 py-8">
+      <div class="container-wide">
+        <ul class="m-0 grid list-none gap-4 p-0 sm:grid-cols-3">
+          {entry.data.destaques.map(d => (
+            <li class="flex gap-3 text-sm leading-snug text-ink">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="2.5" class="mt-0.5 shrink-0 text-accent" aria-hidden="true">
+                <path d="m5 13 4 4L19 7"/>
+              </svg>
+              <span>{d}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  )}
+
+  {/* O formulário vem cedo: é o objetivo da página */}
+  <div id="cotacao">
+    <FormContato
+      variante="cotacao"
+      eyebrow="Cotação sem compromisso"
+      titulo="Receba um comparativo entre operadoras"
+      descricao="Preencha os dados e devolvemos, em até um dia útil, as opções elegíveis ao seu perfil — com preço, rede, carência e histórico de reajuste lado a lado."
+      textoApoio={[
+        'A corretora é remunerada pela operadora. Você paga o mesmo valor de tabela, com a assessoria da escolha e o suporte depois da contratação incluídos.',
+        'Seus dados são usados apenas para elaborar a cotação. Não repassamos seu contato a terceiros.',
+      ]}
+      whatsapp={site.nap.whatsapp}
+      cidades={areaLista(site)}
+    />
+  </div>
+
+  {/* Texto explicativo + barra lateral */}
+  <section class="py-[var(--space-section)]">
+    <div class="container-wide grid gap-12 lg:grid-cols-[1fr_340px] lg:items-start">
+      <div class="article-body">
+        <nav class="mb-6 text-xs text-ink-muted" aria-label="Breadcrumb">
+          <a href="/tema-07" class="no-underline hover:text-primary">Home</a>
+          <span class="mx-1.5 text-ink-muted/50">›</span>
+          <a href="/tema-07/planos" class="no-underline hover:text-primary">Planos</a>
+          <span class="mx-1.5 text-ink-muted/50">›</span>
+          <span>{entry.data.titulo}</span>
+        </nav>
+        <Content />
+      </div>
+
+      <aside class="flex flex-col gap-4 lg:sticky lg:top-6">
+        {entry.data.paraQuem && (
+          <div class="rounded-[var(--radius-card)] border border-line bg-surface-2 p-6">
+            <p class="mb-2 text-xs font-semibold uppercase tracking-wider text-primary">Para quem é</p>
+            <p class="text-sm leading-relaxed text-ink-muted">{entry.data.paraQuem}</p>
+            {entry.data.vidasMin && (
+              <p class="mt-3 border-t border-line pt-3 text-sm">
+                <strong class="font-semibold text-secondary">Mínimo:</strong>{' '}
+                <span class="text-ink-muted">{entry.data.vidasMin}</span>
+              </p>
+            )}
+          </div>
+        )}
+
+        {entry.data.inclui.length > 0 && (
+          <div class="rounded-[var(--radius-card)] border border-line bg-surface p-6">
+            <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-primary">O que a corretora faz</p>
+            <ul class="m-0 flex list-none flex-col gap-2.5 p-0">
+              {entry.data.inclui.map(i => (
+                <li class="flex gap-2.5 text-sm leading-snug text-ink">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                       stroke-width="2.5" class="mt-0.5 shrink-0 text-accent" aria-hidden="true">
+                    <path d="m5 13 4 4L19 7"/>
+                  </svg>
+                  <span>{i}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <div class="rounded-[var(--radius-card)] bg-secondary p-6 text-surface">
+          <p class="font-display text-base font-bold leading-snug">Prefere falar com alguém?</p>
+          <p class="mt-2 text-sm leading-relaxed text-surface/75">
+            Um corretor responde no WhatsApp e monta a cotação com você, sem formulário.
+          </p>
+          <a href={wa} target="_blank" rel="noopener noreferrer"
+             class="mt-4 inline-block rounded-[var(--radius-btn)] bg-success px-5 py-2.5 text-sm font-bold text-white no-underline transition-opacity hover:opacity-90">
+            Chamar no WhatsApp
+          </a>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  {/* Coberturas do plano */}
+  {entry.data.coberturas.length > 0 && (
+    <Prova
+      titulo="O que entra na cobertura"
+      descricao="Itens que definem o preço e a utilidade do plano. Vale conferir cada um antes de comparar valores."
+      itens={entry.data.coberturas}
+    />
+  )}
+
+  <Passos
+    variante="cards"
+    titulo="Como funciona a cotação"
+    descricao="Quatro etapas, sem custo em nenhuma delas."
+    itens={site.passos}
+  />
+
+  <Prova
+    variante="logos"
+    titulo="Operadoras que cotamos para este perfil"
+    descricao="A elegibilidade varia conforme cidade, número de vidas e vínculo. Confirmamos antes de montar o comparativo."
+    itens={site.operadoras}
+  />
+
+  <Numeros variante="escuro" titulo="A corretora em números" itens={site.numeros} nota={site.numerosNota} />
+
+  <Depoimentos
+    titulo="Quem já contratou este tipo de plano"
+    itens={depoimentos}
+    notaMedia={site.avaliacao.nota}
+    totalAvaliacoes={site.avaliacao.total}
+    fonteAvaliacoes={site.avaliacao.fonte}
+  />
+
+  <Faq
+    variante="com-imagem"
+    titulo={`Dúvidas sobre ${entry.data.titulo.toLowerCase()}`}
+    itens={site.faq}
+    imagem="https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=400&h=520&fit=crop&auto=format"
+    imagemAlt="Atendimento em consultório médico"
+  />
+
+  <Localizacao
+    titulo="Onde estamos"
+    descricao="Atendimento presencial em Sorocaba com agendamento e remoto nas demais cidades da região."
+    logradouro={site.nap.logradouro} complemento={site.nap.complemento}
+    bairro={site.nap.bairro} cidade={site.nap.cidade} uf={site.nap.uf} cep={site.nap.cep}
+    telefone={site.nap.telefone} whatsapp={site.nap.whatsapp} email={site.nap.email}
+    horarios={site.horarios} mapaSrc={site.mapaSrc}
+    mapaHref={`https://maps.google.com/?q=${encodeURIComponent(site.nap.enderecoFormatado)}`}
+  />
+
+  <Servicos variante="lista" titulo="Outros tipos de plano" itens={outros} />
+
+  <Cta
+    variante="padrao"
+    titulo={`Quer um comparativo de ${entry.data.titulo.toLowerCase()}?`}
+    descricao="Devolvemos em até um dia útil, com preço, rede, carência e histórico de reajuste lado a lado."
+    ctaPrimTexto="Solicitar cotação"
+    ctaPrimHref="#cotacao"
+    ctaSecTexto="Falar no WhatsApp"
+    ctaSecHref={wa}
+  />
+
+  <Footer
+    variante="colunas"
+    nomeSite={site.nome}
+    logoSrc={site.logo?.src}
+    logoAlt={site.logo?.alt}
+    credencial={textoCredencial(site)}
+    slogan={site.slogan}
+    telefone={site.nap.telefone}
+    email={site.nap.email}
+    endereco={`${site.nap.logradouro}, ${site.nap.complemento}`}
+    cidade={`${site.nap.bairro}, ${site.nap.cidade} — ${site.nap.uf}`}
+    cnpj={site.cnpj}
+    anoFundacao={site.anoFundacao}
+    redes={site.redes}
+    nav={site.nav}
+    colunas={site.navFooterColunas}
+  />
+</Tema07Base>

@@ -1,0 +1,118 @@
+---
+import Tema05Base   from '../../layouts/Tema05Base.astro'
+import Header       from '../../components/blocos/Header.astro'
+import PageHero     from '../../components/blocos/PageHero.astro'
+import FormContato  from '../../components/blocos/FormContato.astro'
+import Localizacao  from '../../components/blocos/Localizacao.astro'
+import Prova        from '../../components/blocos/Prova.astro'
+import Depoimentos  from '../../components/blocos/Depoimentos.astro'
+import Cta          from '../../components/blocos/Cta.astro'
+import Footer       from '../../components/blocos/Footer.astro'
+import { site }     from '../../config/tema-05.ts'
+import { tituloOuPadrao, metaOuPadrao } from '../../lib/paginaFixa.ts'
+import { textoCredencial } from '../../lib/schema.ts'
+import { getCollection } from 'astro:content'
+
+const depoimentos = (await getCollection('depoimentosT5'))
+  .sort((a, b) => a.data.ordem - b.data.ordem)
+  .map(d => ({ nome: d.data.nome, cidade: d.data.cidade, servico: d.data.servico, corpo: (d.body ?? '').trim() }))
+
+const canonical = `${site.dominio}/contato/`
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    { '@type': 'ContactPage', '@id': `${canonical}#webpage`, url: canonical,
+      name: `Contato — ${site.nome}`, about: { '@id': `${site.dominio}/#organization` }, inLanguage: 'pt-BR' },
+    { '@type': 'BreadcrumbList', '@id': `${canonical}#breadcrumb`,
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home',    item: `${site.dominio}/` },
+        { '@type': 'ListItem', position: 2, name: 'Contato', item: canonical },
+      ] },
+  ],
+}
+---
+
+<Tema05Base
+  titulo={tituloOuPadrao(site, 'contato', `Contato — Agende atendimento no ${site.nome}`)}
+  metaDescription={metaOuPadrao(site, 'contato', "Agende uma conversa com um advogado previdenciário em Belo Horizonte. Atendimento presencial com hora marcada e por videoconferência para outras cidades.")}
+  canonical={canonical}
+  jsonLd={jsonLd}
+  nodeId="contato"
+>
+  <Header logoSrc={site.logo?.src} logoAlt={site.logo?.alt} variante="padrao" nomeSite={site.nome} telefone={site.nap.telefone}
+          whatsapp={site.nap.whatsapp} nav={site.nav}
+          ctaTexto="Agendar atendimento" ctaHref="#formulario" />
+
+  <PageHero
+    variante="destaque"
+    titulo={`Contato — Agende atendimento no ${site.nome}`}
+    descricao="Quem responde é advogado, não atendente. A conversa inicial serve para entender a sua história de contribuição e dizer o que o caso comporta."
+  />
+
+  <div id="formulario">
+    <FormContato
+      variante="institucional"
+      eyebrow="Fale com o escritório"
+      descricao="Descreva a sua situação previdenciária em poucas linhas. Retornamos em até um dia útil para agendar a conversa."
+      chamada="Atendimento presencial e por videoconferência"
+      titulo="Nossos contatos"
+      telefone={site.nap.telefone}
+      telefone2={site.nap.telefone2}
+      whatsapp={site.nap.whatsapp}
+      email={site.nap.email}
+      logradouro={site.nap.logradouro}
+      complemento={site.nap.complemento}
+      bairro={site.nap.bairro}
+      cidade={site.nap.cidade}
+      uf={site.nap.uf}
+      cep={site.nap.cep}
+      horarios={site.horarios}
+    />
+  </div>
+
+  <Prova variante="faixa" titulo="O que esperar do atendimento" itens={site.selos} />
+
+  <Localizacao
+    titulo="Onde estamos"
+    descricao="Bairro Funcionários, em Belo Horizonte, com estacionamento no edifício. Atendimento com hora marcada."
+    logradouro={site.nap.logradouro} complemento={site.nap.complemento}
+    bairro={site.nap.bairro} cidade={site.nap.cidade} uf={site.nap.uf} cep={site.nap.cep}
+    telefone={site.nap.telefone} whatsapp={site.nap.whatsapp} email={site.nap.email}
+    horarios={site.horarios} mapaSrc={site.mapaSrc}
+    mapaHref={`https://maps.google.com/?q=${encodeURIComponent(site.nap.enderecoFormatado)}`}
+  />
+
+  <Depoimentos
+    titulo="Relatos de quem já foi atendido"
+    itens={depoimentos}
+    notaMedia="4,9"
+    totalAvaliacoes="+140"
+    fonteAvaliacoes="avaliações no Google"
+  />
+
+  <Cta
+    variante="padrao"
+    titulo="O que levar para a primeira conversa"
+    descricao="Carteira de trabalho, extrato do CNIS, carnês de recolhimento e, se houver, a carta de indeferimento do INSS e os laudos médicos. Se não tiver tudo, venha assim mesmo."
+    ctaPrimTexto="Preencher o formulário"
+    ctaPrimHref="#formulario"
+    ctaSecTexto="Entender o processo"
+    ctaSecHref="/tema-05/direito-previdenciario"
+  />
+
+  <Footer credencial={textoCredencial(site)} logoSrc={site.logo?.src} logoAlt={site.logo?.alt}
+    variante="colunas"
+    nomeSite={site.nome}
+    slogan={site.slogan}
+    telefone={site.nap.telefone}
+    email={site.nap.email}
+    endereco={`${site.nap.logradouro}, ${site.nap.complemento}`}
+    cidade={`${site.nap.bairro}, ${site.nap.cidade} — ${site.nap.uf}`}
+    cnpj={site.cnpj}
+    anoFundacao={site.anoFundacao}
+    redes={site.redes}
+    nav={site.nav}
+    colunas={site.navFooterColunas}
+  />
+</Tema05Base>

@@ -1,0 +1,89 @@
+---
+/**
+ * Rota unificada para serviços, categorias e posts do Tema 04 — mesmo
+ * padrão do tema-03 e do tema base: slug decide o quê, sem /servicos/
+ * nem /blog/ nem /categoria/ no caminho do item individual.
+ *
+ * Prioridade em caso de slug repetido (decisão do Jorge): página fixa >
+ * serviço > categoria > artigo.
+ */
+import ServicoDetalheT4 from '../../components/paginas/ServicoDetalheT4.astro'
+import CategoriaDetalheT4 from '../../components/paginas/CategoriaDetalheT4.astro'
+import PostDetalheT4 from '../../components/paginas/PostDetalheT4.astro'
+import { getCollection } from 'astro:content'
+import { ehPublicado } from '../../lib/publicacao.ts'
+
+export async function getStaticPaths() {
+  // Declarado DENTRO de getStaticPaths: o Astro isola essa função num
+  // chunk próprio de pré-renderização e não inclui const do escopo do
+  // módulo declarada fora dela.
+  const RESERVADOS = new Set([
+    'sobre', 'contato', 'servicos', 'blog', 'autor',
+    'politica-de-privacidade', 'termos-de-uso',
+  ])
+
+  const servicos = await getCollection('servicosT4')
+  const categorias = await getCollection('categoriasT4')
+  const posts = await getCollection('postsT4', ehPublicado)
+
+  const pathsServicos = servicos
+    .filter(s => {
+      if (RESERVADOS.has(s.id)) {
+        console.error(`tema-04/[slug].astro: serviço "${s.id}" colide com página fixa — ignorado. Troque o slug do serviço.`)
+        return false
+      }
+      return true
+    })
+    .map(s => ({ params: { slug: s.id }, props: { tipo: 'servico' as const, entry: s } }))
+
+  const slugsServicos = new Set(pathsServicos.map(p => p.params.slug))
+
+  const pathsCategorias = categorias
+    .filter(c => {
+      if (RESERVADOS.has(c.id)) {
+        console.error(`tema-04/[slug].astro: categoria "${c.id}" colide com página fixa — ignorada. Troque o slug da categoria.`)
+        return false
+      }
+      if (slugsServicos.has(c.id)) {
+        console.error(`tema-04/[slug].astro: colisão de slug "${c.id}" entre servicosT4 e categoriasT4 — a categoria foi ignorada nesta URL, o serviço prevalece. Troque o slug da categoria.`)
+        return false
+      }
+      return true
+    })
+    .map(c => ({ params: { slug: c.id }, props: { tipo: 'categoria' as const, entry: c } }))
+
+  const slugsCategorias = new Set(pathsCategorias.map(p => p.params.slug))
+
+  const pathsPosts = posts
+    .filter(p => {
+      if (RESERVADOS.has(p.id)) {
+        console.error(`tema-04/[slug].astro: post "${p.id}" colide com página fixa — ignorado. Troque o slug do post.`)
+        return false
+      }
+      if (slugsServicos.has(p.id)) {
+        console.error(
+          `tema-04/[slug].astro: colisão de slug "${p.id}" entre servicosT4 e postsT4 — ` +
+          `o post foi ignorado nesta URL, o serviço prevalece. Troque o slug do post.`
+        )
+        return false
+      }
+      if (slugsCategorias.has(p.id)) {
+        console.error(`tema-04/[slug].astro: colisão de slug "${p.id}" entre categoriasT4 e postsT4 — o post foi ignorado nesta URL, a categoria prevalece. Troque o slug do post.`)
+        return false
+      }
+      return true
+    })
+    .map(p => ({
+      params: { slug: p.id },
+      props: { tipo: 'post' as const, entry: p },
+    }))
+
+  return [...pathsServicos, ...pathsCategorias, ...pathsPosts]
+}
+
+const { tipo, entry } = Astro.props
+---
+
+{tipo === 'servico' && <ServicoDetalheT4 entry={entry} />}
+{tipo === 'categoria' && <CategoriaDetalheT4 entry={entry} />}
+{tipo === 'post' && <PostDetalheT4 entry={entry} />}

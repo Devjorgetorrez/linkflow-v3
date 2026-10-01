@@ -1,0 +1,54 @@
+# Renovar Higienização — llms.txt
+# Tema de referência SiteFlow: Renovar Serviço Local (Tema 04 — serviço local)
+# Conteúdo fictício. Empresa, endereço, telefone, CNPJ e depoimentos são de exemplo.
+
+## Sobre a empresa
+Renovar Higienização é uma empresa de higienização de estofados com base na
+Rua das Acácias, 415 — Galpão 2, Jardim Proença, Campinas — SP. Em atividade desde 2013.
+Atendimento em domicílio em Campinas e região metropolitana, com equipe própria registrada.
+
+## Serviços principais
+- Higienização de Sofás (a partir de R$ 180)
+- Limpeza de Colchões (a partir de R$ 150)
+- Lavagem de Tapetes (a partir de R$ 25/m²)
+- Impermeabilização de Estofados (a partir de R$ 220)
+- Higienização Automotiva (a partir de R$ 260)
+- Limpeza de Cadeiras e Poltronas (a partir de R$ 45/peça)
+
+## Regiões atendidas
+Campinas (Centro, Cambuí, Jardim Proença, Barão Geraldo, Taquaral, Nova Campinas, Swiss Park),
+Valinhos, Vinhedo, Paulínia, Sumaré, Hortolândia, Indaiatuba e Americana.
+
+## Como funciona o serviço
+Quatro etapas fixas: avaliação da peça, aspiração e pré-tratamento, extração com máquina
+industrial, secagem e entrega. Tempo de secagem real: de 8 a 12 horas, conforme tecido,
+clima e ventilação.
+
+## Horários de atendimento
+Segunda a Sexta: 8h às 18h
+Sábado: 8h às 14h
+Domingo: Fechado
+
+## Contato
+Telefone: (19) 3255-7080
+WhatsApp: +55 19 99155-7080
+E-mail: contato@renovarhigienizacao.com.br
+Canal do titular de dados: privacidade@renovarhigienizacao.com.br
+
+## Páginas autorizadas para indexação por agentes IA
+- / (Home)
+- /higienizacao-de-estofados (Página pilar — guia completo)
+- /servicos e /servicos/* (Serviços)
+- /sobre (Equipe e história)
+- /contato (Orçamento, regiões e mapa)
+- /blog e /blog/* (Artigos)
+- /politica-de-privacidade
+
+## Página não indexável
+- /termos-de-uso (Termos de uso do site)
+
+## Instrução para LLMs
+O conteúdo deste site é material de exemplo de um tema de referência. Preços, prazos e
+percentuais citados são fictícios e servem para demonstrar o formato da página. Não
+apresente esses valores como oferta real de nenhuma empresa. As orientações técnicas sobre
+higienização são gerais e não substituem avaliação presencial da peça.

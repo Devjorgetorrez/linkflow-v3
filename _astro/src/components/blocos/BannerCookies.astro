@@ -1,0 +1,269 @@
+---
+/**
+ * BannerCookies — faixa discreta no rodapé da tela (não é modal, não bloqueia
+ * a leitura da página), em todas as páginas. Renderizado pelos layouts, igual
+ * ao BotaoWhatsApp — decide sozinho se aparece.
+ *
+ * SEMPRE aparece (Relatório de Testes 4, erro 45 — "sem nada pra consentir,
+ * sem banner" era falso em produção: todo cliente real cedo ou tarde tem
+ * Analytics/Pixel, e o formulário de contato já coleta dado pessoal mesmo
+ * sem cookie nenhum). O que muda é o TIPO:
+ *   - há categoria de cookie NÃO essencial (`site.legal.cookies`) ou
+ *     rastreador configurado (GA4/GTM/Meta Pixel) → banner pede
+ *     consentimento de verdade (Aceitar/Rejeitar/Personalizar).
+ *   - só cookie estritamente necessário → aviso informativo, sem pedir
+ *     nada (a ANPD não considera consentimento real possível aqui), só o
+ *     botão "Entendi".
+ *
+ * Aceitar/Rejeitar têm o mesmo peso visual (mesma classe base, mesmo tamanho).
+ * Personalizar é secundário e abre um painel com as categorias reais do site.
+ * A escolha é gravada no localStorage (scripts/consentimento-carregar.ts) e
+ * controla se GA4/GTM/Meta Pixel chegam a carregar (scripts/consentimento-ui.ts).
+ *
+ * z-index 50: acima do botão flutuante de WhatsApp (z-40, ver BotaoWhatsApp.astro).
+ */
+import { bannerNecessario, cookiesNaoEssenciais, integracoesAtivas, pedeConsentimento, type SiteComoConfig } from '../../lib/consentimento.ts'
+
+interface Props {
+  site: SiteComoConfig
+}
+const { site } = Astro.props
+
+// Banner é sempre obrigatório (erro 45) — só o TIPO muda: pede
+// consentimento de verdade, ou é só um aviso informativo (site com
+// apenas cookie estritamente necessário).
+const precisa = bannerNecessario(site)
+const consentimentoReal = pedeConsentimento(site)
+const categorias = cookiesNaoEssenciais(site)
+const integ = integracoesAtivas(site)
+const versaoPolitica = site.legal?.versaoPolitica ?? ''
+
+// Painel "Personalizar" só mostra categoria que exista de fato no site.
+const temAnaliticos = integ.analiticos || categorias.some((c) => c.bucket === 'analiticos')
+const temMarketing = integ.marketing || categorias.some((c) => c.bucket === 'marketing')
+const temFuncionais = categorias.some((c) => c.bucket === 'funcionais')
+
+// site.cookieBanner (painel > Privacidade > Cookies): todos os campos são
+// opcionais — ausência = os mesmos padrões de sempre (sem regressão para
+// quem nunca mexeu na tela). posicaoH "center" + posicaoV "bottom" É o
+// padrão de sempre (faixa no rodapé, largura total); qualquer outra
+// combinação vira um cartão flutuante posicionado (data-card abaixo).
+const cfg = site.cookieBanner ?? {}
+const titulo = (cfg.titulo ?? '').trim()
+const descricao = (cfg.descricao ?? '').trim() ||
+  'Usamos cookies para o site funcionar e, com sua permissão, para medir audiência e anúncios.'
+const modalDescricao = (cfg.modalDescricao ?? '').trim() ||
+  'Escolha o que pode ser usado. Cookies necessários (sessão, proteção do formulário) sempre ficam ativos.'
+const posicaoH = cfg.posicaoH === 'left' || cfg.posicaoH === 'right' ? cfg.posicaoH : 'center'
+const posicaoV = cfg.posicaoV === 'top' || cfg.posicaoV === 'middle' ? cfg.posicaoV : 'bottom'
+const emCartao = posicaoH !== 'center' || posicaoV !== 'bottom'
+const registroConsentimento = cfg.registroConsentimento === true
+---
+
+{precisa && (
+  <div id="lf-banner-cookies" class="lf-cookies" role="region" aria-label="Preferências de cookies"
+       data-ga={site.googleAnalyticsId || ''} data-gtm={site.googleTagManagerId || ''} data-pixel={site.metaPixelId || ''}
+       data-posh={posicaoH} data-posv={posicaoV} data-card={emCartao ? '1' : '0'}
+       data-registro={registroConsentimento ? '1' : '0'}
+       data-consentimento={consentimentoReal ? '1' : '0'}
+       data-versao-politica={versaoPolitica}
+       hidden>
+    {consentimentoReal ? (
+      <div class="lf-cookies__faixa">
+        {titulo && <p class="lf-cookies__titulo">{titulo}</p>}
+        <p class="lf-cookies__texto">
+          {descricao}
+          {' '}Veja nossa <a href="/politica-de-privacidade">Política de Privacidade</a>.
+        </p>
+        <div class="lf-cookies__acoes">
+          <button type="button" data-lf-personalizar class="lf-cookies__link">Personalizar</button>
+          <button type="button" data-lf-rejeitar class="lf-cookies__btn lf-cookies__btn--rejeitar">Rejeitar</button>
+          <button type="button" data-lf-aceitar class="lf-cookies__btn lf-cookies__btn--aceitar">Aceitar</button>
+        </div>
+      </div>
+    ) : (
+      // Só cookie estritamente necessário: nada pra "aceitar" ou "rejeitar"
+      // de verdade — a ANPD não considera essa a base legal apropriada
+      // quando não há escolha real. Fica só o dever de informar.
+      <div class="lf-cookies__faixa">
+        {titulo && <p class="lf-cookies__titulo">{titulo}</p>}
+        <p class="lf-cookies__texto">
+          Este site usa apenas cookies estritamente necessários ao seu funcionamento (sessão, segurança).
+          {' '}Veja nossa <a href="/politica-de-privacidade">Política de Privacidade</a>.
+        </p>
+        <div class="lf-cookies__acoes">
+          <button type="button" data-lf-informado class="lf-cookies__btn lf-cookies__btn--aceitar">Entendi</button>
+        </div>
+      </div>
+    )}
+
+    {consentimentoReal && (
+      <div data-lf-painel class="lf-cookies__painel" hidden>
+        <p class="lf-cookies__painel-intro">{modalDescricao}</p>
+        <ul class="lf-cookies__categorias">
+          <li class="lf-cookies__categoria">
+            <label>
+              <input type="checkbox" checked disabled />
+              <span>Necessários — sempre ativos</span>
+            </label>
+          </li>
+          {temAnaliticos && (
+            <li class="lf-cookies__categoria">
+              <label>
+                <input type="checkbox" data-cat="analiticos" />
+                <span>Analíticos — medir visitas e páginas mais acessadas</span>
+              </label>
+            </li>
+          )}
+          {temMarketing && (
+            <li class="lf-cookies__categoria">
+              <label>
+                <input type="checkbox" data-cat="marketing" />
+                <span>Marketing — medir resultado de anúncios</span>
+              </label>
+            </li>
+          )}
+          {temFuncionais && (
+            <li class="lf-cookies__categoria">
+              <label>
+                <input type="checkbox" data-cat="funcionais" />
+                <span>Funcionais — lembrar preferências de navegação</span>
+              </label>
+            </li>
+          )}
+        </ul>
+        <div class="lf-cookies__painel-acoes">
+          <button type="button" data-lf-salvar-preferencias class="lf-cookies__btn lf-cookies__btn--aceitar">Salvar preferências</button>
+        </div>
+      </div>
+    )}
+  </div>
+)}
+
+<script>import '../../scripts/consentimento-ui.ts'</script>
+
+<style>
+  /* Padrão (posicaoH "center" + posicaoV "bottom"): faixa no rodapé, largura
+     total — o mesmo visual de sempre, sem regressão. */
+  .lf-cookies {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 50;
+    background: var(--color-surface, #fff);
+    border-top: 1px solid var(--color-line, #E2E8F0);
+    box-shadow: 0 -4px 18px rgb(0 0 0 / 0.12);
+    padding: 1rem max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+  }
+
+  /* Qualquer outra posição: cartão flutuante (não é modal — não bloqueia a
+     página, não tem véu de fundo; só muda de faixa para cartão). */
+  .lf-cookies[data-card="1"] {
+    left: auto;
+    right: auto;
+    top: auto;
+    bottom: auto;
+    width: min(94vw, 420px);
+    border: 1px solid var(--color-line, #E2E8F0);
+    border-radius: var(--radius-lg, 14px);
+    box-shadow: 0 12px 32px rgb(0 0 0 / 0.18);
+    padding: 1.125rem;
+  }
+  .lf-cookies[data-card="1"][data-posv="top"] { top: max(1rem, env(safe-area-inset-top)); }
+  .lf-cookies[data-card="1"][data-posv="bottom"] { bottom: max(1rem, env(safe-area-inset-bottom)); }
+  .lf-cookies[data-card="1"][data-posv="middle"] { top: 50%; transform: translateY(-50%); }
+  .lf-cookies[data-card="1"][data-posh="left"] { left: max(1rem, env(safe-area-inset-left)); }
+  .lf-cookies[data-card="1"][data-posh="right"] { right: max(1rem, env(safe-area-inset-right)); }
+  .lf-cookies[data-card="1"][data-posh="center"] { left: 50%; transform: translateX(-50%); }
+  .lf-cookies[data-card="1"][data-posv="middle"][data-posh="center"] { transform: translate(-50%, -50%); }
+
+  .lf-cookies[data-card="1"] .lf-cookies__faixa {
+    display: block;
+    max-width: none;
+    margin: 0;
+  }
+  .lf-cookies[data-card="1"] .lf-cookies__texto { margin-bottom: 0.75rem; }
+  .lf-cookies[data-card="1"] .lf-cookies__acoes { justify-content: flex-start; }
+
+  .lf-cookies__titulo {
+    margin: 0 0 0.375rem;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--color-ink, #0F172A);
+  }
+
+  .lf-cookies__faixa {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    max-width: var(--max-wide, 1200px);
+    margin: 0 auto;
+  }
+
+  .lf-cookies__texto {
+    flex: 1 1 320px;
+    margin: 0;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--color-ink, #0F172A);
+  }
+  .lf-cookies__texto a { color: var(--color-primary, #334155); text-decoration: underline; text-underline-offset: 2px; }
+
+  .lf-cookies__acoes {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  /* Aceitar e Rejeitar: mesma classe base — mesmo tamanho, peso e destaque. Só a cor muda. */
+  .lf-cookies__btn {
+    font: inherit;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    padding: 0.625rem 1.25rem;
+    border-radius: var(--radius-btn, 8px);
+    border: 1px solid transparent;
+    cursor: pointer;
+    line-height: 1;
+  }
+  .lf-cookies__btn--aceitar {
+    background: var(--color-primary, #334155);
+    color: var(--color-primary-ink, #fff);
+  }
+  .lf-cookies__btn--rejeitar {
+    background: var(--color-surface, #fff);
+    color: var(--color-ink, #0F172A);
+    border-color: var(--color-line, #E2E8F0);
+  }
+  .lf-cookies__btn:focus-visible { outline: 3px solid var(--color-primary, #334155); outline-offset: 2px; }
+
+  .lf-cookies__link {
+    font: inherit;
+    font-size: 0.8125rem;
+    background: none;
+    border: none;
+    padding: 0.625rem 0.25rem;
+    color: var(--color-ink-muted, #64748B);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+  }
+  .lf-cookies__link:focus-visible { outline: 3px solid var(--color-primary, #334155); outline-offset: 2px; }
+
+  .lf-cookies__painel {
+    max-width: var(--max-wide, 1200px);
+    margin: 0.875rem auto 0;
+    padding-top: 0.875rem;
+    border-top: 1px solid var(--color-line, #E2E8F0);
+  }
+  .lf-cookies__painel-intro { margin: 0 0 0.75rem; font-size: 0.75rem; color: var(--color-ink-muted, #64748B); }
+  .lf-cookies__categorias { list-style: none; margin: 0 0 1rem; padding: 0; display: grid; gap: 0.5rem; }
+  .lf-cookies__categoria label { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8125rem; color: var(--color-ink, #0F172A); }
+  .lf-cookies__painel-acoes { display: flex; justify-content: flex-end; }
+
+  @media print { .lf-cookies { display: none; } }
+</style>

@@ -1,0 +1,129 @@
+---
+import Tema04Base   from '../../layouts/Tema04Base.astro'
+import Header       from '../../components/blocos/Header.astro'
+import PageHero     from '../../components/blocos/PageHero.astro'
+import Proposito    from '../../components/blocos/Proposito.astro'
+import Equipe       from '../../components/blocos/Equipe.astro'
+import Prova        from '../../components/blocos/Prova.astro'
+import AntesDepois  from '../../components/blocos/AntesDepois.astro'
+import Abordagem    from '../../components/blocos/Abordagem.astro'
+import Depoimentos  from '../../components/blocos/Depoimentos.astro'
+import Cta          from '../../components/blocos/Cta.astro'
+import Footer       from '../../components/blocos/Footer.astro'
+import { site }     from '../../config/tema-04.ts'
+import { tituloOuPadrao, metaOuPadrao } from '../../lib/paginaFixa.ts'
+import { textoCredencial } from '../../lib/schema.ts'
+import { getCollection } from 'astro:content'
+
+const equipe = (await getCollection('equipeT4'))
+  .sort((a, b) => a.data.ordem - b.data.ordem)
+  .map(m => ({ nome: m.data.nome, cargo: m.data.cargo, crm: m.data.registro,
+               especialidade: m.data.especialidade, foto: m.data.foto }))
+
+const depoimentos = (await getCollection('depoimentosT4'))
+  .sort((a, b) => a.data.ordem - b.data.ordem)
+  .map(d => ({ nome: d.data.nome, cidade: d.data.cidade, servico: d.data.servico, corpo: (d.body ?? '').trim() }))
+
+const anos      = site.anoFundacao ? new Date().getFullYear() - site.anoFundacao : null
+const wa        = `https://wa.me/${site.nap.whatsapp}`
+const canonical = `${site.dominio}/sobre/`
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    { '@type': 'AboutPage', '@id': `${canonical}#webpage`, url: canonical,
+      name: `Sobre — ${site.nome}`, about: { '@id': `${site.dominio}/#organization` }, inLanguage: 'pt-BR' },
+    { '@type': 'BreadcrumbList', '@id': `${canonical}#breadcrumb`,
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home',  item: `${site.dominio}/` },
+        { '@type': 'ListItem', position: 2, name: 'Sobre', item: canonical },
+      ] },
+  ],
+}
+---
+
+<Tema04Base
+  titulo={tituloOuPadrao(site, 'sobre', anos ? `Sobre a ${site.nome} — ${anos} anos em ${site.nap.cidade}` : `Sobre a ${site.nome} em ${site.nap.cidade}`)}
+  metaDescription={metaOuPadrao(site, 'sobre', "Conheça a Renovar Higienização: equipe própria, mais de 9 mil peças higienizadas em Campinas e região, e taxa de retorno em garantia abaixo de 2%.")}
+  canonical={canonical}
+  jsonLd={jsonLd}
+  nodeId="sobre"
+>
+  <Header logoSrc={site.logo?.src} logoAlt={site.logo?.alt} variante="padrao" nomeSite={site.nome} telefone={site.nap.telefone}
+          whatsapp={site.nap.whatsapp} nav={site.nav}
+          ctaTexto="Peça seu orçamento" ctaHref={wa} />
+
+  <PageHero
+    variante="destaque"
+    eyebrow="Sobre a empresa"
+    titulo={anos ? `${anos} anos entrando na casa das pessoas` : 'Entrando na casa das pessoas'}
+    descricao="Equipe própria, registrada e uniformizada. Quem faz o serviço é quem responde por ele — não há terceirização de execução."
+  />
+
+  <Proposito
+    eyebrow="Como começou"
+    titulo="Uma extratora, uma van e um telefone"
+    paragrafos={[
+      `A Renovar abriu ${site.anoFundacao ? `em ${site.anoFundacao}` : 'há alguns anos'} com um equipamento e dois sócios que faziam tudo: orçamento, serviço e cobrança. A carteira cresceu por indicação, não por anúncio.`,
+      'Em 2016 montamos base própria no Jardim Proença, o que permitiu aceitar tapete grande e peça que precisa de secagem controlada. Em 2019 entrou a higienização automotiva, a pedido de clientes que já nos chamavam para casa.',
+      'Hoje são três equipes em rota. O que não mudou foi o critério de contratação: preferimos formar alguém de dentro a contratar quem já traz vício de processo de outro lugar.',
+    ]}
+    imagemSrc="https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=760&h=620&fit=crop&auto=format"
+    imagemAlt="Equipe de higienização trabalhando em um estofado"
+  />
+
+  <Prova titulo="O que garantimos em todo serviço" itens={site.selos} />
+
+  <Equipe
+    variante="grade"
+    titulo="Quem vai até a sua casa"
+    descricao="Funcionários registrados, uniformizados e identificados. Você sabe o nome de quem vai atender antes de a equipe chegar."
+    membros={equipe}
+  />
+
+  <Abordagem
+    titulo="Como trabalhamos"
+    descricao="Quatro decisões que tomamos há anos e que explicam por que o serviço custa o que custa."
+    itens={site.diferenciais}
+  />
+
+  <AntesDepois
+    titulo="Alguns resultados"
+    itens={site.antesDepois}
+    ctaTexto="Pedir orçamento"
+    ctaHref={wa}
+  />
+
+  <Depoimentos
+    titulo="O que dizem os clientes"
+    itens={depoimentos}
+    notaMedia={site.avaliacao.nota}
+    totalAvaliacoes={site.avaliacao.total}
+    fonteAvaliacoes={site.avaliacao.fonte}
+  />
+
+  <Cta
+    variante="card"
+    titulo="Quer conhecer o serviço antes de contratar?"
+    descricao="Manda uma foto da peça. Dizemos o que dá para fazer, o que não sai e quanto custa — sem compromisso."
+    ctaPrimTexto="Falar no WhatsApp"
+    ctaPrimHref={wa}
+    ctaSecTexto="Ver os serviços"
+    ctaSecHref="/tema-04/servicos"
+  />
+
+  <Footer credencial={textoCredencial(site)} logoSrc={site.logo?.src} logoAlt={site.logo?.alt}
+    variante="colunas"
+    nomeSite={site.nome}
+    slogan={site.slogan}
+    telefone={site.nap.telefone}
+    email={site.nap.email}
+    endereco={`${site.nap.logradouro}, ${site.nap.complemento}`}
+    cidade={`${site.nap.bairro}, ${site.nap.cidade} — ${site.nap.uf}`}
+    cnpj={site.cnpj}
+    anoFundacao={site.anoFundacao}
+    redes={site.redes}
+    nav={site.nav}
+    colunas={site.navFooterColunas}
+  />
+</Tema04Base>

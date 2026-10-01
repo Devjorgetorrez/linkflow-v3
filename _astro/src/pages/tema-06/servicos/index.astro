@@ -1,0 +1,130 @@
+---
+import Tema06Base   from '../../../layouts/Tema06Base.astro'
+import Header       from '../../../components/blocos/Header.astro'
+import PageHero     from '../../../components/blocos/PageHero.astro'
+import Servicos     from '../../../components/blocos/Servicos.astro'
+import Prova        from '../../../components/blocos/Prova.astro'
+import Passos       from '../../../components/blocos/Passos.astro'
+import Infraestrutura from '../../../components/blocos/Infraestrutura.astro'
+import AreaAtendida from '../../../components/blocos/AreaAtendida.astro'
+import Faq          from '../../../components/blocos/Faq.astro'
+import Cta          from '../../../components/blocos/Cta.astro'
+import Footer       from '../../../components/blocos/Footer.astro'
+import { site }     from '../../../config/tema-06.ts'
+import { textoCredencial, areaLista } from '../../../lib/schema.ts'
+import { getCollection } from 'astro:content'
+import { ehServicoListavel } from '../../../lib/publicacao.ts'
+
+const servicos = (await getCollection('servicosT6', ehServicoListavel))
+  .sort((a, b) => a.data.ordem - b.data.ordem)
+  .map(s => ({
+    titulo: s.data.titulo, descricao: s.data.resumo, icone: s.data.icone ?? '',
+    imagem: s.data.imagem, imagemAlt: s.data.imagemAlt,
+    href: `/tema-06/${s.id}`, categoria: s.data.categoria,
+  }))
+
+const wa        = `https://wa.me/${site.nap.whatsapp}`
+const canonical = `${site.dominio}/servicos/`
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    { '@type': 'CollectionPage', '@id': `${canonical}#webpage`, url: canonical,
+      name: `Serviços — ${site.nome}`, inLanguage: 'pt-BR' },
+    { '@type': 'BreadcrumbList', '@id': `${canonical}#breadcrumb`,
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home',     item: `${site.dominio}/` },
+        { '@type': 'ListItem', position: 2, name: 'Serviços', item: canonical },
+      ] },
+  ],
+}
+---
+
+<Tema06Base
+  titulo={`Serviços — ${site.nome}`}
+  metaDescription="Caça vazamento, detecção de infiltração, vazamento em piscina, desentupimento, reparo hidráulico e videoinspeção em Goiânia e região metropolitana."
+  canonical={canonical}
+  jsonLd={jsonLd}
+  nodeId="servicos"
+>
+  <Header
+    variante="padrao"
+    nomeSite={site.nome}
+    logoSrc={site.logo?.src}
+    logoAlt={site.logo?.alt}
+    telefone={site.nap.telefone}
+    whatsapp={site.nap.whatsapp}
+    nav={site.nav}
+    ctaTexto="Quero um orçamento"
+    ctaHref={wa}
+  />
+
+  <PageHero
+    variante="destaque"
+    eyebrow="Serviços"
+    titulo="Detecção e reparo hidráulico, do diagnóstico ao laudo"
+    descricao="Atendimento em Goiânia e região, com orçamento fechado antes de qualquer intervenção e plantão de emergência até as 22h."
+  />
+
+  <Servicos variante="lista" itens={servicos} />
+
+  <Prova variante="faixa" titulo="O que vale para qualquer chamado" itens={site.selos} />
+
+  <Passos
+    variante="cards"
+    titulo="Como resolvemos"
+    descricao="Mesma sequência em todos os serviços. O que muda é o equipamento usado em cada etapa."
+    itens={site.passos}
+  />
+
+  <Infraestrutura
+    variante="grade"
+    titulo="Alguns dos nossos trabalhos"
+    itens={site.trabalhos}
+    verMaisHref={wa}
+    verMaisTexto="Falar com um técnico"
+  />
+
+  <AreaAtendida
+    eyebrow="Cobertura"
+    titulo="Onde atendemos"
+    descricao="Se o seu bairro não estiver na lista, pergunte mesmo assim — a rota muda conforme o dia."
+    regioes={areaLista(site)}
+    bullets={site.regioesBullets}
+    imagem="https://images.unsplash.com/photo-1449844908441-8829872d2607?w=420&h=480&fit=crop&auto=format"
+    imagemAlt="Rua residencial arborizada"
+    selo="Goiânia e região metropolitana"
+    ctaTexto="Consultar meu bairro"
+    ctaHref={wa}
+  />
+
+  <Faq variante="duas-colunas" titulo="Dúvidas frequentes" itens={site.faq} />
+
+  <Cta
+    variante="card"
+    titulo="Não sabe qual serviço resolve o seu caso?"
+    descricao="Descreva o problema e mande uma foto. Dizemos o que provavelmente é — inclusive quando não é hidráulica."
+    ctaPrimTexto="Chamar no WhatsApp"
+    ctaPrimHref={wa}
+    ctaSecTexto="Entender a detecção"
+    ctaSecHref="/tema-06/caca-vazamento"
+  />
+
+  <Footer
+    variante="colunas"
+    nomeSite={site.nome}
+    logoSrc={site.logo?.src}
+    logoAlt={site.logo?.alt}
+    credencial={textoCredencial(site)}
+    slogan={site.slogan}
+    telefone={site.nap.telefone}
+    email={site.nap.email}
+    endereco={`${site.nap.logradouro}, ${site.nap.complemento}`}
+    cidade={`${site.nap.bairro}, ${site.nap.cidade} — ${site.nap.uf}`}
+    cnpj={site.cnpj}
+    anoFundacao={site.anoFundacao}
+    redes={site.redes}
+    nav={site.nav}
+    colunas={site.navFooterColunas}
+  />
+</Tema06Base>

@@ -1,0 +1,262 @@
+---
+import Footer     from '../../components/blocos/Footer.astro'
+import Header     from '../../components/blocos/Header.astro'
+import { site }   from '../../config/site.ts'
+import { textoCredencial } from '../../lib/schema.ts'
+import { faqDoPost } from '../../lib/post-seo.ts'
+import PostFaq from '../blocos/PostFaq.astro'
+import PilarBox from '../blocos/PilarBox.astro'
+import { escolherRelacionados, resolverPilar } from '../../lib/relacionados.ts'
+import { getCollection, render } from 'astro:content'
+import { ehPublicado } from '../../lib/publicacao.ts'
+import { resolverAutor, nomeAutor } from '../../lib/autores.ts'
+import Autor from '../blocos/Autor.astro'
+import { resolverCategoria, nomeCategoria } from '../../lib/categorias.ts'
+
+interface Props {
+  entry: Awaited<ReturnType<typeof getCollection<'posts'>>>[number]
+}
+
+const { entry } = Astro.props
+const { Content } = await render(entry)
+const faq = faqDoPost(entry.data)
+const canonical = `${site.dominio}/${entry.id}/`
+
+const dataFormatada = new Intl.DateTimeFormat('pt-BR', {
+  day: 'numeric', month: 'long', year: 'numeric'
+}).format(new Date(entry.data.publicadoEm + 'T12:00:00'))
+
+/* Autor — perfil em content/autores, referenciado pelo slug em `autor:` */
+const autores = await getCollection('autores')
+const autor = resolverAutor(entry.data, autores)
+
+/* Categoria — perfil em content/categorias, referenciado pelo slug em `categoria:` */
+const categorias = await getCollection('categorias')
+const categoria = resolverCategoria(entry.data.categoria, categorias)
+
+/* Posts relacionados (outros posts, exceto o atual) */
+const todosPosts = await getCollection('posts', ehPublicado)
+const relacionados = escolherRelacionados(entry, todosPosts)
+  .map(p => ({
+    titulo:      p.data.titulo,
+    categoria:   nomeCategoria(p.data.categoria, categorias),
+    imagemCapa:  p.data.imagemCapa,
+    resumo:      p.data.resumo,
+    publicadoEm: p.data.publicadoEm,
+    autor:       nomeAutor(p.data, autores),
+    href:        `/${p.id}`,
+  }))
+
+/* Conteúdo pilar — serviço que o artigo apoia (`pilar:` no frontmatter) */
+const pilarServico = resolverPilar(entry, await getCollection('servicos'))
+const pilar = pilarServico && { titulo: pilarServico.titulo, href: `/${pilarServico.slug}` }
+
+/* Redes sociais para compartilhar */
+const shareUrl  = encodeURIComponent(canonical)
+const shareText = encodeURIComponent(entry.data.titulo)
+---
+
+<Header
+  logoSrc={site.logo?.src}
+  logoAlt={site.logo?.alt}
+  variante="padrao"
+  nomeSite={site.nome}
+  telefone={site.nap.telefone}
+  whatsapp={site.nap.whatsapp}
+  nav={site.nav}
+    ctaTexto="Agendar Consulta"
+    ctaHref="/contato"
+  />
+
+  <article>
+    {/* ── Cabeçalho do post ─────────────────────────────────────── */}
+    <div class="bg-surface-2 border-b border-line py-12">
+      <div class="container-wide max-w-[760px]">
+
+        {/* Breadcrumb — Home › Blog › Artigo (igual ao JSON-LD) */}
+        <nav class="mb-5 text-xs text-ink-muted" aria-label="Breadcrumb">
+          <a href="/" class="hover:text-primary no-underline transition-colors">Home</a>
+          <span class="mx-1.5 text-ink-muted/50">›</span>
+          <a href="/blog" class="hover:text-primary no-underline transition-colors">Blog</a>
+          <span class="mx-1.5 text-ink-muted/50">›</span>
+          <span>{entry.data.titulo}</span>
+        </nav>
+
+        {/* Categoria — link para a página dela quando existe na coleção */}
+        {categoria && (
+          categoria.href
+            ? (
+              <a href={categoria.href}
+                 class="inline-block mb-3 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary no-underline hover:bg-primary/15">
+                {categoria.nome}
+              </a>
+            )
+            : (
+              <span class="inline-block mb-3 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                {categoria.nome}
+              </span>
+            )
+        )}
+
+        {/* Título */}
+        <h1 class="text-[clamp(1.625rem,4vw,2.5rem)] font-bold text-secondary leading-tight mb-6">
+          {entry.data.titulo}
+        </h1>
+
+        {/* Byline do autor */}
+        {autor && (
+          <div class="flex items-center gap-3">
+            {autor.foto && (
+              <img src={autor.foto}
+                   alt={autor.fotoAlt ?? autor.nome}
+                   width="44" height="44"
+                   class="h-11 w-11 rounded-full object-cover border-2 border-surface shadow-sm"
+                   loading="eager" />
+            )}
+            <div>
+              <p class="text-sm font-semibold text-ink">
+                {autor.href
+                  ? <a href={autor.href} class="text-ink no-underline hover:text-primary">{autor.nome}</a>
+                  : autor.nome}
+              </p>
+              <p class="text-xs text-ink-muted">{dataFormatada}</p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+
+    {/* ── Imagem de capa ────────────────────────────────────────── */}
+    {entry.data.imagemCapa && (
+      <div class="container-wide max-w-[760px] -mb-2 pt-10">
+        <div class="overflow-hidden rounded-[var(--radius-card)]">
+          <img src={entry.data.imagemCapa}
+               alt={entry.data.imagemCapaAlt ?? ''}
+               width="760" height="420"
+               class="w-full object-cover max-h-[420px]"
+               loading="eager" />
+        </div>
+      </div>
+    )}
+
+    {/* ── Corpo do artigo ───────────────────────────────────────── */}
+    <div class="container-wide max-w-[760px] py-12">
+      <div class="article-body">
+        <Content />
+      </div>
+
+      <PilarBox pilar={pilar} />
+
+      <PostFaq faq={faq} />
+
+      {/* Compartilhar */}
+      <div class="mt-10 pt-8 border-t border-line">
+        <p class="text-xs font-semibold uppercase tracking-wider text-ink-muted mb-3">
+          Compartilhe esse conteúdo em suas redes sociais
+        </p>
+        <div class="flex flex-wrap gap-2">
+          <a href={`https://wa.me/?text=${shareText}%20${shareUrl}`}
+             target="_blank" rel="noopener noreferrer"
+             class="flex items-center gap-1.5 rounded-btn bg-[#25D366] px-4 py-2 text-xs font-semibold text-white no-underline hover:opacity-90 transition-opacity">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.867-2.031-.967-.272-.099-.47-.148-.669.149-.198.297-.767.966-.94 1.164-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.095 3.2 5.076 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z"/>
+            </svg>
+            WhatsApp
+          </a>
+          <a href={`https://www.facebook.com/sharer/sharer.php?u=${shareUrl}`}
+             target="_blank" rel="noopener noreferrer"
+             class="flex items-center gap-1.5 rounded-btn bg-[#1877F2] px-4 py-2 text-xs font-semibold text-white no-underline hover:opacity-90 transition-opacity">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M22 12c0-5.52-4.48-10-10-10S2 6.48 2 12c0 4.84 3.44 8.87 8 9.8V15H8v-3h2V9.5C10 7.57 11.57 6 13.5 6H16v3h-2c-.55 0-1 .45-1 1v2h3v3h-3v6.95c5.05-.5 9-4.76 9-9.95z"/>
+            </svg>
+            Facebook
+          </a>
+          <a href={`https://www.linkedin.com/shareArticle?mini=true&url=${shareUrl}&title=${shareText}`}
+             target="_blank" rel="noopener noreferrer"
+             class="flex items-center gap-1.5 rounded-btn bg-[#0A66C2] px-4 py-2 text-xs font-semibold text-white no-underline hover:opacity-90 transition-opacity">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+            </svg>
+            LinkedIn
+          </a>
+        </div>
+      </div>
+
+      {/* Assinatura do autor — dados do perfil (content/autores), nunca texto fixo */}
+      {autor && (
+        <Autor
+          variante="assinatura"
+          nome={autor.nome}
+          foto={autor.foto}
+          fotoAlt={autor.fotoAlt}
+          cargo={autor.cargo}
+          credencial={autor.credencial}
+          bio={autor.bio}
+          email={autor.email}
+          redes={autor.redes}
+          especialidades={autor.especialidades}
+          formacao={autor.formacao}
+          href={autor.href}
+        />
+      )}
+    </div>
+  </article>
+
+  {/* ── Posts relacionados ─────────────────────────────────────────── */}
+  {relacionados.length > 0 && (
+    <section class="py-[var(--space-section)] bg-surface-2">
+      <div class="container-wide">
+        <h2 class="text-[clamp(1.375rem,2.5vw,1.75rem)] font-bold text-secondary mb-8">
+          Posts Relacionados
+        </h2>
+        <ul class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 list-none p-0 m-0">
+          {relacionados.map(post => (
+            <li>
+              <a href={post.href}
+                 class="group flex flex-col rounded-[var(--radius-card)] border border-line bg-surface overflow-hidden no-underline transition-all hover:-translate-y-0.5 hover:shadow-md">
+                {post.imagemCapa && (
+                  <div class="aspect-video overflow-hidden bg-primary/10">
+                    <img src={post.imagemCapa} alt={post.titulo}
+                         width="400" height="225"
+                         class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                         loading="lazy" />
+                  </div>
+                )}
+                <div class="flex flex-col flex-1 p-5">
+                  {post.categoria && (
+                    <span class="mb-2 text-[10px] font-semibold uppercase tracking-wider text-primary">
+                      {post.categoria}
+                    </span>
+                  )}
+                  <p class="font-semibold text-secondary text-sm leading-snug group-hover:text-primary transition-colors">
+                    {post.titulo}
+                  </p>
+                  {post.autor && (
+                    <p class="mt-auto pt-3 text-xs text-ink-muted">{post.autor}</p>
+                  )}
+                </div>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  )}
+
+  <Footer
+    logoSrc={site.logo?.src}
+    logoAlt={site.logo?.alt}
+    credencial={textoCredencial(site)}
+    variante="escuro"
+    nomeSite={site.nome}
+    slogan={site.slogan}
+    telefone={site.nap.telefone}
+    email={site.nap.email}
+    endereco={`${site.nap.logradouro}, ${site.nap.complemento}`}
+    cidade={`${site.nap.bairro}, ${site.nap.cidade} — ${site.nap.uf}`}
+    cnpj={site.cnpj}
+    anoFundacao={site.anoFundacao}
+    redes={site.redes}
+    nav={site.nav}
+    colunas={site.navFooterColunas}
+  />

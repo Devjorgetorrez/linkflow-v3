@@ -1,0 +1,250 @@
+{
+  "id": "hidroponto-institucional",
+  "nome": "Hidroponto Institucional",
+  "versao": "1.0.0",
+  "descricao": "Tema de referência SiteFlow para serviço técnico de emergência. Turquesa profundo com verde-limão de ação, tipografia Rubik + Inter, 9 tipos de página.",
+  "para_nichos": [
+    "caca-vazamento",
+    "desentupidora",
+    "eletrica",
+    "refrigeracao",
+    "climatizacao",
+    "manutencao-predial",
+    "servico-emergencial"
+  ],
+  "rota_base": "/tema-06",
+  "escopo_tokens": "html[data-tema=\"tema-06\"]",
+  "tokens": {
+    "primary": "#0E7490",
+    "primary-ink": "#FFFFFF",
+    "secondary": "#0B3B4A",
+    "accent": "#5C930C",
+    "ink": "#14202A",
+    "ink-muted": "#55636E",
+    "surface": "#FFFFFF",
+    "surface-2": "#EFF6F8",
+    "line": "#D5E4E9",
+    "success": "#5C930C",
+    "danger": "#C62828"
+  },
+  "tipografia": {
+    "display": "Rubik",
+    "body": "Inter",
+    "pesos": {
+      "display": [
+        600,
+        700
+      ],
+      "body": [
+        400,
+        500,
+        600,
+        700
+      ]
+    }
+  },
+  "radius": {
+    "card": "10px",
+    "btn": "6px",
+    "pill": "999px"
+  },
+  "densidade": "confortavel",
+  "chrome": {
+    "header": "padrao",
+    "footer": "colunas"
+  },
+  "logica_do_modelo": {
+    "resumo": "O visitante chega com um problema que já está acontecendo — mancha na parede, conta alta, esgoto voltando. A página responde em ordem de urgência: o que fazemos, como localizamos sem quebrar, onde atendemos e em quanto tempo chegamos.",
+    "diferenca_para_o_tema_04": "Os dois são serviço local, mas vendem coisas opostas. O Tema 04 vende resultado visível e preço à vista, com prova por foto de antes e depois. O Tema 06 vende método e urgência: não há preço de tabela porque o orçamento depende do diagnóstico, e a prova é o processo — qual equipamento, em que ordem, com que laudo ao final.",
+    "marcas_do_nicho": [
+      "Sinais do problema listados antes da venda do serviço, porque o cliente ainda não sabe nomear o que tem",
+      "Processo em quatro etapas explicando por que localizar vem antes de abrir",
+      "Barra lateral de contato na página de serviço, com NAP completo",
+      "Plantão de emergência anunciado no hero",
+      "Laudo técnico como entregável, não como diferencial vago"
+    ]
+  },
+  "composicoes_obrigatorias": {
+    "descricao": "Regra de composição deste tema: home e servico carregam sempre prova social, cobertura geográfica ou NAP na página, e mapa embedado.",
+    "paginas": [
+      "home",
+      "servico"
+    ],
+    "blocos": [
+      "Depoimentos",
+      "Localizacao:mapa-embed"
+    ]
+  },
+  "paginas": {
+    "home": {
+      "rota": "/tema-06",
+      "blocos": [
+        "Header:padrao",
+        "Hero:destaque",
+        "Prova:faixa",
+        "Servicos:grade",
+        "Passos:numerado",
+        "AreaAtendida",
+        "Proposito",
+        "Numeros:escuro",
+        "Faq:com-imagem",
+        "Cta:padrao",
+        "Depoimentos:com-nota",
+        "Localizacao:mapa-embed",
+        "PostLista:destaque",
+        "BuscasFrequentes",
+        "Footer:colunas"
+      ],
+      "observacao": "O acordeão de diretrizes da referência é o Faq:com-imagem alimentado por site.diretrizes — não é um bloco novo."
+    },
+    "servico": {
+      "rota": "/tema-06/servicos/[id]",
+      "blocos": [
+        "Header:padrao",
+        "Hero:destaque",
+        "Cta:card",
+        "Prova",
+        "Passos:cards",
+        "Infraestrutura:grade",
+        "Depoimentos:com-nota",
+        "Faq:com-imagem",
+        "Localizacao:mapa-embed",
+        "Servicos:lista",
+        "Cta:padrao",
+        "Footer:colunas"
+      ],
+      "observacao": "Traz barra lateral fixa com NAP completo e equipamento utilizado, como na referência. A galeria 'nossos trabalhos' é o bloco Infraestrutura do Tema 01, reaproveitado sem alteração."
+    },
+    "servicos-listagem": {
+      "rota": "/tema-06/servicos",
+      "blocos": [
+        "Header:padrao",
+        "PageHero:destaque",
+        "Servicos:lista",
+        "Prova:faixa",
+        "Passos:cards",
+        "Infraestrutura:grade",
+        "AreaAtendida",
+        "Faq:duas-colunas",
+        "Cta:card",
+        "Footer:colunas"
+      ]
+    },
+    "sobre": {
+      "rota": "/tema-06/sobre",
+      "blocos": [
+        "Header:padrao",
+        "PageHero:destaque",
+        "Proposito",
+        "Prova:faixa",
+        "Equipe:grade",
+        "Numeros:escuro",
+        "Abordagem",
+        "Infraestrutura:grade",
+        "Depoimentos:com-nota",
+        "Cta:card",
+        "Footer:colunas"
+      ]
+    },
+    "contato": {
+      "rota": "/tema-06/contato",
+      "blocos": [
+        "Header:padrao",
+        "PageHero:destaque",
+        "FormContato:institucional",
+        "Prova:faixa",
+        "AreaAtendida",
+        "Localizacao:mapa-embed",
+        "Depoimentos:com-nota",
+        "Cta:padrao",
+        "Footer:colunas"
+      ]
+    },
+    "blog-listagem": {
+      "rota": "/tema-06/blog",
+      "blocos": [
+        "Header:padrao",
+        "PageHero:destaque",
+        "PostLista:grade",
+        "Tags",
+        "Cta:card",
+        "Footer:colunas"
+      ]
+    },
+    "artigo": {
+      "rota": "/tema-06/blog/[id]",
+      "blocos": [
+        "Header:padrao",
+        "Autor:byline",
+        "Autor:assinatura",
+        "PostLista:grade",
+        "Cta:padrao",
+        "Footer:colunas"
+      ]
+    },
+    "politica-de-privacidade": {
+      "rota": "/tema-06/politica-de-privacidade",
+      "blocos": [
+        "Header:padrao",
+        "PageHero:destaque",
+        "ConteudoLegal:politica",
+        "Footer:colunas"
+      ],
+      "ancoras_obrigatorias": [
+        "#cookies",
+        "#direitos"
+      ],
+      "campos_cliente_preenchidos_com_exemplo": true,
+      "observacao": "§6.2 — campos do cliente preenchidos com exemplo, marcado na própria página."
+    },
+    "termos-de-uso": {
+      "rota": "/tema-06/termos-de-uso",
+      "opcional": true,
+      "ligado_por_padrao": false,
+      "noindex": true,
+      "blocos": [
+        "Header:padrao",
+        "PageHero:destaque",
+        "ConteudoLegal:termos",
+        "Footer:colunas"
+      ],
+      "observacao": "§6.3 — opcional e desligado por padrão."
+    }
+  },
+  "blocos_novos_criados": [],
+  "nota_de_recombinacao": "Este tema não exigiu nenhum bloco novo. É o §3.4 do MD funcionando na prática: a estrutura inteira saiu da recombinação de variantes já existentes, criadas para os temas 01, 03, 04 e 05. Foi a primeira vez que um tema saiu sem escrever componente.",
+  "blocos_reaproveitados_sem_alteracao": [
+    "Hero:destaque e Faq:com-imagem, criados no Tema 04",
+    "Passos:numerado e Passos:cards, criados no Tema 04",
+    "AreaAtendida, criado no Tema 04",
+    "Numeros:escuro, criado no Tema 05",
+    "Prova:faixa, criado no ajuste do Tema 05",
+    "Infraestrutura:grade, criado no Tema 01 e usado aqui como galeria de trabalhos",
+    "PageHero:destaque e FormContato:institucional, criados no Tema 03",
+    "Autor:byline e Autor:assinatura, criados no Tema 03",
+    "ConteudoLegal:politica e ConteudoLegal:termos, criados no Tema 03"
+  ],
+  "secoes_omitidas": [
+    {
+      "secao": "Feed do Instagram",
+      "motivo": "Integração de terceiro específica do site de referência, como o widget de chat já omitido nos temas anteriores."
+    },
+    {
+      "secao": "Carrossel com setas",
+      "motivo": "Exigiria JavaScript. Os mesmos itens cabem em grade, sem esconder conteúdo do rastreador."
+    },
+    {
+      "secao": "Busca de região com select e botão",
+      "motivo": "Não há back-end para consultar. A lista real de bairros atendidos entrega a mesma informação sem controle morto."
+    },
+    {
+      "secao": "Par de cards 'infiltração?' e 'conta alta?'",
+      "motivo": "O papel deles — nomear o sintoma antes de vender o serviço — ficou com o bloco Prova alimentado pelo campo `sinais` de cada serviço, que é mais completo e não duplica CTA."
+    },
+    {
+      "secao": "Página pilar /caca-vazamento",
+      "motivo": "Removida por decisão do operador. Ela disputava o mesmo termo da página de serviço de mesmo nome — duas URLs competindo pela mesma busca. O conteúdo de guia foi mantido dentro da página de serviço, e todos os links internos passaram a apontar para ela."
+    }
+  ],
+  "paginas_do_tema": "9 tipos de página. Este tema não tem pilar separado, por escolha de arquitetura — ver secoes_omitidas."
+}

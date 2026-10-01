@@ -1,0 +1,127 @@
+---
+/**
+ * Passos — o processo do serviço, etapa a etapa.
+ *
+ * Bloco previsto no §3.2 do MD (Passos → numerado | linha-tempo | cards |
+ * acordeao) e que ainda não existia no repositório. Implementadas as duas
+ * variantes que o nicho de serviço local usa de fato:
+ *
+ *   numerado — faixa escura, número grande, etapas em linha. É o formato de
+ *              "como funciona" da página de serviço.
+ *   cards    — fundo claro, cartões numerados. Para páginas que já têm outra
+ *              faixa escura por perto.
+ *
+ * `nota` renderiza um aviso ao pé (ex.: tempo estimado de secagem).
+ * Empty state: não renderiza se itens.length === 0.
+ */
+
+interface Etapa {
+  numero:    string
+  titulo:    string
+  descricao: string
+}
+
+interface Props {
+  variante?:  'numerado' | 'cards'
+  titulo?:    string
+  descricao?: string
+  itens:      Etapa[]
+  nota?:      string
+  notaTitulo?: string
+}
+
+const {
+  variante = 'numerado',
+  titulo,
+  descricao,
+  itens = [],
+  nota,
+  notaTitulo,
+} = Astro.props
+
+if (itens.length === 0) return
+---
+
+{variante === 'numerado' && (
+  <section class="bg-secondary py-[var(--space-section)]">
+    <div class="container-wide">
+      {(titulo || descricao) && (
+        <div class="mb-12 text-center">
+          {titulo && (
+            <h2 class="font-display text-[clamp(1.625rem,3vw,2.25rem)] font-bold text-surface">{titulo}</h2>
+          )}
+          {descricao && (
+            <p class="mx-auto mt-3 max-w-[620px] text-base text-surface/70">{descricao}</p>
+          )}
+        </div>
+      )}
+
+      <ol class="m-0 grid list-none gap-8 p-0 sm:grid-cols-2 lg:grid-cols-4">
+        {itens.map(e => (
+          <li>
+            <span class="block font-display text-4xl font-bold leading-none text-surface/25">{e.numero}</span>
+            <h3 class="mt-4 font-display text-base font-bold leading-snug text-surface">{e.titulo}</h3>
+            <p class="mt-2.5 text-sm leading-relaxed text-surface/70">{e.descricao}</p>
+          </li>
+        ))}
+      </ol>
+
+      {nota && (
+        <div class="mt-12 flex items-start gap-4 rounded-[var(--radius-card)] bg-surface/10 p-6">
+          <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-surface/15 text-surface" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+            </svg>
+          </span>
+          <div>
+            {notaTitulo && <p class="font-semibold text-surface">{notaTitulo}</p>}
+            <p class="mt-1 text-sm leading-relaxed text-surface/70">{nota}</p>
+          </div>
+        </div>
+      )}
+    </div>
+  </section>
+)}
+
+{variante === 'cards' && (
+  <section class="bg-surface-2 py-[var(--space-section)]">
+    <div class="container-wide">
+      {(titulo || descricao) && (
+        <div class="mb-10 text-center">
+          {titulo && (
+            <h2 class="font-display text-[clamp(1.625rem,3vw,2.25rem)] font-bold text-secondary">{titulo}</h2>
+          )}
+          {descricao && (
+            <p class="mx-auto mt-3 max-w-[620px] text-base text-ink-muted">{descricao}</p>
+          )}
+        </div>
+      )}
+
+      <ol class="m-0 grid list-none gap-5 p-0 sm:grid-cols-2 lg:grid-cols-4">
+        {itens.map(e => (
+          <li class="rounded-[var(--radius-card)] border border-line bg-surface p-6">
+            <span class="flex h-10 w-10 items-center justify-center rounded-full bg-primary font-display text-sm font-bold text-primary-ink">
+              {e.numero}
+            </span>
+            <h3 class="mt-4 font-display text-base font-bold leading-snug text-secondary">{e.titulo}</h3>
+            <p class="mt-2 text-sm leading-relaxed text-ink-muted">{e.descricao}</p>
+          </li>
+        ))}
+      </ol>
+
+      {nota && (
+        <div class="mt-10 flex items-start gap-4 rounded-[var(--radius-card)] border border-line bg-surface p-6">
+          <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+            </svg>
+          </span>
+          <div>
+            {notaTitulo && <p class="font-semibold text-secondary">{notaTitulo}</p>}
+            <p class="mt-1 text-sm leading-relaxed text-ink-muted">{nota}</p>
+          </div>
+        </div>
+      )}
+    </div>
+  </section>
+)}

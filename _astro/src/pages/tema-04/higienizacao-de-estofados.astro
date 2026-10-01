@@ -1,0 +1,224 @@
+---
+/** Página pilar do Tema 04 — hub de "higienização de estofados". */
+import Tema04Base   from '../../layouts/Tema04Base.astro'
+import Header       from '../../components/blocos/Header.astro'
+import Hero         from '../../components/blocos/Hero.astro'
+import Passos       from '../../components/blocos/Passos.astro'
+import Servicos     from '../../components/blocos/Servicos.astro'
+import AntesDepois  from '../../components/blocos/AntesDepois.astro'
+import Prova        from '../../components/blocos/Prova.astro'
+import AreaAtendida from '../../components/blocos/AreaAtendida.astro'
+import Depoimentos  from '../../components/blocos/Depoimentos.astro'
+import Faq          from '../../components/blocos/Faq.astro'
+import Localizacao  from '../../components/blocos/Localizacao.astro'
+import PostLista    from '../../components/blocos/PostLista.astro'
+import Cta          from '../../components/blocos/Cta.astro'
+import BuscasFrequentes from '../../components/blocos/BuscasFrequentes.astro'
+import Footer       from '../../components/blocos/Footer.astro'
+import { site }     from '../../config/tema-04.ts'
+import { tituloOuPadrao, metaOuPadrao } from '../../lib/paginaFixa.ts'
+import { textoCredencial, areaLista } from '../../lib/schema.ts'
+import { getCollection } from 'astro:content'
+import { ehPublicado, ehServicoListavel } from '../../lib/publicacao.ts'
+import { nomeAutor } from '../../lib/autores.ts'
+import { nomeCategoria } from '../../lib/categorias.ts'
+
+const servicos = (await getCollection('servicosT4', ehServicoListavel))
+  .sort((a, b) => a.data.ordem - b.data.ordem)
+  .map(s => ({
+    titulo: s.data.titulo, descricao: s.data.resumo, icone: s.data.icone ?? '',
+    imagem: s.data.imagem, imagemAlt: s.data.imagemAlt,
+    href: `/tema-04/${s.id}`, categoria: s.data.categoria,
+  }))
+
+const depoimentos = (await getCollection('depoimentosT4'))
+  .sort((a, b) => a.data.ordem - b.data.ordem)
+  .map(d => ({ nome: d.data.nome, cidade: d.data.cidade, servico: d.data.servico, corpo: (d.body ?? '').trim() }))
+
+const autores = await getCollection('autoresT4')
+const categorias = await getCollection('categoriasT4')
+const posts = (await getCollection('postsT4', ehPublicado))
+  .sort((a, b) => new Date(b.data.publicadoEm).getTime() - new Date(a.data.publicadoEm).getTime())
+  .map(p => ({
+    titulo: p.data.titulo, publicadoEm: p.data.publicadoEm, categoria: nomeCategoria(p.data.categoria, categorias),
+    imagemCapa: p.data.imagemCapa, imagemCapaAlt: p.data.imagemCapaAlt, resumo: p.data.resumo,
+    autor: nomeAutor(p.data, autores), href: `/tema-04/${p.id}`,
+  }))
+
+const wa        = `https://wa.me/${site.nap.whatsapp}`
+const canonical = `${site.dominio}/higienizacao-de-estofados/`
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    { '@type': 'WebPage', '@id': `${canonical}#webpage`, url: canonical,
+      name: `Higienização de Estofados — ${site.nome}`,
+      description: 'O que é higienização de estofados, como funciona o processo, quanto tempo leva e com que frequência refazer.',
+      about: { '@id': `${site.dominio}/#organization` }, inLanguage: 'pt-BR' },
+    { '@type': 'BreadcrumbList', '@id': `${canonical}#breadcrumb`,
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home', item: `${site.dominio}/` },
+        { '@type': 'ListItem', position: 2, name: 'Higienização de Estofados', item: canonical },
+      ] },
+    { '@type': 'FAQPage', '@id': `${canonical}#faq`,
+      mainEntity: site.faq.map(f => ({
+        '@type': 'Question', name: f.pergunta,
+        acceptedAnswer: { '@type': 'Answer', text: f.resposta },
+      })) },
+  ],
+}
+---
+
+<Tema04Base
+  titulo={tituloOuPadrao(site, 'guia', `Higienização de Estofados em ${site.nap.cidade} — Guia Completo`)}
+  metaDescription={metaOuPadrao(site, 'guia', "Como funciona a higienização de estofados: diferença para a limpeza caseira, o processo com extratora, tempo de secagem real e de quanto em quanto tempo refazer.")}
+  canonical={canonical}
+  jsonLd={jsonLd}
+  nodeId="pilar"
+>
+  <Header logoSrc={site.logo?.src} logoAlt={site.logo?.alt} variante="padrao" nomeSite={site.nome} telefone={site.nap.telefone}
+          whatsapp={site.nap.whatsapp} nav={site.nav}
+          ctaTexto="Peça seu orçamento" ctaHref={wa} />
+
+  <Hero
+    variante="editorial"
+    eyebrow="Guia completo"
+    titulo="Higienização de estofados: o que é, como funciona e quando refazer"
+    lead="A diferença entre limpar a superfície e esvaziar a espuma. Este guia reúne o processo, o tempo real de secagem e o que nenhuma empresa deveria prometer."
+    ctaPrimTexto="Pedir orçamento"
+    ctaPrimHref={wa}
+    ctaSecTexto="Ver os serviços"
+    ctaSecHref="/tema-04/servicos"
+  />
+
+  <section class="py-[var(--space-section)]">
+    <div class="container-prose article-body">
+      <h2>Aspirar não é higienizar</h2>
+      <p>
+        O aspirador doméstico recolhe o particulado seco que está na superfície do tecido. É útil e
+        deve ser feito toda semana. Mas o que causa odor e alergia não está na superfície: está
+        dissolvido dentro da espuma, misturado a suor, gordura de pele e umidade.
+      </p>
+      <p>
+        A higienização profissional trabalha nessa camada. A extratora injeta solução de limpeza no
+        tecido e recolhe no mesmo movimento, arrastando junto o que estava impregnado. É por isso que
+        a peça não fica encharcada: a água entra e sai no mesmo passo.
+      </p>
+
+      <h2>O que está dentro de um sofá de dois anos</h2>
+      <ul>
+        <li><strong>Ácaros e o resíduo que eles deixam</strong>, que é o que dispara a crise alérgica.</li>
+        <li><strong>Gordura da pele</strong>, que escurece o tecido de forma uniforme — por isso ninguém percebe.</li>
+        <li><strong>Umidade da transpiração</strong>, que não evapora por completo entre um uso e outro.</li>
+        <li><strong>Poeira fina e pelo</strong>, entrelaçados na trama onde o bico do aspirador não chega.</li>
+      </ul>
+
+      <h2>Com que frequência refazer</h2>
+      <p>
+        A cada seis meses no uso comum. Onde há criança pequena, animal ou alguém com alergia
+        respiratória, o intervalo cai para três a quatro meses — é o tempo em que a população de
+        ácaros volta ao patamar anterior.
+      </p>
+      <p>
+        Passar muito do prazo não estraga a peça, mas torna o serviço mais demorado e o resultado
+        menos completo: sujeira antiga adere à fibra e nem sempre sai por inteiro.
+      </p>
+
+      <h2>O que nenhuma empresa deveria prometer</h2>
+      <p>
+        Eliminação total de ácaros, remoção garantida de qualquer mancha e secagem em duas horas.
+        As três são sinais de alerta. Ácaro existe em qualquer casa e o objetivo real é manter a
+        população baixa. Mancha de tinta, caneta e alvejante altera a fibra de forma permanente.
+        E secagem rápida demais quase sempre significa que se usou pouca água — ou seja, limpou pouco.
+      </p>
+    </div>
+  </section>
+
+  <Passos
+    variante="numerado"
+    titulo="O processo, etapa a etapa"
+    descricao="Sempre na mesma ordem. O que muda de uma peça para outra é o produto e a umidade aplicada."
+    itens={site.processo}
+    notaTitulo="Tempo de secagem: de 8 a 12 horas"
+    nota="Varia conforme o tecido, o clima e a ventilação. Ventilador apontado para a peça e janela aberta encurtam bastante. Secador e sol direto ressecam a fibra."
+  />
+
+  <Servicos variante="grade" titulo="Serviços que aplicam esse processo" itens={servicos} />
+
+  <AntesDepois
+    titulo="O resultado em peças reais"
+    itens={site.antesDepois}
+    ctaTexto="Quero esse resultado"
+    ctaHref={wa}
+  />
+
+  <Prova titulo="O que está incluído em qualquer serviço" itens={site.selos} />
+
+  <AreaAtendida
+    eyebrow="Cobertura"
+    titulo="Onde atendemos"
+    regioes={areaLista(site)}
+    bullets={site.regioesBullets}
+    imagem="https://images.unsplash.com/photo-1449844908441-8829872d2607?w=420&h=480&fit=crop&auto=format"
+    imagemAlt="Rua residencial arborizada"
+    selo="Campinas e região metropolitana"
+    ctaTexto="Consultar meu bairro"
+    ctaHref={wa}
+  />
+
+  <Depoimentos
+    titulo="Quem já passou por isso"
+    itens={depoimentos}
+    notaMedia={site.avaliacao.nota}
+    totalAvaliacoes={site.avaliacao.total}
+    fonteAvaliacoes={site.avaliacao.fonte}
+  />
+
+  <div id="duvidas">
+    <Faq
+      variante="com-imagem"
+      titulo="Dúvidas frequentes"
+      itens={site.faq}
+      imagem="https://images.unsplash.com/photo-1527515637462-cff94eecc1ac?w=400&h=520&fit=crop&auto=format"
+      imagemAlt="Técnico higienizando um estofado em domicílio"
+    />
+  </div>
+
+  <Localizacao
+    titulo="Onde estamos"
+    logradouro={site.nap.logradouro} complemento={site.nap.complemento}
+    bairro={site.nap.bairro} cidade={site.nap.cidade} uf={site.nap.uf} cep={site.nap.cep}
+    telefone={site.nap.telefone} whatsapp={site.nap.whatsapp} email={site.nap.email}
+    horarios={site.horarios} mapaSrc={site.mapaSrc}
+    mapaHref={`https://maps.google.com/?q=${encodeURIComponent(site.nap.enderecoFormatado)}`}
+  />
+
+  <PostLista variante="grade" titulo="Continue lendo" posts={posts} verMaisHref="/tema-04/blog" />
+
+  <Cta
+    variante="padrao"
+    titulo="Vamos começar pela sua peça?"
+    descricao="Manda a foto no WhatsApp. Devolvemos o valor fechado e a primeira data livre."
+    ctaPrimTexto="Pedir orçamento"
+    ctaPrimHref={wa}
+    ctaSecTexto="Ver os serviços"
+    ctaSecHref="/tema-04/servicos"
+  />
+
+  <BuscasFrequentes titulo="Buscas relacionadas" itens={site.buscasFrequentes} />
+
+  <Footer credencial={textoCredencial(site)} logoSrc={site.logo?.src} logoAlt={site.logo?.alt}
+    variante="colunas"
+    nomeSite={site.nome}
+    slogan={site.slogan}
+    telefone={site.nap.telefone}
+    email={site.nap.email}
+    endereco={`${site.nap.logradouro}, ${site.nap.complemento}`}
+    cidade={`${site.nap.bairro}, ${site.nap.cidade} — ${site.nap.uf}`}
+    cnpj={site.cnpj}
+    anoFundacao={site.anoFundacao}
+    redes={site.redes}
+    nav={site.nav}
+    colunas={site.navFooterColunas}
+  />
+</Tema04Base>
