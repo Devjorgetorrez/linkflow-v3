@@ -46,3 +46,6 @@ templates-layout-temas/
 
 # Material interno de testes
 HANDOFF-TESTES.docx
+
+# Cópias de segurança criadas pelo update (arquivos que o usuário alterou)
+.backup-atualizacao/
