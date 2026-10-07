@@ -283,6 +283,19 @@ tela de login:
 - Nunca guarde a senha provisória em arquivo; ela aparece uma única vez, na
   resposta ao usuário.
 
+## Trigger: atualizar o Link Flow
+
+Quando o usuário pedir para "atualizar o Link Flow", "atualizar o sistema",
+"baixar a versão nova", "tem atualização?" ou similar — leia e execute
+`skills/atualizar-linkflow/SKILL.md`. Baixa a versão mais recente do
+sistema (skills, regras, motor, painel) do repositório oficial; roda só
+`update.bat` / `update.sh`, nunca comandos git soltos. Não toca em
+`projetos/`, `credenciais/` nem `_memoria/`.
+
+**Não confundir** com "atualizar cliente(s)" logo abaixo, que leva uma
+correção para o site/painel de um cliente já publicado no VPS. Se o pedido
+for só "atualizar", sem dizer qual das duas, pergunte uma vez (ver a skill).
+
 ## Trigger: atualizar cliente(s)
 
 Quando o usuário pedir para "atualizar o site/painel do cliente X",

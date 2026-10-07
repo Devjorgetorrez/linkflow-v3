@@ -40,3 +40,12 @@ venv/
 # Referencias e relatorios internos (nao versionar)
 relatorios/
 templates-layout-temas/
+
+# Trava de sessão do Claude Code (temporário)
+.claude/scheduled_tasks.lock
+
+# Material interno de testes
+HANDOFF-TESTES.docx
+
+# Cópias de segurança criadas pelo update (arquivos que o usuário alterou)
+.backup-atualizacao/
