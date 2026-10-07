@@ -43,3 +43,6 @@ templates-layout-temas/
 
 # Trava de sessão do Claude Code (temporário)
 .claude/scheduled_tasks.lock
+
+# Material interno de testes
+HANDOFF-TESTES.docx
