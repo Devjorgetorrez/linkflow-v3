@@ -161,4 +161,4 @@ fi
 # ── 3. Dependências (mesma rotina do install.sh) ────────────────────────
 step "3. Atualizando dependências"
 
-exec "$PACKAGE_ROOT/install.sh"
+exec bash "$PACKAGE_ROOT/install.sh"

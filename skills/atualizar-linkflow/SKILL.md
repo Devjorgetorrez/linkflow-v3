@@ -34,7 +34,7 @@ cliente?"
 1. **Descobrir o sistema** e rodar o script certo, **sempre** com o modo sem
    perguntas (o agente não consegue responder a perguntas do script):
    - Windows: `powershell -ExecutionPolicy Bypass -File update.ps1 -SemPerguntas`
-   - Linux/macOS: `./update.sh --sem-perguntas`
+   - Linux/macOS: `bash update.sh --sem-perguntas`
    Rode na raiz da pasta do Link Flow (onde está o `CLAUDE.md`).
 
 2. **Nunca** rode `git pull`, `git reset`, `git checkout` ou qualquer outro
