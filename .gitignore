@@ -40,3 +40,6 @@ venv/
 # Referencias e relatorios internos (nao versionar)
 relatorios/
 templates-layout-temas/
+
+# Trava de sessão do Claude Code (temporário)
+.claude/scheduled_tasks.lock
