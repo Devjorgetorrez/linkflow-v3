@@ -33,7 +33,9 @@ done
 ok()   { echo "  [OK] $1"; }
 warn() { echo "  [AVISO] $1"; }
 step() { echo ""; echo "$1"; }
-g()    { git -C "$PACKAGE_ROOT" -c core.quotepath=false "$@"; }
+# safe.directory=*: numa VPS a pasta costuma ser de outro usuário (ZIP enviado
+# por scp, root x usuário comum) e o git recusa com "dubious ownership".
+g()    { git -C "$PACKAGE_ROOT" -c core.quotepath=false -c safe.directory='*' "$@"; }
 
 echo ""
 echo "Link Flow — Atualizador"
@@ -88,6 +90,15 @@ if ! command -v git >/dev/null 2>&1; then
     warn "O Git não está instalado neste computador — ele é necessário para baixar atualizações."
     echo "  Instale pelo gerenciador de pacotes (ex.: sudo apt install git, ou brew install git)"
     echo "  e rode update.sh de novo."
+    exit 1
+fi
+
+# Só atualiza uma cópia COMPLETA do Link Flow. Pastas de infraestrutura (como
+# /opt/linkflow na VPS, que só tem painel/ e _astro/) não têm CLAUDE.md nem
+# skills/ — iniciar o git ali despejaria o projeto inteiro dentro delas.
+if [ ! -f "$PACKAGE_ROOT/CLAUDE.md" ] || [ ! -d "$PACKAGE_ROOT/skills" ]; then
+    warn "Esta pasta não parece ser uma cópia completa do Link Flow (falta CLAUDE.md ou skills/)."
+    echo "  Rode o update dentro da pasta onde você abre o Claude Code. Nada foi alterado."
     exit 1
 fi
 

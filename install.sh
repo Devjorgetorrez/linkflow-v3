@@ -100,9 +100,24 @@ fi
 # ── 5. Dependencias Python dos scripts ──────────────────────────────────
 step "5. Instalando dependencias Python (scripts/requirements.txt)"
 
-if "$PYTHON_CMD" -m pip install --quiet -r "$PACKAGE_ROOT/scripts/requirements.txt"; then
+PIP_LOG="$(mktemp)"
+pip_ok=0
+if "$PYTHON_CMD" -m pip install --quiet -r "$PACKAGE_ROOT/scripts/requirements.txt" 2>"$PIP_LOG"; then
+    pip_ok=1
+elif grep -q "externally-managed-environment" "$PIP_LOG"; then
+    # Ubuntu 24.04 / Debian 12 (comum em VPS) recusam pip direto (PEP 668).
+    # Sao so openpyxl e requests, usados pelos scripts do proprio Link Flow.
+    warn "Python do sistema e 'gerenciado' (PEP 668) - repetindo com --break-system-packages."
+    if "$PYTHON_CMD" -m pip install --quiet --break-system-packages -r "$PACKAGE_ROOT/scripts/requirements.txt" 2>"$PIP_LOG"; then
+        pip_ok=1
+    fi
+fi
+if [ "$pip_ok" -eq 1 ]; then
+    rm -f "$PIP_LOG"
     ok "Dependencias Python instaladas (openpyxl, requests)"
 else
+    [ -s "$PIP_LOG" ] && tail -5 "$PIP_LOG" | sed 's/^/    /'
+    rm -f "$PIP_LOG"
     err "pip install falhou. Rode manualmente '$PYTHON_CMD -m pip install -r scripts/requirements.txt' para ver o erro completo."
     ERRORS+=("pip")
 fi

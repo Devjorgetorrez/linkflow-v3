@@ -42,7 +42,7 @@ function Invoke-Git {
     param([string[]]$GitArgs)
     $antes = $ErrorActionPreference
     $ErrorActionPreference = "Continue"
-    $saida = & git -C $scriptDir -c core.quotepath=false @GitArgs 2>&1
+    $saida = & git -C $scriptDir -c core.quotepath=false -c safe.directory=* @GitArgs 2>&1
     $codigo = $LASTEXITCODE
     $ErrorActionPreference = $antes
     return [pscustomobject]@{
@@ -106,6 +106,13 @@ if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
     Write-Warn "O Git nao esta instalado neste computador - ele e necessario para baixar atualizacoes."
     Write-Host "  Instale com:  winget install --id Git.Git -e" -ForegroundColor Yellow
     Write-Host "  Depois feche e abra o terminal e rode update.bat de novo." -ForegroundColor Yellow
+    exit 1
+}
+
+# So atualiza uma copia COMPLETA do Link Flow (ver update.sh).
+if (-not (Test-Path "$scriptDir\CLAUDE.md") -or -not (Test-Path "$scriptDir\skills")) {
+    Write-Warn "Esta pasta nao parece ser uma copia completa do Link Flow (falta CLAUDE.md ou skills\)."
+    Write-Host "  Rode o update dentro da pasta onde voce abre o Claude Code. Nada foi alterado." -ForegroundColor Yellow
     exit 1
 }
 
