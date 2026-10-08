@@ -15,6 +15,13 @@ user-invokable: false
 
 # site-atualizar — Republicar Site Astro (Fase 3 e edições fora do blog)
 
+> **Antes de qualquer comando no servidor, leia `skills/vps-setup/ambientes.md`.**
+> O Link Flow roda em 3 cenários (Windows → VPS externa; Linux na VPS → ela
+> mesma; Linux na VPS → outra VPS). Os `ssh`/`scp`/`rsync` abaixo mostram a
+> forma remota: **nunca os execute como estão** — traduza pelo
+> `scripts/vps/lf_vps.py` (tabela no `ambientes.md`), que decide sozinho entre
+> SSH e execução local.
+
 Pega o que já está em `_astro/src/content/` — seja porque a Fase 3
 acabou de escrever conteúdo real nas Money Pages, seja porque o painel
 SiteFlow salvou uma edição — e coloca no ar. Não cria nada novo, não

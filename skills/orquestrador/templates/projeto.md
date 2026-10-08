@@ -63,6 +63,7 @@ negocio_ficticio: nao
 
 ## Ambiente VPS
 
+vps_modo: [CAMPO — remoto | local; ver skills/vps-setup/ambientes.md]
 vps_ip: [CAMPO]
 vps_porta: [CAMPO]
 vps_user: root

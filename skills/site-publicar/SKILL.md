@@ -13,6 +13,13 @@ user-invokable: false
 
 # site-publicar — Publicação de Artigo em Site Astro
 
+> **Antes de qualquer comando no servidor, leia `skills/vps-setup/ambientes.md`.**
+> O Link Flow roda em 3 cenários (Windows → VPS externa; Linux na VPS → ela
+> mesma; Linux na VPS → outra VPS). Os `ssh`/`scp`/`rsync` abaixo mostram a
+> forma remota: **nunca os execute como estão** — traduza pelo
+> `scripts/vps/lf_vps.py` (tabela no `ambientes.md`), que decide sozinho entre
+> SSH e execução local.
+
 Recebe o artigo já escrito pelo LinkFlow, salva como `.md` no conteúdo
 do Astro, envia via SSH e builda direto no VPS.
 O cliente não precisa fazer nada — o site atualiza automaticamente.

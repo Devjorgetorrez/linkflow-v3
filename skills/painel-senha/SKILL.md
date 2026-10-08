@@ -11,6 +11,13 @@ description: >
 
 # painel-senha — Redefinir a senha de um usuário do painel
 
+> **Antes de qualquer comando no servidor, leia `skills/vps-setup/ambientes.md`.**
+> O Link Flow roda em 3 cenários (Windows → VPS externa; Linux na VPS → ela
+> mesma; Linux na VPS → outra VPS). Os `ssh`/`scp`/`rsync` abaixo mostram a
+> forma remota: **nunca os execute como estão** — traduza pelo
+> `scripts/vps/lf_vps.py` (tabela no `ambientes.md`), que decide sozinho entre
+> SSH e execução local.
+
 O painel **não** tem "esqueci minha senha" por e-mail, de propósito: o painel
 só aceita a chave de API para criar o primeiro administrador, e uma rota de
 reset abriria uma porta a mais. Quem redefine é o Claude Code, com o mesmo

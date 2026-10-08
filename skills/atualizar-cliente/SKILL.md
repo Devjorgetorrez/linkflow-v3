@@ -13,6 +13,13 @@ user-invokable: true
 
 # atualizar-cliente — Propagar correção do motor/painel para clientes já no ar
 
+> **Antes de qualquer comando no servidor, leia `skills/vps-setup/ambientes.md`.**
+> O Link Flow roda em 3 cenários (Windows → VPS externa; Linux na VPS → ela
+> mesma; Linux na VPS → outra VPS). Os `ssh`/`scp`/`rsync` abaixo mostram a
+> forma remota: **nunca os execute como estão** — traduza pelo
+> `scripts/vps/lf_vps.py` (tabela no `ambientes.md`), que decide sozinho entre
+> SSH e execução local.
+
 Cada cliente `site_tipo: astro` é uma cópia ISOLADA do motor e do painel
 (arquitetura multi-tenant — ver `vps-setup`). Corrigir um bug no repositório
 e subir a correção para a referência compartilhada (`/opt/linkflow/_astro`,

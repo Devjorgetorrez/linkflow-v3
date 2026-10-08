@@ -13,6 +13,14 @@ user-invokable: true
 
 # vps-setup — Infraestrutura de VPS para LinkFlow
 
+> **Antes de qualquer comando no servidor, leia `skills/vps-setup/ambientes.md`.**
+> O Link Flow roda em 3 cenários (Windows → VPS externa; Linux na VPS → ela
+> mesma; Linux na VPS → outra VPS). Os `ssh`/`scp`/`rsync` abaixo mostram a
+> forma remota: **nunca os execute como estão** — traduza pelo
+> `scripts/vps/lf_vps.py` (tabela no `ambientes.md`), que decide sozinho entre
+> SSH e execução local. **O PASSO 0 muda no cenário 2** (servidor = esta
+> própria máquina): sem senha, porta nem chave — ver `ambientes.md` §3.
+
 Prepara o servidor: instala o necessário, cria a estrutura isolada do
 cliente (pasta própria, porta própria, processo PM2 próprio), configura
 Nginx e SSL, orienta o DNS. Ao final, o painel de gestão do cliente está
@@ -109,6 +117,17 @@ pergunte de novo. Ler `dominio` e `dominio_painel` do `projeto.md`.
 Verificar se `## Ambiente VPS` no `projeto.md` já tem `vps_ip`.
 Se sim, ir para PASSO 2 (decidir bootstrap vs. novo cliente).
 
+**Descubra o cenário antes de pedir qualquer dado** (`skills/vps-setup/ambientes.md` §1):
+
+- Windows ou macOS → servidor externo (`vps_modo: remoto`). Siga o pedido abaixo.
+- Linux e `vps_modo` ainda vazio → faça a pergunta única: "O site vai ficar nesta
+  mesma máquina em que estamos conversando, ou em outro servidor?"
+  - **Outro servidor** → grave `vps_modo: remoto` e siga o pedido abaixo.
+  - **Nesta mesma máquina** → `vps_modo: local`. **Pule o resto deste PASSO 0 e o
+    teste SSH do PASSO 1:** não existe senha, porta nem chave a autorizar
+    (`ambientes.md` §3 diz exatamente o que gravar: IP público descoberto sozinho,
+    usuário atual). Vá para o PASSO 2.
+
 Se não, **um único pedido** com os três dados do e-mail da Hostgator:
 
 > "Para colocar o site no ar, preciso dos dados do servidor que a Hostgator
@@ -142,6 +161,7 @@ funciona sem senha nenhuma — a chave já está confiada.
 
 Salvar em `projeto.md` em `## Ambiente VPS`:
 ```
+vps_modo: remoto
 vps_ip: [IP]
 vps_porta: [porta]
 vps_user: root

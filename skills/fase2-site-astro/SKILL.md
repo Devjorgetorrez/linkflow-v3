@@ -13,6 +13,14 @@ user-invokable: false
 
 # fase2-site-astro — Construtor de Site Astro
 
+> **Antes de qualquer comando no servidor, leia `skills/vps-setup/ambientes.md`.**
+> O Link Flow roda em 3 cenários (Windows → VPS externa; Linux na VPS → ela
+> mesma; Linux na VPS → outra VPS). Os `ssh`/`scp` da ETAPA 6 mostram a forma
+> remota: **nunca os execute como estão** — traduza pelo `scripts/vps/lf_vps.py`.
+> **A prévia do Marco 1 (ETAPA 5) muda quando o agente roda numa VPS Linux**
+> (cenários 2 e 3): o navegador do usuário não alcança o `localhost` dela —
+> ver `ambientes.md` §4.
+
 Lê o projeto.md, **constrói o site numa cópia local, mostra a prévia no
 localhost e só publica depois que o usuário aprova o visual**. O usuário nunca
 vê um site como "já no ar" antes de ter aprovado: tudo o que ele vê primeiro é
@@ -500,13 +508,22 @@ mídias nessa mesma pasta (`[SITE_LOCAL]/midia`).
 
 (rodar em segundo plano; se a porta estiver ocupada, usar 4325 e dizer o endereço certo.)
 
+**Prévia remota (cenários 2 e 3: agente numa VPS Linux).** O navegador do usuário
+não alcança o `localhost` da VPS. Se o Linux não tem `$DISPLAY`/`$WAYLAND_DISPLAY`
+(ver `skills/vps-setup/ambientes.md` §4): suba com `--host 0.0.0.0` em vez de
+`127.0.0.1`, libere a porta se houver `ufw` ativo, descubra o IP público
+(`curl -fsS https://ifconfig.me`) e use `http://<IP>:4321` como `[ENDEREÇO]` abaixo.
+Nos cenários 1 (Windows/macOS), `[ENDEREÇO]` = `http://localhost:4321`. Se o
+endereço não abrir, diga em uma frase que a hospedagem pode estar bloqueando o
+acesso à prévia e pare — não improvise.
+
 Resposta ao usuário — **exatamente um pedido**:
 
 > "A prévia do seu site está pronta, no layout **[nome do layout]**.
-> Abra **http://localhost:4321** no seu navegador, navegue como se fosse um
+> Abra **[ENDEREÇO]** no seu navegador, navegue como se fosse um
 > cliente e me diga o que quer mudar — ou diga **aprovado** se estiver bom.
 > (Se quiser comparar com outros layouts, tenho uma vitrine em
-> http://localhost:4322/catalogo — é só me pedir para abri-la.)
+> [ENDEREÇO DA VITRINE]/catalogo — é só me pedir para abri-la.)
 >
 > Onde estamos: prévia local do site, sem nada publicado.
 > Falta para o próximo marco: a sua aprovação do visual."
@@ -557,6 +574,12 @@ tema_pasta: [layout final]
 
 Encerrar o servidor da prévia (e a vitrine, se estiver de pé) e seguir para o
 Marco 2. Enquanto `visual_aprovado` não for `sim`, **nada é publicado**.
+
+**Se a prévia foi remota** (agente numa VPS Linux — cenários 2 e 3, ver 5.2):
+além de encerrar os servidores, **fechar a porta que você abriu** (`ufw delete
+allow 4321/tcp`, e `4322/tcp` se a vitrine foi aberta). A prévia é um site
+inacabado visível a quem souber o endereço — não pode ficar no ar. Faça o mesmo
+se o usuário desistir ou abandonar o Marco 1.
 
 ---
 

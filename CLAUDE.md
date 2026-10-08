@@ -93,8 +93,9 @@ Ao receber `/link-flow site <slug>`, ler `## Ambiente de Publicacao` no `projeto
   que `fase2-site` acabou de gerar (Money Pages, handoff) para construir o site.
   A skill roda em **dois marcos**, e entre eles há **uma pausa obrigatória**:
   - **Marco 1 (aprovar o visual):** constrói o site numa cópia LOCAL
-    (`projetos/<slug>/site/`), sobe a prévia em `http://localhost:4321` e ajusta
-    até o usuário aprovar. Não usa domínio, servidor nem custo. Termina quando o
+    (`projetos/<slug>/site/`), sobe a prévia em `http://localhost:4321` (se o
+    agente roda numa VPS Linux: em `http://<IP-da-VPS>:4321` — ver "Ambientes de
+    execução") e ajusta até o usuário aprovar. Não usa domínio, servidor nem custo. Termina quando o
     usuário diz, explicitamente, que aprova; o agente então registra
     `visual_aprovado: sim` no `projeto.md`.
   - **Marco 2 (colocar no ar):** só com `visual_aprovado: sim`. Pede domínio e
@@ -106,8 +107,10 @@ Ao receber `/link-flow site <slug>`, ler `## Ambiente de Publicacao` no `projeto
   ou para adicionar mais um cliente a um servidor já configurado.
   `fase2-site-astro` roda seu próprio guardião (`guardiao_construtor.py`, fases
   `construcao`, `previa`, `publicacao` e `saida`) — não pular nenhuma.
-→ O usuário só vê "o site no ar" no fim do Marco 2. Tudo o que ele vê antes é um
-  endereço `localhost` que só ele acessa.
+→ O usuário só vê "o site no ar" no fim do Marco 2. Tudo o que ele vê antes é a
+  prévia: um endereço `localhost` que só ele acessa (Windows/macOS) ou, quando o
+  agente roda numa VPS Linux, o IP da VPS com a porta da prévia — que é fechada
+  no fim do Marco 1.
 
 **Nunca perguntar ao cliente qual tipo de site** — está definido no `projeto.md`.
 Se o campo não existir, usar `wordpress` como padrão.
@@ -175,6 +178,24 @@ STATUS — [Nome do Cliente]
 
 Se o projeto não existir: "Não encontrei o projeto `<slug>`. Use `/link-flow novo` para cadastrar."
 **Regra:** sempre terminar com o próximo comando exato, pronto para copiar.
+
+---
+
+## Ambientes de execução (3 cenários)
+
+O Link Flow roda em três cenários, e **todas** as skills que falam com o
+servidor valem para os três:
+
+1. Windows (Claude Desktop) → site numa VPS externa, por SSH.
+2. Linux, dentro da VPS do usuário → site **na própria VPS** (sem SSH).
+3. Linux, dentro de uma VPS → site em **outra** VPS, por SSH.
+
+Fonte única das regras: `skills/vps-setup/ambientes.md`. Em resumo: **nunca
+escreva `ssh`/`scp`/`rsync` na mão** — use `scripts/vps/lf_vps.py`, que decide
+sozinho entre SSH e execução local pelo `vps_modo` do `projeto.md`. Windows e
+macOS são sempre cenário 1 (não pergunte). Só no Linux, uma vez por cliente,
+pergunte se o site fica "nesta mesma máquina" ou "em outro servidor" e grave
+`vps_modo`.
 
 ---
 
